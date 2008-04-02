@@ -116,7 +116,11 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
      */
     function __construct(array $data = null)
     {
-        $this->__class = get_class($this);
+        $class_name = get_class($this);
+        if (substr($class_name, -4) == 'null') {
+            $class_name = substr($class_name, 0, -4);
+        }
+        $this->__class = $class_name;
         self::reflection($this->__class);
 
         if (is_array($data)) {
@@ -326,7 +330,57 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
                 $this->{$varname} = array();
                 return array();
             } else {
-                $obj = new $attr['class'];
+                // 如果请求的关联对象尚不存在，则尝试从数据库读取该关联对象
+
+                // 如果读取不到，则尝试构造一个 Null 对象
+                $class_name = $attr['class'] . 'Null';
+                if (!class_exists($class_name, false)) {
+                    $text = <<<EOT
+class {$class_name} extends {$attr['class']}
+{
+    function __construct(array \$data = null)
+    {
+        parent::__construct();
+    }
+
+    function setProps(array \$props)
+    {
+    }
+
+    function save(\$force_create = false, \$recursion = 99)
+    {
+    }
+
+    function reload(\$recursion = 1)
+    {
+    }
+
+    function doValidate(\$mode = 'general')
+    {
+    }
+
+    function destroy(\$recursion = 99)
+    {
+    }
+
+    function id()
+    {
+        return null;
+    }
+
+    protected function create(\$recursion = 99)
+    {
+    }
+
+    protected function update(\$recursion = 99)
+    {
+    }
+}
+
+EOT;
+                    eval($text);
+                }
+                $obj = new $class_name();
                 $this->{$varname} = $obj;
                 return $obj;
             }
@@ -348,10 +402,10 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
             return;
         }
         $attr = self::$__ref[$this->__class]['attribs'][$varname];
-        if ($attr['readonly']) {
-            // LC_MSG: Property "%s" is readonly.
-            throw new QException(__('Property "%s" is readonly.', $varname));
-        }
+//        if ($attr['readonly']) {
+//            // LC_MSG: Property "%s" is readonly.
+//            throw new QException(__('Property "%s" is readonly.', $varname));
+//        }
         if (isset($attr['setter'])) {
             call_user_func($attr['setter'], $value);
             return;
@@ -388,12 +442,11 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
             if (!is_object($value) || !($value instanceof $attr['class'])) {
                 // LC_MSG: Property "%s" type mismatch. expected is "%s", actual is "%s".
                 $msg = 'Property "%s" type mismatch. expected is "%s", actual is "%s".';
-                throw new QActiveRecord_Exception(__($msg, $varname, $attr['class'], gettype($value)));
+                throw new QDB_ActiveRecord_Exception(__($msg, $varname, $attr['class'], get_class($value)));
             }
             $this->__props[$varname] = $value;
             $this->__all_props[$varname] =& $this->__props[$varname];
         }
-
     }
 
     /**
@@ -540,6 +593,12 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
         } elseif (!empty($ref['table_class'])) {
             $ref['table'] = Q::getSingleton($ref['table_class']);
             $ref['table']->connect();
+        }
+
+        if (!isset($ref['table'])) {
+            QDebug::dump($ref, $class);
+            QDebug::dumpTrace();
+            exit;
         }
         $ref['pk'] = $ref['table']->pk;
 
@@ -805,7 +864,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
         $this->beforeCreate();
         $this->__doCallbacks(self::before_create);
 
-        $row = $this->toArray($recursion);
+        $row = $this->toArray(0);
 
         foreach (self::$__ref[$this->__class]['create_reject'] as $f) {
             if (is_null($this->__all_props[$f])) {
@@ -814,7 +873,37 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
         }
         $table = self::$__ref[$this->__class]['table'];
         /* @var $table QDB_Table */
-        $id = $table->create($row, $recursion);
+        $id = $table->create($row, 0);
+        $this->__all_props[$this->idname()] = $id;
+
+        foreach (self::$__ref[$this->__class]['links'] as $prop_name => $null) {
+            $link = self::$__ref[$this->__class]['table']->getLink($prop_name);
+            /* @var $link QDB_Table_Link */
+            $mk = $this->alias_name($link->main_key);
+
+            if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
+                if (!isset($this->__all_props[$prop_name]) || !is_object($this->__all_props[$prop_name])) {
+                    continue;
+                }
+                $obj = $this->__all_props[$prop_name];
+                $ak = $obj->alias_name($link->assoc_key);
+                $obj->{$ak} = $this->{$mk};
+                $obj->save();
+//                $row = $this->__all_props[$prop_name]->toArray(0);
+//                $link->saveAssocData($row, $this->__all_props[$link->main_key], 0);
+            } else {
+//                $rowset = array();
+                $ak = null;
+                $mkv = $this->{$mk};
+                foreach ($this->__all_props[$prop_name] as $obj) {
+                    if (is_null($ak)) { $ak = $obj->alias_name($link->assoc_key); }
+                    $obj->{$ak} = $mkv;
+                    $obj->save();
+//                    $rowset[] = $obj->toArray(0);
+                }
+//                $link->saveAssocData($rowset, $this->__all_props[$link->main_key], 0);
+            }
+        }
 
         $this->__all_props[$this->idname()] = $id;
         $this->__doCallbacks(self::after_create);
@@ -842,7 +931,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
         $this->beforeUpdate();
         $this->__doCallbacks(self::before_update);
 
-        $row = $this->toArray($recursion);
+        $row = $this->toArray(0);
 
         foreach (self::$__ref[$this->__class]['update_reject'] as $f) {
             if ($this->__all_props[$f] === null) {
@@ -850,7 +939,37 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
             }
         }
         $table = self::$__ref[$this->__class]['table'];
-        $table->update($row, $recursion);
+        $table->update($row, 0);
+
+        foreach (self::$__ref[$this->__class]['links'] as $prop_name => $null) {
+            if (!isset($this->__all_props[$prop_name])) { continue; }
+
+            $link = self::$__ref[$this->__class]['table']->getLink($prop_name);
+            /* @var $link QDB_Table_Link */
+            $mk = $this->alias_name($link->main_key);
+            if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
+                if (!isset($this->__all_props[$prop_name]) || !is_object($this->__all_props[$prop_name])) {
+                    continue;
+                }
+                $obj = $this->__all_props[$prop_name];
+                $ak = $obj->alias_name($link->assoc_key);
+                $obj->{$ak} = $this->{$mk};
+                $obj->save();
+//                $row = $this->__all_props[$prop_name]->toArray(0);
+//                $link->saveAssocData($row, $this->__all_props[$link->main_key], 0);
+            } else {
+//                $rowset = array();
+                $ak = null;
+                $mkv = $this->{$mk};
+                foreach ($this->__all_props[$prop_name] as $obj) {
+                    if (is_null($ak)) { $ak = $obj->alias_name($link->assoc_key); }
+                    $obj->{$ak} = $mkv;
+                    $obj->save();
+//                    $rowset[] = $obj->toArray(0);
+                }
+//                $link->saveAssocData($rowset, $this->__all_props[$link->main_key], 0);
+            }
+        }
 
         $this->__doCallbacks(self::after_update);
         $this->afterUpdate();

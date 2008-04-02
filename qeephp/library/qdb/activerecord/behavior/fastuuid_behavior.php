@@ -54,7 +54,7 @@ class Behavior_Fastuuid extends QDB_ActiveRecord_Behavior_Abstract
      */
     function beforeCreate(QDB_ActiveRecord_Abstract $obj, array & $props)
     {
-        $props[$obj->idname()] = self::newID();
+        $props[$obj->idname()] = self::newID($this->settings['being_timestamp'], $this->settings['suffix_len']);
     }
 
     /**
