@@ -786,7 +786,6 @@ class QDB_Select
                     $link->init();
                     // if ($link->assoc_table === $this->recursion_link) { continue; }
 
-
                     switch ($link->type) {
                     case QDB_Table::has_one:
                     case QDB_Table::has_many:

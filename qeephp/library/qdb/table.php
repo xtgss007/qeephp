@@ -358,7 +358,7 @@ class QDB_Table
      */
     function removeAllLinks()
     {
-        $this->links = null;
+        $this->links = array();
     }
 
     /**
@@ -756,13 +756,14 @@ class QDB_Table
         $tran = $this->dbo->beginTrans();
         // TODO: removeByField() 实现对多个字段的处理
 
+        $qfield = $this->dbo->qfield($field);
         if (is_array($field_value)) {
             $fvs = ' IN (' . implode(', ', array_map(array($this->dbo, 'qstr'), $field_value)) . ')';
         } else {
             $fvs = ' = ' . $this->dbo->qstr($field_value);
         }
 
-        if ($recursion > 0 && is_array($this->links)) {
+        if ($recursion > 0) {
             $used_fields = array();
             foreach ($this->links as $name => $link) {
                 /* @var $link QDB_Table_Link */
@@ -784,7 +785,7 @@ class QDB_Table
             }
 
             if (!empty($used_fields)) {
-                $sql = 'SELECT ' . $this->dbo->qfields($used_fields) . " FROM {$this->qtable_name} WHERE {$this->pk} {$fvs}";
+                $sql = 'SELECT ' . $this->dbo->qfields(array_values($used_fields)) . " FROM {$this->qtable_name} WHERE {$qfield} {$fvs}";
 
                 // 查询出删除关联表记录需要的关联键值
                 $mkv = (array)$this->dbo->getAll($sql);
@@ -798,13 +799,14 @@ class QDB_Table
                 foreach ($used_fields as $name => $field) {
                     /* @var $link QDB_Table_Link */
                     $link = $this->links[$name];
-                    $link->removeAssocData($akv[$name], $recursion - 1);
+                    if (empty($akv[$field])) { continue; }
+                    $link->removeAssocData($akv[$field], $recursion - 1);
                 }
             }
         }
 
         // 删除主表记录
-        $sql = "DELETE FROM {$this->qtable_name} WHERE {$fvs}";
+        $sql = "DELETE FROM {$this->qtable_name} WHERE {$qfield} {$fvs}";
         $this->dbo->execute($sql);
         return $this->dbo->affectedRows();
     }
