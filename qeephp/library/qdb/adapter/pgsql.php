@@ -14,7 +14,7 @@
  * 
  * @package database
  * @author  Abin30@163.com
- * @version $Id: pgsql.php  
+ * @version $Id: pgsql.php      阿斌 $
  */
 
 /**
@@ -441,10 +441,14 @@ class QDB_Adapter_Pgsql extends QDB_Adapter_Abstract
 	function metaTables($pattern = null, $schema = null)
 	{
 		if(!empty($schema)){
-			$sql = sprintf("select relname from pg_class c, pg_namespace n WHERE relkind in ('r','v') AND (c.relname='%s' or c.relname = lower('%s')) and c.relnamespace=n.oid and n.nspname='%s'",$table_name,$table_name,$schema);
+			$sql = sprintf("select relname from pg_class c, pg_namespace n WHERE relkind in ('r','v') and c.relnamespace=n.oid and n.nspname='%s'",$schema);
 		}else{
-			$sql = sprintf("select relname from pg_class c, pg_namespace n WHERE relkind in ('r','v') AND (c.relname='%s' or c.relname = lower('%s')) ",$table_name,$table_name);
+			$sql = "select relname from pg_class c, pg_namespace n WHERE relkind in ('r','v') ";
 		}
+		if(!empty($pattern)){
+			$sql.=sprintf("AND (c.relname like '%s' or c.relname like '%s')",$pattern,strtolower($pattern));
+		}
+		debug_print_backtrace();
 		$rs = $this->execute($sql);
 		/* @var $rs QDB_Result_Abstract */
 		$tables = array();
