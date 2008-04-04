@@ -4,12 +4,6 @@
 # 核心设置
 #############################
 
-# 当用户没有权限访问特定 URL 时，要调用的错误处理函数
-on_access_denied:       on_access_denied
-
-# 当用户访问的 URL 不存在时，要调用的错误处理函数
-on_action_not_found:    on_page_not_found
-
 # url 参数的传递模式，可以是 standard, pathinfo, 和 rewrite 模式
 # 只有在 url_mode 为 pathinfo 或 rewrite 时，routes.yaml 指定的路由才能生效
 # 如果使用 IIS，有可能需要将 url_mode 改为 standard 才能正常运行

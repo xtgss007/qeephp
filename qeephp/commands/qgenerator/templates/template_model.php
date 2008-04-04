@@ -1,6 +1,8 @@
 <?php echo '<?php'; ?>
 
-
+/**
+ * <?php echo $class_name; ?> 封装来自 <?php echo $table_name; ?> 数据表的记录及领域逻辑
+ */
 class <?php echo $class_name; ?> extends QDB_ActiveRecord_Abstract
 {
 
@@ -114,7 +116,7 @@ case 't': // 时间
 case 'c'; // 字符串
 case 'x'; // 大字符串
     if (!empty($f['length'])) {
-        if ($f['has_default'] == false && $f['not_null'] = true) {
+        if ($f['has_default'] == false && $f['not_null'] == true) {
             $rules[] = "array('not_empty', '{$desc}不能为空'),";
         }
         if ($f['length'] > 0) {
@@ -181,4 +183,48 @@ if (empty($rules)) { continue; }
 
 /* -------------------------------------------------------------------- */
 
+}
+
+/**
+ * <?php echo $class_name; ?>Null 用于封装不存在的 <?php echo $class_name; ?> 对象
+ */
+class <?php echo $class_name; ?>Null extends <?php echo $class_name; ?>
+{
+    function __construct(array $data = null)
+    {
+        parent::__construct();
+    }
+
+    function setProps(array $props)
+    {
+    }
+
+    function save($force_create = false, $recursion = 99)
+    {
+    }
+
+    function reload($recursion = 1)
+    {
+    }
+
+    function doValidate(\$mode = 'general')
+    {
+    }
+
+    function destroy($recursion = 99)
+    {
+    }
+
+    function id()
+    {
+        return null;
+    }
+
+    protected function create($recursion = 99)
+    {
+    }
+
+    protected function update($recursion = 99)
+    {
+    }
 }
