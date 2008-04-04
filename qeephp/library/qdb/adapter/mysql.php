@@ -59,7 +59,7 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
         }
 
         if (!empty($this->dsn['database'])) {
-            $this->selectDB($this->dsn['database']);
+            $this->setSchema($this->dsn['database']);
         }
 
         if (isset($this->dsn['charset']) && $this->dsn['charset'] != '') {
