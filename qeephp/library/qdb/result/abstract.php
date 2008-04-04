@@ -226,32 +226,4 @@ abstract class QDB_Result_Abstract
 
         return $data;
     }
-
-    /**
-     * 将 $handle 查询获得的结果组装到 $rowset 中
-     *
-     * @param QDB_Result_Abstract $assoc_handle
-     * @param array $rowset
-     * @param string $mapping_name
-     * @param boolean $one_to_one
-     * @param string $ref_key
-     */
-    function assemble(QDB_Result_Abstract $assoc_handle, array & $rowset, $mapping_name, $one_to_one, $ref_key)
-    {
-        if ($one_to_one) {
-            // 一对一组装数据
-            while (($row = $assoc_handle->fetchRow())) {
-                $rkv = $row[$ref_key];
-                unset($row[$ref_key]);
-                $rowset[$rkv][$mapping_name] = $row;
-            }
-        } else {
-            // 一对多组装数据
-            while (($row = $assoc_handle->fetchRow())) {
-                $rkv = $row[$ref_key];
-                unset($row[$ref_key]);
-                $rowset[$rkv][$mapping_name][] = $row;
-            }
-        }
-    }
 }

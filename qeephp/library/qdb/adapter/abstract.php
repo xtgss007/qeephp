@@ -294,13 +294,13 @@ abstract class QDB_Adapter_Abstract
     }
 
     /**
-     * 选择要操作的数据库
+     * 选择要操作的 SCHEMA
      *
-     * @param string $database
+     * @param string $schema
      *
      * @return boolean
      */
-    abstract function selectDB($database);
+    abstract function setSchema($schema);
 
     /**
      * 转义值

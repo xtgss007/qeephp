@@ -84,12 +84,13 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
         parent::close();
     }
 
-    function selectDB($database)
+    function setSchema($schema)
     {
         if (!$this->conn) { $this->connect(); }
-        if (!mysql_select_db($database, $this->conn)) {
-            throw new QDB_Exception("USE {$database}", mysql_error($this->conn), mysql_errno($this->conn));
+        if (!mysql_select_db($schema, $this->conn)) {
+            throw new QDB_Exception("USE {$schema}", mysql_error($this->conn), mysql_errno($this->conn));
         }
+        $this->schema = $schema;
     }
 
     function qstr($value)
