@@ -45,9 +45,8 @@ class QGenerator_Controller extends QGenerator_Abstract
             $full_name = $controller_name;
         }
 
-        $controller_name = strtolower($controller_name);
         $class_name = 'Controller_' . ucfirst($controller_name);
-        $filename = $controller_name . '_controller.php';
+        $filename = strtolower($controller_name) . '_controller.php';
         Q::loadVendor('filesys');
 
         if ($namespace) {
