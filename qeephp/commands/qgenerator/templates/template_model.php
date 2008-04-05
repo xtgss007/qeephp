@@ -207,7 +207,7 @@ class <?php echo $class_name; ?>Null extends <?php echo $class_name; ?>
     {
     }
 
-    function doValidate(\$mode = 'general')
+    function doValidate($mode = 'general')
     {
     }
 

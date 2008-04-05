@@ -41,7 +41,7 @@ class QGenerator_Model extends QGenerator_Abstract
 
         $dir = ROOT_DIR . '/app/model';
         $this->createDir($dir);
-        $filename = $dir . '/' . $model_name . '.php';
+        $filename = $dir . '/' . strtolower($model_name) . '.php';
         $class_name = ucfirst($model_name);
 
         if (file_exists($filename)) {
