@@ -20,7 +20,7 @@
  *
  * @package database
  */
-abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
+abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, ArrayAccess
 {
     /**
      * 预定义的事件
@@ -263,25 +263,53 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
     {
         $row = array();
         $attribs = self::$__ref[$this->__class]['attribs'];
-        // ralias 是 别名 => 实际字段名
-        $ralias = self::$__ref[$this->__class]['ralias'];
 
-        foreach (array_keys($this->__all_props) as $a) {
-            $f = $ralias[$a];
-            if ($attribs[$f]['assoc']) {
+        foreach ($this->__all_props as $prop => $value) {
+            if ($attribs[$prop]['assoc']) {
                 if ($recursion <= 0) { continue; }
-                if (is_array($this->__all_props[$a]) || $this->__all_props[$a] instanceof Iterator) {
-                    $row[$f] = array();
-                    foreach ($this->__all_props[$a] as $obj) {
-                        $row[$f][] = $obj->toArray($recursion - 1);
+                if (is_array($value) || $value instanceof Iterator) {
+                    $row[$prop] = array();
+                    foreach ($value as $obj) {
+                        $row[$prop][] = $obj->toArray($recursion - 1);
                     }
-                } else {
-                    $row[$f] = $this->__all_props[$a]->toArray($recursion - 1);
                 }
             } else {
-                $row[$f] = isset($this->__all_props[$a]) ? $this->__all_props[$a] : $this->{$a};
+                $row[$prop] = $value;
             }
         }
+
+        return $row;
+    }
+
+    /**
+     * 返回对象属性数组，键名是保存对象时用的数据表的字段名
+     *
+     * @param int $recursion
+     *
+     * @return array
+     */
+    function toDbArray($recursion = 99)
+    {
+        $row = array();
+        $attribs = self::$__ref[$this->__class]['attribs'];
+        $ralias = self::$__ref[$this->__class]['ralias'];
+
+        foreach ($this->__all_props as $prop => $value) {
+            $field = $ralias[$prop];
+
+            if ($attribs[$prop]['assoc']) {
+                if ($recursion <= 0) { continue; }
+                if (is_array($value) || $value instanceof Iterator) {
+                    $row[$field] = array();
+                    foreach ($value as $obj) {
+                        $row[$field][] = $obj->toDbArray($recursion - 1);
+                    }
+                }
+            } else {
+                $row[$field] = $value;
+            }
+        }
+
         return $row;
     }
 
@@ -333,8 +361,11 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface
                 // 如果请求的关联对象尚不存在，则尝试从数据库读取该关联对象
 
                 // 如果读取不到，则尝试构造一个 Null 对象
-                $class_name = $attr['class'] . 'Null';
-                if (!class_exists($class_name, false)) {
+                $class_name = $attr['class'] . '_Null';
+                try {
+                    Q::loadClass($class_name);
+                } catch (QException $ex) {
+                    unset($ex);
                     $text = <<<EOT
 class {$class_name} extends {$attr['class']}
 {
@@ -380,6 +411,7 @@ class {$class_name} extends {$attr['class']}
 EOT;
                     eval($text);
                 }
+
                 $obj = new $class_name();
                 $this->{$varname} = $obj;
                 return $obj;
@@ -470,6 +502,52 @@ EOT;
             // LC_MSG: Call to undefined method "%s::%s()".
             throw new QDB_ActiveRecord_Exception(__('Call to undefined method "%s::%s()".', $this->__class, $method));
         }
+    }
+
+    /**
+     * ArrayAccess 接口方法
+     *
+     * @param string $key
+     *
+     * @return boolean
+     */
+    function offsetExists($key)
+    {
+        return isset($this->{$key});
+    }
+
+    /**
+     * ArrayAccess 接口方法
+     *
+     * @param string $key
+     * @param mixed $value
+     */
+    function offsetSet($key, $value)
+    {
+        $this->{$key} = $value;
+    }
+
+    /**
+     * ArrayAccess 接口方法
+     *
+     * @param string $key
+     *
+     * @return boolean
+     */
+    function offsetGet($key)
+    {
+        return $this->{$key};
+    }
+
+    /**
+     * ArrayAccess 接口方法
+     *
+     * @param string $key
+     */
+    function offsetUnset($key)
+    {
+        // LC_MSG: QDB_ActiveRecord_Abstract 没有实现 offsetUnset() 方法.
+        throw new QDB_ActiveRecord_Exception(__('QDB_ActiveRecord_Abstract 没有实现 offsetUnset() 方法.'));
     }
 
     /**
@@ -851,63 +929,82 @@ EOT;
      */
     protected function create($recursion = 99)
     {
-        $keys = array();
-        foreach (self::$__ref[$this->__class]['create_reject'] as $f) {
-            $keys[$f] = self::$__ref[$this->__class]['ralias'][$f];
-            $this->__all_props[$f] = null;
-        }
-        foreach (self::$__ref[$this->__class]['create_autofill'] as $f => $fill) {
-            $this->__all_props[$f] = $fill;
+        $ref = self::$__ref[$this->__class];
+        $table = $this->getTable();
+        $null = QDB_ActiveRecord_Removed_Prop::instance();
+
+        // 开启事务
+        $tran = $table->getConn()->beginTrans();
+
+        // 根据 create_reject 数组，将属性设置为 QDB_ActiveRecord_Removed_Prop 对象
+        foreach ($ref['create_reject'] as $prop) {
+            $this->__all_props[$prop] = $null;
         }
 
+        // 根据 create_autofill 设置对属性进行填充
+        foreach ($ref['create_autofill'] as $prop => $fill) {
+            $this->__all_props[$prop] = $fill;
+        }
+
+        // 进行 create 验证
         $this->doValidate('create');
+
+        // 引发 before_create 事件
         $this->beforeCreate();
         $this->__doCallbacks(self::before_create);
 
-        $row = $this->toArray(0);
+        // 将对象属性转换为名值对数组
+        $row = $this->toDbArray(0);
 
-        foreach (self::$__ref[$this->__class]['create_reject'] as $f) {
-            if (is_null($this->__all_props[$f])) {
-                unset($row[$keys[$f]]);
+        // 过滤掉值为 QDB_ActiveRecord_Removed_Prop 的键
+        foreach ($row as $key => $value) {
+            if (is_object($value) && ($value instanceof QDB_ActiveRecord_Removed_Prop)) {
+                unset($row[$key]);
             }
         }
-        $table = self::$__ref[$this->__class]['table'];
-        /* @var $table QDB_Table */
+
+        // 将名值对保存到数据库
         $id = $table->create($row, 0);
         $this->__all_props[$this->idname()] = $id;
 
-        foreach (self::$__ref[$this->__class]['links'] as $prop_name => $null) {
-            $link = self::$__ref[$this->__class]['table']->getLink($prop_name);
+        // 遍历关联的对象，并调用对象的save()方法
+        foreach ($ref['links'] as $prop => $null) {
+            if (!isset($this->__all_props[$prop])) { continue; }
+
+            $link = $table->getLink($prop);
             /* @var $link QDB_Table_Link */
             $mk = $this->alias_name($link->main_key);
 
             if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
-                if (!isset($this->__all_props[$prop_name]) || !is_object($this->__all_props[$prop_name])) {
+                if (!isset($this->__all_props[$prop]) || !is_object($this->__all_props[$prop])) {
                     continue;
                 }
-                $obj = $this->__all_props[$prop_name];
+                // 务必为关联对象设置 assoc_key 字段值
+                $obj = $this->__all_props[$prop];
                 $ak = $obj->alias_name($link->assoc_key);
                 $obj->{$ak} = $this->{$mk};
-                $obj->save();
-//                $row = $this->__all_props[$prop_name]->toArray(0);
-//                $link->saveAssocData($row, $this->__all_props[$link->main_key], 0);
+                $obj->save(false, $recursion - 1);
             } else {
-//                $rowset = array();
                 $ak = null;
                 $mkv = $this->{$mk};
-                foreach ($this->__all_props[$prop_name] as $obj) {
+                foreach ($this->__all_props[$prop] as $obj) {
                     if (is_null($ak)) { $ak = $obj->alias_name($link->assoc_key); }
                     $obj->{$ak} = $mkv;
-                    $obj->save();
-//                    $rowset[] = $obj->toArray(0);
+                    $obj->save(false, $recursion - 1);
                 }
-//                $link->saveAssocData($rowset, $this->__all_props[$link->main_key], 0);
             }
         }
 
-        $this->__all_props[$this->idname()] = $id;
+        // 引发after_create事件
         $this->__doCallbacks(self::after_create);
         $this->afterCreate();
+
+        // 将所有为QDB_ActiveRecord_Removed_Prop的属性设置为null
+        foreach ($this->__all_props as $prop => $value) {
+            if (is_object($value) && ($value instanceof QDB_ActiveRecord_Removed_Prop)) {
+                $this->__all_props[$prop] = null;
+            }
+        }
     }
 
     /**
@@ -917,62 +1014,81 @@ EOT;
      */
     protected function update($recursion = 99)
     {
-        $keys = array();
-        foreach (self::$__ref[$this->__class]['update_reject'] as $f) {
-            $keys[$f] = self::$__ref[$this->__class]['ralias'][$f];
-            $this->__all_props[$f] = null;
-        }
-        foreach (self::$__ref[$this->__class]['update_autofill'] as $f => $fill) {
-            $this->__all_props[$f] = $fill;
+        $ref = self::$__ref[$this->__class];
+        $table = $this->getTable();
+        $null = QDB_ActiveRecord_Removed_Prop::instance();
+
+        // 开启事务
+        $tran = $table->getConn()->beginTrans();
+
+        // 根据 update_reject 设置，将属性设置为 QDB_ActiveRecord_Removed_Prop 对象
+        foreach ($ref['update_reject'] as $prop) {
+            $this->__all_props[$prop] = $null;
         }
 
-        /* @var $table QDB_Table */
+        // 根据 update_autofill 设置对属性进行填充
+        foreach ($ref['update_autofill'] as $prop => $fill) {
+            $this->__all_props[$prop] = $fill;
+        }
+
+        // 进行 update 验证
         $this->doValidate('update');
+
+        // 引发before_update事件
         $this->beforeUpdate();
         $this->__doCallbacks(self::before_update);
 
-        $row = $this->toArray(0);
+        // 将对象属性转换为名值对数组
+        $row = $this->toDbArray(0);
 
-        foreach (self::$__ref[$this->__class]['update_reject'] as $f) {
-            if ($this->__all_props[$f] === null) {
-                unset($row[$keys[$f]]);
+        // 过滤掉值为 QDB_ActiveRecord_Removed_Prop 的键
+        foreach ($row as $key => $value) {
+            if (is_object($value) && ($value instanceof QDB_ActiveRecord_Removed_Prop)) {
+                unset($row[$key]);
             }
         }
-        $table = self::$__ref[$this->__class]['table'];
+
+        // 将名值对保存到数据库
         $table->update($row, 0);
 
-        foreach (self::$__ref[$this->__class]['links'] as $prop_name => $null) {
-            if (!isset($this->__all_props[$prop_name])) { continue; }
+        // 遍历关联的对象，并调用对象的save()方法
+        foreach ($ref['links'] as $prop => $null) {
+            if (!isset($this->__all_props[$prop])) { continue; }
 
-            $link = self::$__ref[$this->__class]['table']->getLink($prop_name);
+            $link = $table->getLink($prop);
             /* @var $link QDB_Table_Link */
             $mk = $this->alias_name($link->main_key);
+
             if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
-                if (!isset($this->__all_props[$prop_name]) || !is_object($this->__all_props[$prop_name])) {
+                if (!isset($this->__all_props[$prop]) || !is_object($this->__all_props[$prop])) {
                     continue;
                 }
-                $obj = $this->__all_props[$prop_name];
+                // 务必为关联对象设置 assoc_key 字段值
+                $obj = $this->__all_props[$prop];
                 $ak = $obj->alias_name($link->assoc_key);
                 $obj->{$ak} = $this->{$mk};
-                $obj->save();
-//                $row = $this->__all_props[$prop_name]->toArray(0);
-//                $link->saveAssocData($row, $this->__all_props[$link->main_key], 0);
+                $obj->save(false, $recursion - 1);
             } else {
-//                $rowset = array();
                 $ak = null;
                 $mkv = $this->{$mk};
-                foreach ($this->__all_props[$prop_name] as $obj) {
+                foreach ($this->__all_props[$prop] as $obj) {
                     if (is_null($ak)) { $ak = $obj->alias_name($link->assoc_key); }
                     $obj->{$ak} = $mkv;
-                    $obj->save();
-//                    $rowset[] = $obj->toArray(0);
+                    $obj->save(false, $recursion - 1);
                 }
-//                $link->saveAssocData($rowset, $this->__all_props[$link->main_key], 0);
             }
         }
 
+        // 引发after_create事件
         $this->__doCallbacks(self::after_update);
         $this->afterUpdate();
+
+        // 将所有为QDB_ActiveRecord_Removed_Prop的属性设置为null
+        foreach ($this->__all_props as $prop => $value) {
+            if (is_object($value) && ($value instanceof QDB_ActiveRecord_Removed_Prop)) {
+                $this->__all_props[$prop] = null;
+            }
+        }
     }
 
     /**
@@ -1055,8 +1171,11 @@ EOT;
 
         $error = array();
         $v = new QValidate_Validator(null);
+
         foreach (self::$__ref[$class]['validation'] as $prop => $rules) {
             if (!isset($props[$prop])) { continue; }
+            if (is_object($data[$prop]) && ($data[$prop] instanceof QDB_ActiveRecord_Removed_Prop)) { continue; }
+
             $v->setData($data[$prop]);
             $v->id = $prop;
             foreach ($rules as $rule) {
@@ -1071,6 +1190,7 @@ EOT;
                     $v->runRule($rule);
                 }
             }
+
             if (!$v->isPassed()) {
                 $error[$prop] = $v->getFailed();
             }
@@ -1199,5 +1319,26 @@ EOT;
      */
     protected function afterInitialize()
     {
+    }
+}
+
+class QDB_ActiveRecord_Removed_Prop
+{
+    private function __construct()
+    {
+    }
+
+    static function instance()
+    {
+        static $instance;
+        if (is_null($instance)) {
+            $instance = new QDB_ActiveRecord_Removed_Prop();
+        }
+        return $instance;
+    }
+
+    function __toString()
+    {
+        return '';
     }
 }

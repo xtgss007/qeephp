@@ -186,9 +186,10 @@ if (empty($rules)) { continue; }
 }
 
 /**
- * <?php echo $class_name; ?>Null 用于封装不存在的 <?php echo $class_name; ?> 对象
+ * <?php echo $class_name; ?>_Null 用于封装不存在的 <?php echo $class_name; ?> 对象
  */
-class <?php echo $class_name; ?>Null extends <?php echo $class_name; ?>
+class <?php echo $class_name; ?>_Null extends <?php echo $class_name; ?>
+
 {
     function __construct(array $data = null)
     {
@@ -227,4 +228,12 @@ class <?php echo $class_name; ?>Null extends <?php echo $class_name; ?>
     protected function update($recursion = 99)
     {
     }
+}
+
+
+/**
+ * <?php echo $class_name; ?>_Exception 用于封装 <?php echo $class_name; ?> 领域逻辑异常
+ */
+class <?php echo $class_name; ?>_Exception extends QException
+{
 }
