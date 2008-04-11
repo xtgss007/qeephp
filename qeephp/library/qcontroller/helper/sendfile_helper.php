@@ -65,7 +65,7 @@ class Helper_Sendfile
     {
         $filename = '"' . htmlspecialchars($filename) . '"';
         header("Content-Type: {$mime_type}");
-        $charset = Q::getIni('response_charset');
+        $charset = Q::getIni('i18n_response_charset');
         header("Content-Disposition: attachment; filename={$filename}; charset={$charset}");
         header('Pragma: cache');
         header('Cache-Control: public, must-revalidate, max-age=0');

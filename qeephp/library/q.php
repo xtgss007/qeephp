@@ -138,7 +138,7 @@ abstract class Q
 
         if (is_null($backend)) {
             if (is_null($obj)) {
-                $obj = self::getSingleton(self::getIni('default_cache_backend'));
+                $obj = self::getSingleton(self::getIni('runtime_cache_backend'));
             }
             return $obj->get($id, $policy);
         } else {
@@ -161,7 +161,7 @@ abstract class Q
 
         if (is_null($backend)) {
             if (is_null($obj)) {
-                $obj = self::getSingleton(self::getIni('default_cache_backend'));
+                $obj = self::getSingleton(self::getIni('runtime_cache_backend'));
             }
             $obj->set($id, $data, $policy);
         } else {
@@ -180,7 +180,7 @@ abstract class Q
     static function removeCache($id, array $policy = null, $backend = null)
     {
         if (is_null($backend)) {
-            $cache = self::getSingleton(self::getIni('default_cache_backend'));
+            $cache = self::getSingleton(self::getIni('runtime_cache_backend'));
         } else {
             $cache = self::getSingleton($backend);
         }
@@ -335,7 +335,7 @@ abstract class Q
      */
     static function loadVendor($name)
     {
-        Q::loadFile($name . '.php', true, (array)self::getIni('vendor_ext_dir'));
+        Q::loadFile($name . '.php', true, (array)self::getIni('runtime_vendor_dirs'));
     }
 
     /**
@@ -352,6 +352,24 @@ abstract class Q
         }
         self::loadClass($class_name);
         return self::register(new $class_name(), $class_name);
+    }
+
+    /**
+     * 获得指定名字的服务对象实例
+     *
+     * @param string $service_name
+     *
+     * @return object
+     */
+    static function getService($service_name)
+    {
+        $class_name = self::getIni('service_' . strtolower($service_name));
+        if (empty($class_name)) {
+            // LC_MSG: 未配置的服务名 "%s".
+            throw new QException(__('未配置的服务名 "%s".', $service_name));
+        }
+
+        return self::getSingleton($class_name);
     }
 
     /**
@@ -566,7 +584,7 @@ function __()
 {
     $args = func_get_args();
     $msg = array_shift($args);
-    $language = strtolower(Q::getIni('error_msg_language'));
+    $language = strtolower(Q::getIni('error_language'));
     $messages = Q::loadFile('LC_MESSAGES.php', false, Q_DIR . '/_lang/' . $language, false);
     if (isset($messages[$msg])) {
         $msg = $messages[$msg];

@@ -21,9 +21,9 @@ class Test_QDB_Table_Links extends PHPUnit_Framework_TestCase
 {
     function __construct()
     {
-        $dsn = Q::getIni('dsn');
+        $dsn = Q::getIni('default_dsn');
         if (empty($dsn)) {
-            Q::setIni('dsn', Q::getIni('dsn_mysql'));
+            Q::setIni('default_dsn', Q::getIni('dsn_mysql'));
         }
         parent::__construct();
     }

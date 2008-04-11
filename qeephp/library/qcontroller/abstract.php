@@ -102,7 +102,7 @@ abstract class QController_Abstract
         } else {
             $arr = array($this->request->controller_name, $action_name, $namespace, $module);
             $this->view = null;
-            return call_user_func_array(Q::getIni('on_action_not_found'), $arr);
+            return call_user_func_array(Q::getIni('dispatcher_on_action_not_found'), $arr);
         }
     }
 

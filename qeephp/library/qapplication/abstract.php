@@ -63,23 +63,21 @@ abstract class QApplication_Abstract
 
         set_exception_handler(array($this, 'exceptionHandler'));
         set_magic_quotes_runtime(0);
-        date_default_timezone_set(Q::getIni('default_timezone'));
+        date_default_timezone_set(Q::getIni('l10n_default_timezone'));
 
-        $this->log = Q::getSingleton(Q::getIni('log_provider'));
-        $this->request = Q::getSingleton(Q::getIni('request_class'));
-        $this->acl = Q::getSingleton(Q::getIni('request_acl_class'));
+        $this->log = Q::getService('log');
+        $this->request = Q::getSingleton(Q::getIni('dispatcher_request_class'));
+        $this->acl = Q::getService('acl');
 
-        if (Q::getIni('session_provider')) {
-            Q::loadClass(Q::getIni('session_provider'));
+        if (Q::getIni('runtime_session_provider')) {
+            Q::loadClass(Q::getIni('runtime_session_provider'));
         }
-        if (Q::getIni('auto_session')) {
+        if (Q::getIni('runtime_session_start')) {
             session_start();
         }
 
-        Q::setIni('on_access_denied', array($this, 'onAccessDenied'));
-        Q::setIni('on_action_not_found', array($this, 'onActionNotFound'));
-        Q::setIni('current_namespace', $this->request->namespace);
-        Q::setIni('current_module', $this->request->module_name);
+        Q::setIni('dispatcher_on_access_denied',    array($this, 'onAccessDenied'));
+        Q::setIni('dispatcher_on_action_not_found', array($this, 'onActionNotFound'));
     }
 
     /**
@@ -110,7 +108,7 @@ abstract class QApplication_Abstract
         // 检查是否有权限访问
         $arr = array($controller_name, $action_name, $namespace, $module);
         if (!$this->checkAuthorized($controller_name, $action_name, $namespace, $module)) {
-            return call_user_func_array(Q::getIni('on_access_denied'), $arr);
+            return call_user_func_array(Q::getIni('dispatcher_on_access_denied'), $arr);
         }
 
         // 尝试载入控制器
@@ -129,7 +127,7 @@ abstract class QApplication_Abstract
         try {
             Q::loadClassFile($filename, array($dir), $class_name);
         } catch (Exception $ex) {
-            return call_user_func_array(Q::getIni('on_action_not_found'), $arr);
+            return call_user_func_array(Q::getIni('dispatcher_on_action_not_found'), $arr);
         }
 
         $controller = new $class_name($this);
@@ -137,8 +135,8 @@ abstract class QApplication_Abstract
 
         $ret = $controller->execute($action_name, $namespace, $module);
 
-        if (!headers_sent() && Q::getIni('auto_response_header')) {
-            header('Content-Type: text/html; charset=' . Q::getIni('response_charset'));
+        if (!headers_sent() && Q::getIni('runtime_response_header')) {
+            header('Content-Type: text/html; charset=' . Q::getIni('i18n_response_charset'));
         }
 
         if (is_object($ret) && ($ret instanceof QResponse_Interface)) {
@@ -178,8 +176,8 @@ abstract class QApplication_Abstract
     function checkAuthorized($controller_name, $action_name, $namespace = null, $module = null)
     {
         // 如果控制器没有提供 ACT，或者提供了一个空的 ACT，则假定允许用户访问
-        $raw_act = $this->getControllerACT($controller_name);
-        if (is_null($raw_act) || empty($raw_act)) { return true; }
+        $raw_act = $this->getControllerACT($controller_name, $namespace, $module);
+        if (empty($raw_act)) { return true; }
 
         $act = $this->acl->formatACT($raw_act);
         $act['actions'] = array();
@@ -204,25 +202,33 @@ abstract class QApplication_Abstract
         }
 
         // 如果当前要访问的控制器方法没有在 act 中指定，则检查 act 中是否提供了 ACTION_ALL
-        if (!isset($act['actions']['action_all'])) { return true; }
-        return $this->acl->check($roles, $act['actions']['action_all']);
+        if (!isset($act['actions']['ACTION_ALL'])) { return true; }
+        return $this->acl->check($roles, $act['actions']['ACTION_ALL']);
     }
 
     /**
      * 获取指定控制器的访问控制表（ACT）
      *
      * @param string $controller_name
+     * @param string $namespace
+     * @param string $module
      *
      * @return array
      */
-    function getControllerACT($controller_name)
+    function getControllerACT($controller_name, $namespace = null, $module = null)
     {
-        // 首先尝试从全局 ACT 查询控制器的 ACT
-        $act = Q::getIni('global_act/' . $controller_name);
+        if (empty($namespace)) {
+            $namespace = 'default';
+        }
+        if (empty($module)) {
+            $module = 'default';
+        }
+
+        $act = Q::getIni("acl_global_act/{$module}/{$namespace}/{$controller_name}");
         if ($act) {
             return $act;
         } else {
-            return Q::getIni('default_act');
+            return Q::getIni('acl_default_act');
         }
     }
 

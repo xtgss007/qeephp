@@ -50,13 +50,13 @@ abstract class Test_QDB_Adapter_Abstract extends PHPUnit_Framework_TestCase
     function testGetSchema()
     {
         $schema = $this->dbo->getSchema();
-        $this->assertEquals(Q::getIni('dsn/database'), $schema);
+        $this->assertEquals(Q::getIni('default_dsn/database'), $schema);
     }
 
     function testGetTablePrefix()
     {
         $prefix = $this->dbo->getTablePrefix();
-        $this->assertEquals(Q::getIni('dsn/prefix'), $prefix);
+        $this->assertEquals(Q::getIni('default_dsn/prefix'), $prefix);
     }
 
     abstract function testQstr();
@@ -283,7 +283,7 @@ abstract class Test_QDB_Adapter_Abstract extends PHPUnit_Framework_TestCase
         $this->insertIntoPosts(10);
 
         // 明确的回滚事务
-        $tran->failTrans();
+        $tran->setTransFailed();
         unset($tran);
         $newCount = $this->dbo->getOne($sql);
         $this->assertEquals($count, $newCount);

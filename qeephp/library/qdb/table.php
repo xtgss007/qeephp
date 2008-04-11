@@ -1314,7 +1314,11 @@ class QDB_Table
 
         if ($cached) {
             // 尝试从缓存读取
-            $policy = array('encoding_filename' => true, 'serialize' => true);
+            $policy = array(
+                'encoding_filename' => true,
+                'serialize' => true,
+                'lifetime' => Q::getIni('db_meta_lifetime')
+            );
             $backend = Q::getIni('db_meta_cache_backend');
             $meta = Q::getCache($this->cache_id, $policy, $backend);
             if (is_array($meta) && !empty($meta)) {

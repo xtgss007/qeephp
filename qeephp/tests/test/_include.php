@@ -25,7 +25,7 @@ require dirname(__FILE__) . '/../../library/q.php';
 
 spl_autoload_register(array('Q', 'loadClass'));
 
-Q::setIni('internal_cache_dir', dirname(__FILE__) . '/../../tmp');
+Q::setIni('runtime_cache_dir', dirname(__FILE__) . '/../../tmp');
 define('FIXTURE_DIR', dirname(dirname(__FILE__)) . DS . 'fixture');
 Q::import(FIXTURE_DIR);
 

@@ -23,20 +23,6 @@
 abstract class QDB_Adapter_Abstract
 {
     /**
-     * 所有 SQL 查询的日志
-     *
-     * @var array
-     */
-    public $log = array();
-
-    /**
-     * 执行的查询计数
-     *
-     * @var int
-     */
-    public $query_count = 0;
-
-    /**
      * 数据库连接信息
      *
      * @var mixed
@@ -166,19 +152,14 @@ abstract class QDB_Adapter_Abstract
      */
     protected $savepoint_enabled = false;
 
+    #IFDEF DEBUG
     /**
-     * 指示是否将查询语句放入 log 数组
+     * 日志服务程序
      *
-     * @var boolean
+     * @var QLog
      */
-    protected $log_query = false;
-
-    /**
-     * 指示是否将查询语句写入日志
-     *
-     * @var boolean
-     */
-    protected $log_message = false;
+    protected $logger;
+    #ENDIFDEF
 
     /**
      * 指示是否将查询结果中的字段名转换为全小写
@@ -197,7 +178,10 @@ abstract class QDB_Adapter_Abstract
     {
         $this->dsn = $dsn;
         $this->id = $id;
-        $this->log_message = function_exists('log_message');
+
+        #IFDEF DEBUG
+        $this->logger = Q::getService('log');
+        #ENDIFDEF
     }
 
     /**
@@ -804,7 +788,7 @@ abstract class QDB_Adapter_Abstract
     /**
      * 指示在调用 completeTrans() 时回滚事务
      */
-    function failTrans()
+    function setTransFailed()
     {
         $this->has_failed_query = true;
     }

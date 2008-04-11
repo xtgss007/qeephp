@@ -16,68 +16,139 @@
  */
 
 return array(
-    // {{{ 核心配置
+
+    // {{{ 运行环境相关
+
+    /**
+     * 要使用的 session 服务
+     */
+    'runtime_session_provider'  => null,
+
+    /**
+     * 是否自动打开 session
+     */
+    'runtime_session_start'     => false,
+
+    /**
+     * QeePHP 内部及 cache 系列函数使用的缓存目录
+     * 应用程序必须设置该选项才能使用 cache 功能。
+     */
+    'runtime_cache_dir'         => null,
+
+    /**
+     * 默认使用的缓存服务
+     */
+    'runtime_cache_backend'     => 'QCache_File',
+
+    /**
+     * 第三方库目录
+     */
+    'runtime_vendor_dirs'       => array(Q_DIR . DS . '_vendor'),
+
+    /**
+     * 是否自动输出 Content-Type: text/html; charset=%i18n_response_charset%
+     */
+    'runtime_response_header'   => true,
+
+    // }}}
+
+
+
+    // {{{ 错误处理相关
+
+    /**
+     * 指示是否显示错误信息（有一定安全风险）
+     *
+     * 在生产环境建议关闭此功能。
+     */
+    'error_display'             => true,
+
+    /**
+     * 指示是否显示友好的错误信息（有安全风险）
+     *
+     * 在生产环境必须关闭此功能。
+     */
+    'error_display_friendly'    => true,
+
+    /**
+     * 指示是否在错误信息中显示出错位置的源代码（有安全风险）
+     *
+     * 在生产环境必须关闭此功能。
+     */
+    'error_display_source'      => true,
+
+    /**
+     * 错误信息的默认语言
+     */
+    'error_language'            => 'zh_cn',
+
+    // }}}
+
+
+
+    // {{{ 调度器相关
 
     /**
      * 指示控制器的 url 参数名和默认控制器名
      *
      * 控制器名字只能是a-z字母和0-9数字，以及“_”下划线。
      */
-    'controller_accessor'       => 'controller',
-    'default_controller'        => 'default',
+    'dispatcher_controller_accessor'    => 'controller',
+    'dispatcher_default_controller'     => 'default',
 
     /**
      * 指示 动作方法的 url 参数名和默认 动作方法名
      */
-    'action_accessor'           => 'action',
-    'default_action'            => 'index',
+    'dispatcher_action_accessor'        => 'action',
+    'dispatcher_default_action'         => 'index',
 
     /**
      * 指示命名空间的 url 参数名和默认命名空间
      */
-    'namespace_accessor'        => 'namespace',
-    'default_namespace'         => null,
+    'dispatcher_namespace_accessor'     => 'namespace',
+    'dispatcher_default_namespace'      => null,
 
     /**
      * 指示模块的 url 参数名和默认模块名
      */
-    'module_accessor'           => 'module',
-    'default_module'            => null,
+    'dispatcher_module_accessor'        => 'module',
+    'dispatcher_default_module'         => null,
 
     /**
      * 当无权访问请求的动作时要调用的处理例程
      */
-    'on_access_denied'          => null,
+    'dispatcher_on_access_denied'       => null,
 
     /**
      * 当请求的动作不存在时要调用的处理例程
      */
-    'on_action_not_found'       => null,
+    'dispatcher_on_action_not_found'    => null,
 
     /**
      * 指示要使用的请求对象
      */
-    'request_class'             => 'QRequest',
+    'dispatcher_request_class'          => 'QRequest',
 
     /**
-     * 是否启动session_start，对负载有影响，建议关闭。如果需要验证等功能，请使用cookie代替
+     * url 参数的传递模式，可以是标准、PATHINFO、URL 重写等模式
      */
-    'auto_session'              => false,
+    'dispatcher_url_mode'               => 'standard',
 
-    /**
-     * 处理请求时要使用的验证服务提供程序
-     */
-    'request_acl_class'         => 'QACL',
+    // }}}
+
+
+
+    // {{{ 访问控制相关
 
     /**
      * 指示当没有为控制器提供 ACT 时，要使用的默认 ACT
      */
-    'default_act'               => array('allow' => 'acl_everyone'),
+    'acl_default_act'   => array('allow' => 'ACL_EVERYONE'),
 
     /**
      * 全局 ACT，当没有指定 ACT 时则从全局 ACT 中查找指定控制器的 ACT
      */
-    'global_act'                => null,
+    'acl_global_act'    => null,
 
     /**
      * 指示 ACL 组件用什么键名在 session 中保存用户数据
@@ -85,155 +156,141 @@ return array(
      * 如果在一个域名下同时运行多个应用程序，
      * 请务必为每一个应用程序使用自己独一无二的键名
      */
-    'acl_session_key'           => 'acl_userdata',
+    'acl_session_key'   => 'acl_userdata',
 
     /**
      * 指示 ACL 组件用什么键名在 session 中保存用户角色信息
      */
-    'acl_roles_key'             => 'acl_roles',
-
-    /**
-     * url 参数的传递模式，可以是标准、PATHINFO、URL 重写等模式
-     */
-    'url_mode'                  => 'standard',
-
-    /**
-     * 指示默认的应用程序入口文件名
-     */
-    'url_bootstrap'             => 'index.php',
-
-    /**
-     * QeePHP 内部及 cache 系列函数使用的缓存目录
-     * 应用程序必须设置该选项才能使用 cache 功能。
-     */
-    'internal_cache_dir'        => null,
-
-    /**
-     * 默认使用的缓存服务
-     */
-    'default_cache_backend'     => 'QCache_File',
-
-    /**
-     * 默认的时区设置
-     */
-    'default_timezone'          => 'Asia/Shanghai',
-
-    /**
-     * 第三方库的保存目录
-     */
-    'vendor_ext_dir'       => array(Q_DIR . DS . '_vendor'),
+    'acl_roles_key'     => 'acl_roles',
 
     // }}}
+
+
 
     // {{{ 数据库相关
 
     /**
      * 数据库连接设置
      */
-    'dsn'                       => null,
+    'db_default_dsn'        => null,
 
     /**
      * 数据表元数据缓存时间（秒），如果 db_meta_cached 设置为 false，则不会缓存数据表元数据
-     * 通常开发时，该设置为 10，以便修改数据库表结构后应用程序能够立刻刷新元数据
      */
-    'db_meta_lifetime'          => 0,
+    'db_meta_lifetime'      => 0,
 
     /**
      * 指示是否缓存数据表的元数据
      */
-    'db_meta_cached'            => true,
+    'db_meta_cached'        => true,
 
     /**
      * 缓存元数据使用的缓存服务
      */
-    'db_meta_cache_backend'     => 'QCache_File',
+    'db_meta_cache_backend' => 'QCache_File',
 
     // }}}
+
+
 
     // {{{ View 相关
 
     /**
      * 要使用的模板引擎，'PHP' 表示使用 PHP 语言本身作模板引擎
      */
-    'view_adapter'               => 'QView_Adapter_Gingko',
+    'view_adapter'          => 'QView_Adapter_Gingko',
 
     /**
      * 模板引擎要使用的配置信息
      */
-    'view_config'               => null,
+    'view_config'           => null,
 
     /**
      * QWebControls 扩展控件的保存目录
      */
-    'webcontrols_ext_dir'       => array(Q_DIR . '/_webcontrols'),
+    'view_webcontrols_dirs' => array(Q_DIR . DS . '_webcontrols'),
 
     // }}}
 
-    // {{{ I18N
+
+
+    // {{{ 国际化（I18N）和本地化（L10N）相关
 
     /**
      * 指示 QeePHP 应用程序内部处理数据和输出内容要使用的编码
      */
-    'response_charset'          => 'utf-8',
-
-    /**
-     * 是否自动输出 Content-Type: text/html; charset=response_charset
-     */
-    'auto_response_header'      => true,
+    'i18n_response_charset' => 'utf-8',
 
     /**
      * 指示是否启用多语言支持
      */
-    'multi_languages'           => false,
+    'i18n_multi_languages'  => false,
+
+    /**
+     * 默认的时区设置
+     */
+    'l10n_default_timezone' => 'Asia/Shanghai',
 
     // }}}
 
+
+
     // {{{ 日志和错误处理
-    /**
-     * 指示是否启用日志服务
-     */
-    'log_enabled'               => true,
 
     /**
-     * 指示日志服务的程序
+     * 指示记录哪些优先级的日志（不符合条件的会直接过滤）
      */
-    'log_provider'              => 'QLog',
+    'log_priorities'            => 'NOTICE, DEBUG, WARN, ERR, INFO, CRIT, ALERT',
 
     /**
-     * 指示用什么目录保存日志文件
+     * 是否使用延迟的日志写入
      *
-     * 如果没有指定日志存放目录，则保存到内部缓存目录中
+     * 允许日志延迟写入可以显著减少IO操作，但可能在应用程序出现不可捕获错误时丢失未写入的日志。
      */
-    'log_files_dir'             => null,
+    'log_cached'                => true,
 
     /**
-     * 指示用什么文件名保存日志
+     * 日志缓存块大小（单位KB）
+     *
+     * 更小的缓存块可以节约内存，但写入日志的次数更频繁，性能更低。
      */
-    'log_filename'              => 'access.log',
+    'log_cache_chunk_size'      => 512, // 512KB
 
     /**
-     * 指示当日志文件超过多少 KB 时，自动创建新的日志文件，单位是 KB，不能小于 512KB
+     * 要使用的日志写入程序（可以指定多个）
      */
-    'log_file_maxsize'          => 4096,
+    'log_writers'               => array('QLog_Writer_Stream'),
 
     /**
-     * 指示哪些级别的错误要保存到日志中
+     * QLog_Writer_Stream 要使用的格式化程序
      */
-    'log_level'                 => 'notice, debug, warning, error, exception, log, sql',
+    'log_writer_stream_formatter' => 'QLog_Formatter_Simple',
 
     /**
-     * 指示是否显示错误信息
+     * QLog_Writer_Stream 保存日志文件的目录
      */
-    'display_errors'            => true,
+    'log_writer_stream_dir'     => null,
 
     /**
-     * 指示是否显示友好的错误信息
+     * QLog_Writer_Stream 保存日志文件的文件名
      */
-    'friendly_errors'           => true,
+    'log_writer_stram_filename' => 'access.log',
+
+    // }}}
+
+
+
+    // {{{ 内置服务配置
 
     /**
-     * 指示是否在错误信息中显示出错位置的源代码
+     * 验证服务
      */
-    'display_source'            => true,
+    'service_acl'   => 'QACL',
 
+    /**
+     * 日志服务
+     */
+    'service_log'   => 'QLog',
+
+    // }}}
 );

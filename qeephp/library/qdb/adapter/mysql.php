@@ -153,7 +153,6 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
             }
         } catch (QDB_Exception $ex) {
             // 产生序列值失败，创建序列表
-            unset($ex);
             $this->execute(sprintf('CREATE TABLE %s (id INT NOT NULL)', $qtable));
         }
 
@@ -198,14 +197,12 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
         if (is_array($inputarr)) {
             $sql = $this->fakebind($sql, $inputarr);
         }
+
+        #IFDEF DEBUG
+        $this->logger->append($sql, QLog::DEBUG, 'sql');
+        #ENDIFDEF
+
         if (!$this->conn) { $this->connect(); }
-        if ($this->log_query) {
-            $this->log[] = $sql;
-        }
-        if ($this->log_message) {
-            log_message($sql, 'debug');
-        }
-        $this->query_count++;
         $result = mysql_query($sql, $this->conn);
 
         if (is_resource($result)) {

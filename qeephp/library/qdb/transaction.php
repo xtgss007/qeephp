@@ -34,49 +34,28 @@ class QDB_Transaction
      *
      * @var boolean
      */
-    protected $in_transaction;
+    protected $in_transaction = true;
 
     /**
-     * 父事务
-     *
-     * @var QDB_Transaction
-     */
-    private $parent_transaction = null;
-
-    /**
-     * 子事务
-     *
-     * @var QDB_Transaction
-     */
-    private $child_transaction = null;
-
-    /**
-     * 事务对象的 ID
-     *
-     * @var string
-     */
-    private $id;
-
-    /**
-     * 是否启用日志
+     * 是否将事务标记为已经失败
      *
      * @var boolean
      */
-    private static $log_enabled = false;
+    protected $trans_failed = false;
 
     /**
-     * 事务对象堆栈
+     * 该事务对象使用的助手
      *
-     * @var array
+     * @var QDB_Transaction_Helper
      */
-    private static $transactions_stack = array();
+    protected $helper;
 
     /**
-     * 前一个异常处理例程
+     * 事务的ID
      *
-     * @var mixed
+     * @var string
      */
-    private static $previously_exception_handler;
+    protected $id;
 
     /**
      * 构造函数
@@ -85,34 +64,14 @@ class QDB_Transaction
      */
     function __construct(QDB_Adapter_Abstract $dbo)
     {
-        if (!self::$log_enabled) {
-            self::$log_enabled = function_exists('log_message');
-        }
-        if (self::$log_enabled) {
-            log_message("QDB_Transaction object: {$this->id} constructed.", 'debug');
-        }
-
-        // 如果事务堆栈中已经有事务对象，则把当前对象加入前一个事务对象的链表
-        $last = array_pop(self::$transactions_stack);
-        /* @var $last QDB_Transaction */
-        if ($last) {
-            $last->child_transaction = $this;
-            array_push(self::$transactions_stack, $last);
-            $this->parent_transaction = $last;
-        } else {
-            // 只有构造堆栈中第一个事务对象时才设置异常处理函数
-            self::$previously_exception_handler = set_exception_handler(array(__CLASS__, '__exceptionHandler'));
-            if (self::$log_enabled) {
-                log_message("QDB_Transaction object - set_exception_handler().", 'debug');
-            }
-        }
-
-        $this->id = 'tran-' . count(self::$transactions_stack);
-        array_push(self::$transactions_stack, $this);
-
         $this->dbo = $dbo;
         $this->dbo->startTrans();
-        $this->in_transaction = true;
+        $this->id = $dbo->getID();
+        $this->helper = new QDB_Transaction_Helper($this->id, $this);
+
+        // #IFDEF DEBUG
+
+        // #ENDIF
     }
 
     /**
@@ -120,10 +79,20 @@ class QDB_Transaction
      */
     function __destruct()
     {
-        $this->commit();
-        if (self::$log_enabled) {
-            log_message("QDB_Transaction object: {$this->id} destructed.", 'debug');
+        if ($this->trans_failed) {
+            $this->rollback();
+        } else {
+            $this->commit();
         }
+    }
+
+    /**
+     * 解除事务对象与助手对象的绑定
+     */
+    function unbindHelper()
+    {
+        unset($this->helper);
+        $this->helper = null;
     }
 
     /**
@@ -137,16 +106,6 @@ class QDB_Transaction
     function commit($commit_on_no_errors = true)
     {
         if (!$this->in_transaction) { return; }
-
-        if ($this->child_transaction) {
-            // 先完成子事务的提交
-            $this->child_transaction->commit($commit_on_no_errors);
-        }
-
-        if (self::$log_enabled) {
-            log_message("QDB_Transaction object: {$this->id} commit transaction.", 'debug');
-        }
-
         $this->dbo->completeTrans($commit_on_no_errors);
         $this->in_transaction = false;
     }
@@ -157,16 +116,6 @@ class QDB_Transaction
     function rollback()
     {
         if (!$this->in_transaction) { return; }
-
-        if ($this->child_transaction) {
-            // 先完成子事务的回滚
-            $this->child_transaction->rollback();
-        }
-
-        if (self::$log_enabled) {
-            log_message("QDB_Transaction object: {$this->id} rollback transaction.", 'debug');
-        }
-
         $this->dbo->completeTrans(false);
         $this->in_transaction = false;
     }
@@ -174,18 +123,10 @@ class QDB_Transaction
     /**
      * 指示在调用 complete_trans() 时回滚事务
      */
-    function failTrans()
+    function setTransFailed()
     {
-        if (!$this->in_transaction) { return; }
-
-        if (self::$log_enabled) {
-            log_message("QDB_Transaction object: {$this->id} set failed status.", 'debug');
-        }
-
-        if ($this->child_transaction) {
-            $this->child_transaction->failTrans();
-        }
-        $this->dbo->failTrans();
+        $this->trans_failed = true;
+        $this->dbo->setTransFailed();
     }
 
     /**
@@ -193,37 +134,6 @@ class QDB_Transaction
      */
     function hasFailedQuery()
     {
-        if (!$this->in_transaction) { return null; }
         return $this->dbo->hasFailedQuery();
-    }
-
-    /**
-     * 异常处理函数
-     *
-     * @param Exception $ex
-     */
-    static function __exceptionHandler($ex)
-    {
-        // 如果没有父事务，则还原异常处理例程
-        restore_exception_handler();
-
-        if (self::$log_enabled) {
-            log_message("QDB_Transaction - restore_exception_handler()", 'debug');
-        }
-
-        // 回滚所有事物
-        $transaction = reset(self::$transactions_stack);
-        /* @var $transaction QDB_Transaction */
-        if (is_object($transaction)) {
-            $transaction->rollback();
-        }
-
-        // 重新抛出异常
-        // 强烈鄙视 PHP 不能在异常处理例程中重新抛出异常！！
-        if (empty(self::$previously_exception_handler)) {
-            QException::dump($ex);
-        } else {
-            call_user_func(self::$previously_exception_handler, $ex);
-        }
     }
 }

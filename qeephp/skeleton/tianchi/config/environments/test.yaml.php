@@ -5,44 +5,30 @@
 #############################
 
 # 数据表元数据缓存时间（秒）
-db_meta_lifetime:       300
+db_meta_lifetime:       120
 
 # 指示是否缓存数据表的元数据
 db_meta_cached:         true
-
-# 缓存元数据使用的缓存服务
-db_meta_cache_backend:  QCache_File
 
 
 #############################
 # 日志设置
 #############################
 
-# 指示是否启用日志服务
-log_enabled:            true
-
-# 指示日志服务的程序
-log_provider:           QLog
-
 # 指示用什么目录保存日志文件
-#
-# 如果没有指定日志存放目录，则保存到内部缓存目录中
-log_files_dir:          %ROOT_DIR%/log
+log_writer_stream_dir:  %ROOT_DIR%/log
 
 # 指示用什么文件名保存日志
-log_filename:           test-debug.log
+log_writer_stram_filename: test.log
 
-# 指示当日志文件超过多少 KB 时，自动创建新的日志文件，单位是 KB，不能小于 512KB
-log_file_maxsize:       4096
-
-# 指示哪些级别的错误要保存到日志中
-log_level:              debug, warning, error, exception
+# 指示记录哪些优先级的日志（不符合条件的会直接过滤）
+log_priorities:         EMERG, ALERT, CRIT, ERR, WARN, NOTICE, INFO, DEBUG
 
 # 指示是否显示错误信息
-display_errors:         true
+error_display:          false
 
 # 指示是否显示友好的错误信息
-friendly_errors:        false
+error_display_friendly: false
 
 # 指示是否在错误信息中显示出错位置的源代码
-display_source:         false
+error_display_source:   false

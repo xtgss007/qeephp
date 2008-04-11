@@ -65,7 +65,7 @@ abstract class Chili_Runner_Abstract
         }
 
         clearstatcache();
-        $dir = realpath($dir);
+        $dir = rtrim(realpath($dir), '/\\');
         $appdir = $dir . DS . $appname;
         if (file_exists($appdir)) {
             throw new Chili_Exception(__('Application dir "%s" already exists.', $appdir));

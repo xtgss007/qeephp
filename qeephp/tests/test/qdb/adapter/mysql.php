@@ -26,7 +26,7 @@ class Test_QDB_Adapter_MySQL extends Test_QDB_Adapter_Abstract
 {
     protected function setUp()
     {
-        Q::setIni('dsn', Q::getIni('dsn_mysql'));
+        Q::setIni('default_dsn', Q::getIni('dsn_mysql'));
         parent::setUp();
     }
 

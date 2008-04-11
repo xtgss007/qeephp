@@ -39,25 +39,27 @@ class QDB
     /**
      * 开发者必须通过该方法获得数据库访问对象实例
      *
-     * @param mixed $dsn
+     * @param string $dsn_name
      *
      * @return QDB_Adapter_Abstract
      */
-    static function getConn($dsn = null)
+    static function getConn($dsn_name = null)
     {
-        $default = is_null($dsn);
+        $default = empty($dsn_name);
         if ($default && Q::isRegistered('dbo_default')) {
             return Q::registry('dbo_default');
         }
 
-        if (is_null($dsn)) {
-            $dsn = Q::getIni('dsn');
-
-            if (empty($dsn)) {
-                // LC_MSG: Invalid DSN.
-                throw new QException(__('Invalid DSN.'));
-            }
+        if (empty($dsn_name)) {
+            $dsn = Q::getIni('db_dsn_pool/default');
+        } else {
+            $dsn = Q::getIni('db_dsn_pool/' . $dsn_name);
         }
+        if (empty($dsn)) {
+            // LC_MSG: Invalid DSN.
+            throw new QException(__('Invalid DSN.'));
+        }
+
         $dbtype = $dsn['driver'];
         $objid = "dbo_{$dbtype}_" .  md5(serialize($dsn));
         if (Q::isRegistered($objid)) {

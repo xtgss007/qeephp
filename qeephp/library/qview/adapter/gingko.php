@@ -16,7 +16,7 @@
  */
 
 // {{{ includes
-Q::loadFile('general.php', true, Q_DIR . '/qview/helper');
+include_once Q_DIR . '/qview/helper/general.php';
 // }}}
 
 /**
@@ -34,6 +34,13 @@ class QView_Adapter_Gingko extends QView_Adapter_Abstract
     public $template_dir = '';
 
     /**
+     * 设置响应对象对应的控制器
+     *
+     * @var QController_Abstract
+     */
+    public $controller;
+
+    /**
      * 模板变量
      *
      * @var array
@@ -48,12 +55,10 @@ class QView_Adapter_Gingko extends QView_Adapter_Abstract
     protected $response;
 
     /**
-     * 设置响应对象对应的控制器
+     * 构造函数
      *
-     * @var QController_Abstract
+     * @param QResponse_Render $response
      */
-    public $controller;
-
     function __construct(QResponse_Render $response)
     {
         $this->response = $response;

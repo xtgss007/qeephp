@@ -47,9 +47,12 @@ class QFilter_View_Macros
      */
     protected $request;
 
+    /**
+     * 构造函数
+     */
     function __construct()
     {
-        $this->request = Q::getSingleton(Q::getIni('request_class'));
+        $this->request = Q::getSingleton(Q::getIni('dispatcher_request_class'));
         $this->replace[] = $this->request->getBaseDir();
         $this->replace[] = $this->request->getBaseUri();
         $this->replace[] = $this->request->getRequestUri();

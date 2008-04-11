@@ -91,7 +91,7 @@ class QCache_File
             $this->default_policy = array_merge($this->default_policy, $default_policy);
         }
         if (empty($this->default_policy['cache_dir'])) {
-            $this->default_policy['cache_dir'] = Q::getIni('internal_cache_dir');
+            $this->default_policy['cache_dir'] = Q::getIni('runtime_cache_dir');
         }
     }
 

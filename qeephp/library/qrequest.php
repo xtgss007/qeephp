@@ -84,32 +84,32 @@ class QRequest
             $keys = array_change_key_case($keys);
         }
 
-        $k = strtolower(Q::getIni('controller_accessor'));
+        $k = strtolower(Q::getIni('dispatcher_controller_accessor'));
         if (isset($keys[$k])) {
             $this->controller_name = $_REQUEST[$keys[$k]];
         } else {
-            $this->controller_name = Q::getIni('default_controller');
+            $this->controller_name = Q::getIni('dispatcher_default_controller');
         }
 
-        $k = strtolower(Q::getIni('action_accessor'));
+        $k = strtolower(Q::getIni('dispatcher_action_accessor'));
         if (isset($keys[$k])) {
             $this->action_name = $_REQUEST[$keys[$k]];
         } else {
-            $this->action_name = Q::getIni('default_action');
+            $this->action_name = Q::getIni('dispatcher_default_action');
         }
 
-        $k = strtolower(Q::getIni('module_accessor'));
+        $k = strtolower(Q::getIni('dispatcher_module_accessor'));
         if (isset($keys[$k])) {
             $this->module_name = $_REQUEST[$keys[$k]];
         } else {
-            $this->module_name = Q::getIni('default_module');
+            $this->module_name = Q::getIni('dispatcher_default_module');
         }
 
-        $k = strtolower(Q::getIni('namespace_accessor'));
+        $k = strtolower(Q::getIni('dispatcher_namespace_accessor'));
         if (isset($keys[$k])) {
             $this->namespace = $_REQUEST[$keys[$k]];
         } else {
-            $this->namespace = Q::getIni('default_namespace');
+            $this->namespace = Q::getIni('dispatcher_default_namespace');
         }
 
         $this->controller_name = strtolower(preg_replace('/[^a-z0-9_]+/i', '', $this->controller_name));

@@ -26,9 +26,9 @@ class Test_QDB_Table_Basic extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $dsn = Q::getIni('dsn');
+        $dsn = Q::getIni('default_dsn');
         if (empty($dsn)) {
-            Q::setIni('dsn', Q::getIni('dsn_mysql'));
+            Q::setIni('default_dsn', Q::getIni('dsn_mysql'));
         }
         $dbo = QDB::getConn();
         $params = array(

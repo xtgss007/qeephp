@@ -85,7 +85,7 @@ Q::import(ROOT_DIR . DS . 'app');
  */
 function load_boot_config($reload = false)
 {
-    Q::setIni('internal_cache_dir', ROOT_DIR . DS . 'tmp' . DS . 'internal');
+    Q::setIni('runtime_cache_dir', ROOT_DIR . DS . 'tmp' . DS . 'runtime_cache');
 
     switch (RUN_MODE) {
     case 'deploy':
@@ -136,7 +136,7 @@ function load_module_config($module)
 
     $files = array(
         $root . '/config/environment.yaml.php'                   => 'global',
-        $root . '/config/database.yaml.php'                      => 'dsn_pool',
+        $root . '/config/database.yaml.php'                      => 'db_dsn_pool',
         $root . '/config/acl.yaml.php'                           => 'global_act',
         $root . '/config/environments/' . RUN_MODE . '.yaml.php' => 'global',
     );
@@ -155,7 +155,7 @@ function load_module_config($module)
             $config[$namespace] = array_merge_recursive($config[$namespace], $contents);
         }
     }
-    $config['dsn'] = $config['dsn_pool'][RUN_MODE];
+    $config['db_dsn_pool']['default'] = $config['db_dsn_pool'][RUN_MODE];
 
     return $config;
 }
