@@ -60,11 +60,11 @@ class QDB_Transaction_Helper
     function __destruct()
     {
         restore_exception_handler();
-        if ($this->ex) {
+        if ($this->exception) {
             if ($this->previous_handler) {
-                call_user_func($this->previous_handler, $this->ex);
+                call_user_func($this->previous_handler, $this->exception);
             } else {
-                QException::dump($this->ex);
+                QException::dump($this->exception);
             }
         }
     }

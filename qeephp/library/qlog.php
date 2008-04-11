@@ -127,6 +127,24 @@ class QLog
      * @param int $type
      * @param string $group
      */
+    static function log($msg, $type, $group = 'default')
+    {
+        static $instance;
+
+        if (is_null($instance)) {
+            $instance = Q::getService('log');
+        }
+        /* @var $instance QLog */
+        $instance->append($msg, $type, $group);
+    }
+
+    /**
+     * 追加日志到日志缓存
+     *
+     * @param string $msg
+     * @param int $type
+     * @param string $group
+     */
     function append($msg, $type, $group = 'default')
     {
         if (isset($this->priorities['indexs'][$type])) {

@@ -54,6 +54,32 @@ return array(
 
 
 
+    // {{{ session 相关
+
+    /**
+     * 使用 cookie 存储 session 时，以什么键名在 cookie 中保存 session 数据
+     */
+    'session_cookie_name'       => 'qeeapp_session',
+
+    /**
+     * 使用 cookie 存储 session 时，session 数据的最长有效期
+     */
+    'session_cookie_expiration' => 7200, // 秒
+
+    /**
+     * 使用 cookie 存储 session 时，每隔多少次请求就重新产生一个 session_id
+     */
+    'session_cookie_regenerate' => 3,
+
+    /**
+     * 使用 cookie 存储 session 时，失效数据的回收几率
+     */
+    'session_cookie_gc_probability' => 2,
+
+    // }}}
+
+
+
     // {{{ 错误处理相关
 
     /**

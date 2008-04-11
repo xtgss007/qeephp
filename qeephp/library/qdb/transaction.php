@@ -67,7 +67,7 @@ class QDB_Transaction
         $this->dbo = $dbo;
         $this->dbo->startTrans();
         $this->id = $dbo->getID();
-        $this->helper = new QDB_Transaction_Helper($this->id, $this);
+        $this->helper = new QDB_Transaction_Helper($this);
 
         // #IFDEF DEBUG
 
