@@ -1,7 +1,16 @@
 <?php echo '<?php'; ?>
 
 /**
+ * 定义 <?php echo $class_name; ?>、<?php echo $class_name; ?>_Null 和 <?php echo $class_name; ?>_Exception 类
+ *
+ * @package model
+ * @version $Id$
+ */
+
+/**
  * <?php echo $class_name; ?> 封装来自 <?php echo $table_name; ?> 数据表的记录及领域逻辑
+ *
+ * @package model
  */
 class <?php echo $class_name; ?> extends QDB_ActiveRecord_Abstract
 {
@@ -186,7 +195,9 @@ if (empty($rules)) { continue; }
 }
 
 /**
- * <?php echo $class_name; ?>_Null 用于封装不存在的 <?php echo $class_name; ?> 对象
+ * <?php echo $class_name; ?>_Null 用于封装“空” <?php echo $class_name; ?> 对象
+ *
+ * @package model
  */
 class <?php echo $class_name; ?>_Null extends <?php echo $class_name; ?>
 
@@ -230,9 +241,10 @@ class <?php echo $class_name; ?>_Null extends <?php echo $class_name; ?>
     }
 }
 
-
 /**
  * <?php echo $class_name; ?>_Exception 用于封装 <?php echo $class_name; ?> 领域逻辑异常
+ *
+ * @package model
  */
 class <?php echo $class_name; ?>_Exception extends QException
 {
