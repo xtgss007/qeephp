@@ -372,9 +372,8 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
                 // 如果读取不到，则尝试构造一个 Null 对象
                 $class_name = $attr['class'] . '_Null';
                 $obj = new $class_name();
-                $this->{$varname} = $obj;
-                $this->__all_props[$varname] =& $this->{$varname};
-                return $obj;
+                $this->__props[$varname] = $obj;
+                return $this->__props[$varname];
             }
         } else {
             return $this->__props[$varname];
