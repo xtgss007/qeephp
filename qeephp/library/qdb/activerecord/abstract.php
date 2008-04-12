@@ -154,16 +154,16 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
     function save($force_create = false, $recursion = 99)
     {
         self::__bindAll($this->__class);
-        $this->beforeSave();
-        $this->__doCallbacks(self::before_save);
+        $this->beforeSave($recursion);
+        $this->__doCallbacks(self::before_save, $recursion);
         $id = $this->id();
         if (empty($id) || $force_create) {
             $this->create($recursion);
         } else {
             $this->update($recursion);
         }
-        $this->__doCallbacks(self::after_save);
-        $this->afterSave();
+        $this->__doCallbacks(self::after_save, $recursion);
+        $this->afterSave($recursion);
     }
 
     /**
@@ -316,11 +316,13 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
     /**
      * 返回对象所有属性的 JSON 字符串
      *
+     * @param int $recursion
+     *
      * @return string
      */
-    function toJSON()
+    function toJSON($recursion = 99)
     {
-        return json_encode($this->toArray());
+        return json_encode($this->toArray($recursion));
     }
 
     /**
@@ -347,73 +349,31 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
             throw new QDB_ActiveRecord_Exception(__('Property "%s" not defined.', $varname));
         }
         $attr = self::$__ref[$this->__class]['attribs'][$varname];
+
         if (isset($attr['getter'])) {
             if (!is_array($attr['getter'])) {
                 $attr['getter'] = array($this, $attr['getter']);
             }
             return call_user_func($attr['getter'], $varname);
         }
-        if (!empty($attr['class']) && !is_object($this->__props[$varname])) {
+
+        if ($attr['assoc']) {
+            if (isset($this->__all_props[$varname]) && is_object($this->__all_props[$varname])) {
+                return $this->__all_props[$varname];
+            }
+
             if ($attr['assoc'] == 'has_many' || $attr['assoc'] == 'many_to_many') {
-                $this->{$varname} = array();
-                return array();
+                $this->{$varname} = new QColl($attr['class']);
+                $this->__all_props[$varname] =& $this->{$varname};
+                return $this->{$varname};
             } else {
                 // 如果请求的关联对象尚不存在，则尝试从数据库读取该关联对象
 
                 // 如果读取不到，则尝试构造一个 Null 对象
                 $class_name = $attr['class'] . '_Null';
-                try {
-                    Q::loadClass($class_name);
-                } catch (QException $ex) {
-                    unset($ex);
-                    $text = <<<EOT
-class {$class_name} extends {$attr['class']}
-{
-    function __construct(array \$data = null)
-    {
-        parent::__construct();
-    }
-
-    function setProps(array \$props)
-    {
-    }
-
-    function save(\$force_create = false, \$recursion = 99)
-    {
-    }
-
-    function reload(\$recursion = 1)
-    {
-    }
-
-    function doValidate(\$mode = 'general')
-    {
-    }
-
-    function destroy(\$recursion = 99)
-    {
-    }
-
-    function id()
-    {
-        return null;
-    }
-
-    protected function create(\$recursion = 99)
-    {
-    }
-
-    protected function update(\$recursion = 99)
-    {
-    }
-}
-
-EOT;
-                    eval($text);
-                }
-
                 $obj = new $class_name();
                 $this->{$varname} = $obj;
+                $this->__all_props[$varname] =& $this->{$varname};
                 return $obj;
             }
         } else {
@@ -461,15 +421,15 @@ EOT;
                 $msg = 'Property "%s" type mismatch. expected is "%s", actual is "%s".';
                 throw new QDB_ActiveRecord_Exception(__($msg, $varname, 'array', gettype($value)));
             }
-            foreach ($value as $obj) {
-                if (!is_object($obj) || !($obj instanceof $attr['class'])) {
-                    // LC_MSG: Property "%s[]" type mismatch. expected is "%s", actual is "%s".
-                    $msg = 'Property "%s[]" type mismatch. expected is "%s", actual is "%s".';
-                    throw new QDB_ActiveRecord_Exception(__($msg, $varname, $attr['class'], gettype($obj)));
-                }
+
+            if (empty($this->__all_props[$varname])) {
+                $this->{$varname} = new QColl($attr['class']);
+                $this->__all_props[$varname] =& $this->{$varname};
             }
-            $this->{$varname} = $value;
-            $this->__all_props[$varname] =& $this->{$varname};
+
+            foreach ($value as $obj) {
+                $this->{$varname}[] = $obj;
+            }
         } else {
             if (!is_object($value) || !($value instanceof $attr['class'])) {
                 // LC_MSG: Property "%s" type mismatch. expected is "%s", actual is "%s".
@@ -673,11 +633,6 @@ EOT;
             $ref['table']->connect();
         }
 
-        if (!isset($ref['table'])) {
-            QDebug::dump($ref, $class);
-            QDebug::dumpTrace();
-            exit;
-        }
         $ref['pk'] = $ref['table']->pk;
 
         // 绑定行为插件
@@ -947,11 +902,11 @@ EOT;
         }
 
         // 进行 create 验证
-        $this->doValidate('create');
+        $this->doValidate('create', $recursion);
 
         // 引发 before_create 事件
-        $this->beforeCreate();
-        $this->__doCallbacks(self::before_create);
+        $this->beforeCreate($recursion);
+        $this->__doCallbacks(self::before_create, $recursion);
 
         // 将对象属性转换为名值对数组
         $row = $this->toDbArray(0);
@@ -996,8 +951,8 @@ EOT;
         }
 
         // 引发after_create事件
-        $this->__doCallbacks(self::after_create);
-        $this->afterCreate();
+        $this->__doCallbacks(self::after_create, $recursion);
+        $this->afterCreate($recursion);
 
         // 将所有为QDB_ActiveRecord_Removed_Prop的属性设置为null
         foreach ($this->__all_props as $prop => $value) {
@@ -1035,8 +990,8 @@ EOT;
         $this->doValidate('update');
 
         // 引发before_update事件
-        $this->beforeUpdate();
-        $this->__doCallbacks(self::before_update);
+        $this->beforeUpdate($recursion);
+        $this->__doCallbacks(self::before_update, $recursion);
 
         // 将对象属性转换为名值对数组
         $row = $this->toDbArray(0);
@@ -1080,8 +1035,8 @@ EOT;
         }
 
         // 引发after_create事件
-        $this->__doCallbacks(self::after_update);
-        $this->afterUpdate();
+        $this->__doCallbacks(self::after_update, $recursion);
+        $this->afterUpdate($recursion);
 
         // 将所有为QDB_ActiveRecord_Removed_Prop的属性设置为null
         foreach ($this->__all_props as $prop => $value) {
@@ -1200,12 +1155,15 @@ EOT;
 
     /**
      * 调用指定类型的 callback 方法
+     *
+     * @param int $type
+     * @param int $recursion
      */
-    protected function __doCallbacks($type)
+    protected function __doCallbacks($type, $recursion = 0)
     {
         if (!isset(self::$__callbacks[$this->__class][$type])) { return; }
         foreach (self::$__callbacks[$this->__class][$type] as $callback) {
-            call_user_func_array($callback, array($this, $this->__all_props));
+            call_user_func_array($callback, array($this, $this->__all_props, $recursion));
         }
     }
 
@@ -1253,57 +1211,73 @@ EOT;
 
     /**
      * 事件回调：保存记录之前
+     *
+     * @param int $recursion
      */
-    protected function beforeSave()
+    protected function beforeSave($recursion = 0)
     {
     }
 
     /**
      * 事件回调：保存记录之后
+     *
+     * @param int $recursion
      */
-    protected function afterSave()
+    protected function afterSave($recursion = 0)
     {
     }
 
     /**
      * 事件回调：创建记录之前
+     *
+     * @param int $recursion
      */
-    protected function beforeCreate()
+    protected function beforeCreate($recursion = 0)
     {
     }
 
     /**
      * 事件回调：创建记录之后
+     *
+     * @param int $recursion
      */
-    protected function afterCreate()
+    protected function afterCreate($recursion = 0)
     {
     }
 
     /**
      * 事件回调：更新记录之前
+     *
+     * @param int $recursion
      */
-    protected function beforeUpdate()
+    protected function beforeUpdate($recursion = 0)
     {
     }
 
     /**
      * 事件回调：更新记录之后
+     *
+     * @param int $recursion
      */
-    protected function afterUpdate()
+    protected function afterUpdate($recursion = 0)
     {
     }
 
     /**
      * 事件回调：删除记录之前
+     *
+     * @param int $recursion
      */
-    protected function beforeDestroy()
+    protected function beforeDestroy($recursion = 0)
     {
     }
 
     /**
      * 事件回调：删除记录之后
+     *
+     * @param int $recursion
      */
-    protected function afterDestroy()
+    protected function afterDestroy($recursion = 0)
     {
     }
 

@@ -63,6 +63,7 @@ class QLog_Writer_Stream
         if (flock($fp, LOCK_EX)) {
             foreach ($log as $item) {
                 list($time, $msg, $type, $type_name) = $item;
+
                 $string = date('c', $time) . ' ' . $type_name . ' (' . $type . '): ' . $msg . PHP_EOL;
                 fwrite($fp, $string);
             }
