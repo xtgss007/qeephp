@@ -41,14 +41,14 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
     function __callbacks()
     {
         return array(
-            array(self::before_create,   array($this, 'beforeCreate')),
-            array(self::after_destroy,   array($this, 'afterDestroy')),
-            array(self::custom_callback, array($this, 'createChild')),
-            array(self::custom_callback, array($this, 'getSubNodes')),
-            array(self::custom_callback, array($this, 'getPath')),
-            array(self::custom_callback, array($this, 'getSubTree')),
-            array(self::custom_callback, array($this, 'getCurrentLevelNodes')),
-            array(self::custom_callback, array($this, 'allChildCount')),
+            array(self::before_create,    'beforeCreate'),
+            array(self::after_destroy,    'afterDestroy'),
+            array(self::dynamic_callback, 'createChild'),
+            array(self::dynamic_callback, 'getSubNodes'),
+            array(self::dynamic_callback, 'getPath'),
+            array(self::dynamic_callback, 'getSubTree'),
+            array(self::dynamic_callback, 'getCurrentLevelNodes'),
+            array(self::dynamic_callback, 'allChildCount'),
         );
     }
 

@@ -20,94 +20,21 @@
  *
  * @package database
  */
-abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, ArrayAccess
+abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, QDB_ActiveRecord_Interface, ArrayAccess
 {
-    /**
-     * 预定义的事件
-     */
-    const after_find                  = 'after_find';                   // 查询后
-    const after_initialize            = 'after_initialize';             // 初始化后
-
-    const before_save                 = 'before_save';                  // 保存之前
-    const after_save                  = 'after_save';                   // 保存之后
-
-    const before_create               = 'before_create';                // 创建之前
-    const after_create                = 'after_create';                 // 创建之后
-
-    const before_update               = 'before_update';                // 更新之前
-    const after_update                = 'after_update';                 // 更新之后
-
-    const before_validation           = 'before_validation';            // 验证之前
-    const after_validation            = 'after_validation';             // 验证之后
-
-    const before_validation_on_create = 'before_validation_on_create';  // 创建记录验证之前
-    const after_validation_on_create  = 'after_validation_on_create';   // 创建记录验证之后
-
-    const before_validation_on_update = 'before_validation_on_update';  // 更新记录验证之前
-    const after_validation_on_update  = 'after_validation_on_update';   // 更新记录验证之后
-
-    const before_destroy              = 'before_destroy';               // 销毁之前
-    const after_destroy               = 'after_destroy';                // 销毁之后
-
-    /**
-     * 其他类型 callback
-     */
-    const custom_callback             = 'custom_callback';              // 行为插件自定义方法
-
-    /**
-     * 属性方法
-     */
-    const getter                      = 'getter';                       // 读属性
-    const setter                      = 'setter';                       // 写属性
-
     /**
      * 对象所有属性的引用
      *
      * @var array
      */
-    protected $__all_props;
+    protected $_props;
 
     /**
-     * 当前对象的类名
+     * 元信息对象
      *
-     * @var string
+     * @var QDB_ActiveRecord_Meta
      */
-    protected $__class;
-
-    /**
-     * 对象不允许直接访问的属性
-     *
-     * @var array
-     */
-    private $__props;
-
-    /**
-     * 对象属性的读写方法
-     *
-     * @var array
-     */
-    private $__props_events;
-
-    /**
-     * 事件钩子
-     *
-     * @var array
-     */
-    private static $__callbacks = array();
-
-    /**
-     * 扩展的方法
-     *
-     * @var array
-     */
-    private static $__methods = array();
-
-    /**
-     * 所有用到的 ActiveRecord 对象的定义
-     *
-     * @var array
-     */
-    private static $__ref = array();
+    protected $_meta;
 
     /**
      * 构造函数
@@ -116,19 +43,23 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      */
     function __construct(array $data = null)
     {
+        // 判断是否是 ActiveRecord_Null 类
         $class_name = get_class($this);
-        if (substr($class_name, -4) == 'null') {
-            $class_name = substr($class_name, 0, -4);
+        if (strtolower(substr($class_name, -5)) == '_null') {
+            $class_name = substr($class_name, 0, -5);
         }
-        $this->__class = $class_name;
-        self::reflection($this->__class);
+        // 构造元对象
+        $this->meta = QDB_ActiveRecord_Meta::getInstance($class_name);
 
+        // 将数组赋值给对象属性
         if (is_array($data)) {
-            $this->__attach($data);
+            $this->_attach($data);
         } else {
-            $this->__attach(array());
+            $this->_attach(array());
         }
-        $this->__doCallbacks(self::after_initialize);
+
+        // 触发 after_initialize 事件
+        $this->_meta->event(self::after_initialize);
         $this->afterInitialize();
     }
 
@@ -153,16 +84,15 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      */
     function save($force_create = false, $recursion = 99)
     {
-        self::__bindAll($this->__class);
         $this->beforeSave($recursion);
-        $this->__doCallbacks(self::before_save, $recursion);
+        $this->_meta->event(self::before_save, $recursion);
         $id = $this->id();
         if (empty($id) || $force_create) {
             $this->create($recursion);
         } else {
             $this->update($recursion);
         }
-        $this->__doCallbacks(self::after_save, $recursion);
+        $this->_meta->event(self::after_save, $recursion);
         $this->afterSave($recursion);
     }
 
@@ -178,7 +108,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
                     ->recursion($recursion)
                     ->asArray()
                     ->query();
-        $this->__attach($arr);
+        $this->_attach($arr);
     }
 
     /**
@@ -186,32 +116,32 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      *
      * @param string $mode
      */
-    function doValidate($mode = 'general')
+    function validate($mode = 'general')
     {
         $this->beforeValidation();
-        $this->__doCallbacks(self::before_validation);
+        $this->_meta->event(self::before_validation);
         if ($mode == 'create') {
             $this->beforeValidationOnCreate();
-            $this->__doCallbacks(self::before_validation_on_create);
+            $this->_meta->event(self::before_validation_on_create);
         } elseif ($mode == 'update') {
             $this->beforeValidationOnUpdate();
-            $this->__doCallbacks(self::before_validation_on_update);
+            $this->_meta->event(self::before_validation_on_update);
         }
 
         // 进行验证
-        $error = self::__validate($this->__class, $this->__all_props);
+        $error = $this->_meta->validate($this->_props);
         if (!empty($error)) {
             throw new QDB_ActiveRecord_Validate_Exception($this, $error);
         }
 
         if ($mode == 'create') {
             $this->afterValidationOnCreate();
-            $this->__doCallbacks(self::after_validation_on_create);
+            $this->_meta->event(self::after_validation_on_create);
         } elseif ($mode == 'update') {
             $this->afterValidationOnUpdate();
-            $this->__doCallbacks(self::after_validation_on_update);
+            $this->_meta->event(self::after_validation_on_update);
         }
-        $this->__doCallbacks(self::after_validation);
+        $this->_meta->event(self::after_validation);
         $this->afterValidation();
     }
 
@@ -223,11 +153,15 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
     function destroy($recursion = 99)
     {
         $this->beforeDestroy();
-        $this->__doCallbacks(self::before_destroy);
-        $table = self::$__ref[$this->__class]['table'];
-        /* @var $table QDB_Table */
-        $table->remove($this->id(), $recursion);
-        $this->__doCallbacks(self::after_destroy);
+        $this->_meta->event(self::before_destroy);
+
+        foreach ($this->_meta->props as $prop_name => $params) {
+            if ($params['assoc']) {
+                // TODO: ActiveRecord 的层叠删除
+            }
+        }
+
+        $this->_meta->event(self::after_destroy);
         $this->afterDestroy();
     }
 
@@ -238,8 +172,8 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      */
     function id()
     {
-        $pk = self::$__ref[$this->__class]['pk'];
-        return $this->{$pk};
+        $pk = $this->_meta->idname;
+        return $this->_props[$pk];
     }
 
     /**
@@ -249,7 +183,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      */
     function idname()
     {
-        return self::$__ref[$this->__class]['pk'];
+        return $this->_meta->idname;
     }
 
     /**
@@ -262,22 +196,22 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
     function toArray($recursion = 99)
     {
         $row = array();
-        $attribs = self::$__ref[$this->__class]['attribs'];
-
-        foreach ($this->__all_props as $prop => $value) {
-            if ($attribs[$prop]['assoc']) {
+        foreach ($this->_meta->fields2prop as $prop_name) {
+            if ($this->_meta->props[$prop_name]['assoc']) {
                 if ($recursion <= 0) { continue; }
-                if (is_array($value) || $value instanceof Iterator) {
-                    $row[$prop] = array();
-                    foreach ($value as $obj) {
-                        $row[$prop][] = $obj->toArray($recursion - 1);
+                if ($this->_meta->props[$prop_name]['assoc'] == 'has_one'
+                    || $this->_meta->props[$prop_name]['assoc'] == 'belongs_to') {
+                    $row[$prop_name] = $this->_props[$prop_name]->toArray($recursion - 1);
+                } else {
+                    $row[$prop_name] = array();
+                    foreach ($this->_props[$prop_name] as $obj) {
+                        $row[$prop_name][] = $obj->toArray($recursion - 1);
                     }
                 }
             } else {
-                $row[$prop] = $value;
+                $row[$prop_name] = $this->_props[$prop_name];
             }
         }
-
         return $row;
     }
 
@@ -291,25 +225,22 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
     function toDbArray($recursion = 99)
     {
         $row = array();
-        $attribs = self::$__ref[$this->__class]['attribs'];
-        $ralias = self::$__ref[$this->__class]['ralias'];
-
-        foreach ($this->__all_props as $prop => $value) {
-            $field = $ralias[$prop];
-
-            if ($attribs[$prop]['assoc']) {
+        foreach ($this->_meta->fields2prop as $field_name => $prop_name) {
+            if ($this->_meta->props[$prop_name]['assoc']) {
                 if ($recursion <= 0) { continue; }
-                if (is_array($value) || $value instanceof Iterator) {
-                    $row[$field] = array();
-                    foreach ($value as $obj) {
-                        $row[$field][] = $obj->toDbArray($recursion - 1);
+                if ($this->_meta->props[$prop_name]['assoc'] == 'has_one'
+                    || $this->_meta->props[$prop_name]['assoc'] == 'belongs_to') {
+                    $row[$field_name] = $this->_props[$prop_name]->toArray($recursion - 1);
+                } else {
+                    $row[$field_name] = array();
+                    foreach ($this->_props[$prop_name] as $obj) {
+                        $row[$field_name][] = $obj->toArray($recursion - 1);
                     }
                 }
             } else {
-                $row[$field] = $value;
+                $row[$field_name] = $this->_props[$prop_name];
             }
         }
-
         return $row;
     }
 
@@ -326,13 +257,17 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
     }
 
     /**
-     * 返回该对象使用的表数据入口对象
+     * 触发事件
      *
-     * @return QDB_Table
+     * @param int $event
+     * @param int $recursion
      */
-    function getTable()
+    protected function _event($event, $recursion = 0)
     {
-        return self::$__ref[$this->__class]['table'];
+        if (empty($this->_meta->callbacks[$event])) { return; }
+        foreach ($this->_meta->callbacks[$event] as $callback) {
+            call_user_func($callback, $this, $recursion);
+        }
     }
 
     /**
@@ -344,40 +279,28 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      */
     function __get($varname)
     {
-        if (!isset(self::$__ref[$this->__class]['attribs'][$varname])) {
-            // LC_MSG: Property "%s" not defined.
-            throw new QDB_ActiveRecord_Exception(__('Property "%s" not defined.', $varname));
+        if (!isset($this->_meta->props[$varname])) {
+            // LC_MSG: 对象 "%s" 的属性 "%s" 没有定义.
+            throw new QDB_ActiveRecord_Exception(__('对象 "%s" 的属性 "%s" 没有定义.',
+                                                    $this->_meta->getClassName(), $varname));
         }
-        $attr = self::$__ref[$this->__class]['attribs'][$varname];
-
-        if (isset($attr['getter'])) {
-            if (!is_array($attr['getter'])) {
-                $attr['getter'] = array($this, $attr['getter']);
+        $params = $this->_meta->props[$varname];
+        if (!empty($params['getter'])) {
+            if (!is_array($params['getter'])) {
+                $params['getter'] = array($this, $params['getter']);
             }
-            return call_user_func($attr['getter'], $varname);
+            return call_user_func($params['getter']);
         }
 
-        if ($attr['assoc']) {
-            if (isset($this->__all_props[$varname]) && is_object($this->__all_props[$varname])) {
-                return $this->__all_props[$varname];
-            }
-
-            if ($attr['assoc'] == 'has_many' || $attr['assoc'] == 'many_to_many') {
-                $this->{$varname} = new QColl($attr['class']);
-                $this->__all_props[$varname] =& $this->{$varname};
-                return $this->{$varname};
+        if (!isset($this->_props[$varname]) && $params['assoc']) {
+            if ($params['assoc'] == 'has_one' || $params['assoc'] == 'belongs_to') {
+                $this->_props[$varname] = new $params['assoc_class'] . '_Null';
             } else {
-                // 如果请求的关联对象尚不存在，则尝试从数据库读取该关联对象
-
-                // 如果读取不到，则尝试构造一个 Null 对象
-                $class_name = $attr['class'] . '_Null';
-                $obj = new $class_name();
-                $this->__props[$varname] = $obj;
-                return $this->__props[$varname];
+                $this->_props[$varname] = new QColl($params['assoc_class']);
             }
-        } else {
-            return $this->__props[$varname];
         }
+
+        return $this->_props[$varname];
     }
 
     /**
@@ -388,55 +311,53 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      */
     function __set($varname, $value)
     {
-        if (!isset(self::$__ref[$this->__class]['attribs'][$varname])) {
-            $this->{$varname} = $value;
-            return;
+        if (!isset($this->_meta->props[$varname])) {
+            // LC_MSG: 对象 "%s" 的属性 "%s" 没有定义.
+            throw new QDB_ActiveRecord_Exception(__('对象 "%s" 的属性 "%s" 没有定义.',
+                                                    $this->_meta->getClassName(), $varname));
         }
-        $attr = self::$__ref[$this->__class]['attribs'][$varname];
-//        if ($attr['readonly']) {
-//            // LC_MSG: Property "%s" is readonly.
-//            throw new QException(__('Property "%s" is readonly.', $varname));
-//        }
-        if (isset($attr['setter'])) {
-            call_user_func($attr['setter'], $value);
+        $params = $this->_meta->props[$varname];
+        if ($params['readonly']) {
+            // LC_MSG: 对象 "%s" 的属性 "%s" 是只读属性.
+            throw new QException(__('对象 "%s" 的属性 "%s" 是只读属性.',
+                                    $this->_meta->getClassName(), $varname));
+        }
+
+        if (!empty($params['setter'])) {
+            if (!is_array($params['setter'])) {
+                $params['setter'] = array($this, $params['setter']);
+            }
+            call_user_func($params['setter'], $value);
             return;
         }
 
-        if (!$attr['assoc']) {
-            if (isset($this->__props[$varname])) {
-                $this->__props[$varname] = $value;
-                $this->__all_props[$varname] =& $this->__props[$varname];
+        if ($params['assoc']) {
+            if ($params['assoc'] == 'has_one' || $params['assoc'] == 'belongs_to') {
+                if (!is_object($value) || !($value instanceof $params['assoc_class'])) {
+                    // LC_MSG: 对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型的对象.
+                    throw new QDB_ActiveRecord_Exception(__('对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型的对象.',
+                                                    $this->_meta->getClassName(), $varname, $params['assoc_class']));
+
+                }
+
+                $this->_props[$varname] = $value;
             } else {
-                $this->{$varname} = $value;
-                $this->__all_props[$varname] =& $this->{$varname};
-            }
-            return;
-        }
+                // 聚合的对象，要求 $value 必须是一个包含特定类型对象的数组
+                if (!is_array($value) && !($value instanceof Iterator)) {
+                    // LC_MSG: 对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型的对象组成的集合.
+                    throw new QDB_ActiveRecord_Exception(__('对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型的对象组成的集合.',
+                                     $this->_meta->getClassName(), $varname, $params['assoc_class']));
+                }
 
-        if ($attr['assoc'] == 'has_many' || $attr['assoc'] == 'many_to_many') {
-            // 聚合的对象，要求 $value 必须是一个包含特定类型对象的数组
-            if (!is_array($value) && !($value instanceof Iterator)) {
-                // LC_MSG: Property "%s" type mismatch. expected is "%s", actual is "%s".
-                $msg = 'Property "%s" type mismatch. expected is "%s", actual is "%s".';
-                throw new QDB_ActiveRecord_Exception(__($msg, $varname, 'array', gettype($value)));
-            }
-
-            if (empty($this->__all_props[$varname])) {
-                $this->{$varname} = new QColl($attr['class']);
-                $this->__all_props[$varname] =& $this->{$varname};
-            }
-
-            foreach ($value as $obj) {
-                $this->{$varname}[] = $obj;
+                if (!isset($this->_props[$varname])) {
+                    $this->_props[$varname] = new QColl($params['assoc_class']);
+                }
+                foreach ($value as $obj) {
+                    $this->_props[$varname][] = $obj;
+                }
             }
         } else {
-            if (!is_object($value) || !($value instanceof $attr['class'])) {
-                // LC_MSG: Property "%s" type mismatch. expected is "%s", actual is "%s".
-                $msg = 'Property "%s" type mismatch. expected is "%s", actual is "%s".';
-                throw new QDB_ActiveRecord_Exception(__($msg, $varname, $attr['class'], get_class($value)));
-            }
-            $this->__props[$varname] = $value;
-            $this->__all_props[$varname] =& $this->__props[$varname];
+            $this->_props[$varname] = $value;
         }
     }
 
@@ -453,10 +374,11 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
         if (!is_array($args)) {
             $args = array();
         }
-        if (isset(self::$__methods[$this->__class][$method])) {
-            array_unshift($args, $this->__all_props);
+
+        if (isset($this->_meta->methods[$method])) {
+            array_unshift($args, $this->_props);
             array_unshift($args, $this);
-            return call_user_func_array(self::$__methods[$this->__class][$method], $args);
+            return call_user_func_array($this->_meta->methods[$method], $args);
         } else {
             // LC_MSG: Call to undefined method "%s::%s()".
             throw new QDB_ActiveRecord_Exception(__('Call to undefined method "%s::%s()".', $this->__class, $method));
@@ -472,7 +394,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
      */
     function offsetExists($key)
     {
-        return isset($this->{$key});
+        return isset($this->_props[$key]);
     }
 
     /**
@@ -558,281 +480,11 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
     }
 
     /**
-     * 为一个 ActiveRecord 类定义一个关联
-     *
-     * @param string $class
-     * @param string $field
-     * @param array $options
-     */
-    static function unbind($class, $mapping_name)
-    {
-        unset(self::$__ref[$class]['attribs'][$mapping_name]);
-        unset(self::$__ref[$class]['alias'][$mapping_name]);
-        unset(self::$__ref[$class]['ralias'][$mapping_name]);
-        unset(self::$__ref[$class]['links'][$mapping_name]);
-    }
-
-    /**
-     * 获得一个模型类的反射信息
-     *
-     * @param string $class
-     *
-     * @return array
-     */
-    static function reflection($class)
-    {
-        if (isset(self::$__ref[$class])) {
-            return self::$__ref[$class];
-        }
-
-        Q::loadClass($class);
-        $ref = call_user_func(array($class, '__define'));
-        if (empty($ref['fields']) || !is_array($ref['fields'])) {
-            $ref['fields'] = array();
-        }
-        if (empty($ref['validation']) || !is_array($ref['validation'])) {
-            $ref['validation'] = array();
-        }
-        if (!empty($ref['create_reject'])) {
-            $ref['create_reject'] = Q::normalize($ref['create_reject']);
-        } else {
-            $ref['create_reject'] = array();
-        }
-        if (!empty($ref['update_reject'])) {
-            $ref['update_reject'] = Q::normalize($ref['update_reject']);
-        } else {
-            $ref['update_reject'] = array();
-        }
-        if (empty($ref['create_autofill']) || is_array($ref['create_autofill'])) {
-            $ref['create_autofill'] = array();
-        }
-        if (empty($ref['update_autofill']) || is_array($ref['update_autofill'])) {
-            $ref['update_autofill'] = array();
-        }
-
-        // 构造表数据入口
-        if (!empty($ref['table_name'])) {
-            // 通过 table_name 指定数据表
-            $obj_id = 'activerecord_table_' . strtolower($class);
-            if (Q::isRegistered($obj_id)) {
-                $ref['table'] = Q::registry($obj_id);
-            } else {
-                Q::loadClass('QDB_Table');
-                $params = array('table_name' => $ref['table_name']);
-                foreach ($ref as $key => $value) {
-                    if (substr($key, 0, 6) == 'table_' && $key != 'table_name') {
-                        $params[substr($key, 6)] = $value;
-                    }
-                }
-                $ref['table'] = new QDB_Table($params, true);
-                Q::register($ref['table'], $obj_id);
-            }
-        } elseif (!empty($ref['table_class'])) {
-            $ref['table'] = Q::getSingleton($ref['table_class']);
-            $ref['table']->connect();
-        }
-
-        $ref['pk'] = $ref['table']->pk;
-
-        // 绑定行为插件
-        self::$__callbacks[$class] = array();
-        self::$__methods[$class] = array();
-
-        $behaviors = isset($ref['behaviors']) ? Q::normalize($ref['behaviors']) : array();
-        $dirs = array(
-            Q_DIR . '/qdb/activerecord/behavior',
-            ROOT_DIR . '/app/model/behavior',
-        );
-        $behaviors_objs = array();
-        foreach ($behaviors as $behavior) {
-            $behavior = strtolower($behavior);
-            $behavior_class = 'Behavior_' . ucfirst($behavior);
-
-            if (!class_exists($behavior_class, false)) {
-                $filename = $behavior . '_behavior.php';
-                Q::loadClassFile($filename, $dirs, $behavior_class);
-            }
-            if (!empty($ref['behaviors_settings'][$behavior])) {
-                $settings = $ref['behaviors_settings'][$behavior];
-            } else {
-                $settings = array();
-            }
-            $behavior_obj = new $behavior_class($class, $settings);
-            /* @var $behavior_obj QDB_ActiveRecord_Behavior_Abstract */
-            $callbacks = $behavior_obj->__callbacks($class);
-            $behaviors_objs[] = $behavior_obj;
-
-            foreach ($callbacks as $call) {
-                list($type, $method) = $call;
-                switch ($type) {
-                case self::custom_callback:
-                    if (is_array($method)) {
-                        // array($obj/$class, $method) 形式的 callback
-                        self::$__methods[$class][$method[1]] = $method;
-                    } else {
-                        self::$__methods[$class][$method] = $method;
-                    }
-                    break;
-                case self::setter:
-                    $ref['fields'][$method] = array('setter' => array($behavior_obj, 'set' . ucfirst($method)));
-                    break;
-                case self::getter:
-                    $ref['fields'][$method] = array('getter' => array($behavior_obj, 'get' . ucfirst($method)));
-                    break;
-                default:
-                    self::$__callbacks[$class][$type][] = $method;
-                }
-            }
-        }
-
-        // 根据字段定义确定字段属性
-        $meta = $ref['table']->columns();
-        $ref['links'] = array();
-        $ref['alias'] = array();
-        if (isset($ref['fields']) && is_array($ref['fields'])) {
-            foreach ($ref['fields'] as $field => $options) {
-                $define = array('public' => true, 'readonly' => false, 'assoc' => false);
-
-                if (!is_array($options)) {
-                    // 假定为别名
-                    $define['alias'] = $options;
-                } else {
-                    $define['readonly'] = isset($options['readonly']) ? (bool)$options['readonly'] : false;
-                    if (!empty($options['setter'])) {
-                        $define['public'] = false;
-                        $define['setter'] = $options['setter'];
-                    }
-                    if (!empty($options['getter'])) {
-                        $define['public'] = false;
-                        $define['getter'] = $options['getter'];
-                    }
-                    if (!empty($options['alias'])) {
-                        $ref['alias'][$field] = $options['alias'];
-                    } else {
-                        $ref['alias'][$field] = $field;
-                    }
-                    $define['alias'] = $ref['alias'][$field];
-
-                    if (!empty($options['has_one'])) {
-                        $define['assoc'] = 'has_one';
-                        $define['class'] = $options['has_one'];
-                    }
-                    if (!empty($options['has_many'])) {
-                        $define['assoc'] = 'has_many';
-                        $define['class'] = $options['has_many'];
-                    }
-                    if (!empty($options['belongs_to'])) {
-                        $define['assoc'] = 'belongs_to';
-                        $define['class'] = $options['belongs_to'];
-                    }
-                    if (!empty($options['many_to_many'])) {
-                        $define['assoc'] = 'many_to_many';
-                        $define['class'] = $options['many_to_many'];
-                    }
-                    if ($define['assoc']) {
-                        unset($options['readonly']);
-                        unset($options['alias']);
-                        unset($options['setter']);
-                        unset($options['getter']);
-                        $define['assoc_options'] = $options;
-                        $ref['links'][$field] = $define;
-                    }
-                }
-
-                // 根据 META 确定属性是否是虚拟属性
-                $define['virtual'] = empty($meta[$field]);
-
-                // 根据 META 确定属性的默认值
-                if (!empty($meta[$field]) && $meta[$field]['has_default']) {
-                    $define['default'] = $meta[$field]['default'];
-                } else {
-                    $define['default'] = null;
-                }
-                $attribs[$field] = $define;
-            }
-        }
-
-        // 将没有指定的字段也设置为对象属性
-        foreach ($meta as $key => $field) {
-            if (!isset($attribs[$key])) {
-                $ref['alias'][$key] = $key;
-                $attribs[$key] = array(
-                    'public'    => true,
-                    'readonly'  => false,
-                    'assoc'     => false,
-                    'alias'     => $key,
-                    'virtual'   => false,
-                    'default'   => ($field['has_default']) ? $field['default'] : null,
-                );
-            }
-        }
-        $ref['meta'] = $meta;
-        $ref['attribs'] = $attribs;
-        // ralias 是别名 => 字段名的映射
-        $ref['ralias'] = array_flip($ref['alias']);
-        unset($ref['fields']);
-
-        self::$__ref[$class] = $ref;
-
-        foreach ($behaviors_objs as $behavior_obj) {
-            /* @var $behavior_obj QDB_ActiveRecord_Behavior_Abstract */
-            $behavior_obj->__bindFinished($ref);
-        }
-        return $ref;
-    }
-
-    /**
-     * 完成对象间的关联
-     *
-     * @param string $class
-     */
-    private static function __bindAll($class)
-    {
-        self::reflection($class);
-        $table = self::$__ref[$class]['table'];
-        /* @var $table QDB_Table */
-        foreach (self::$__ref[$class]['links'] as $define) {
-            $mapping_name = $define['alias'];
-            if ($table->existsLink($mapping_name)) { continue; }
-            $ref = QDB_ActiveRecord_Abstract::reflection($define['class']);
-            $assoc_table = $ref['table'];
-
-            $link = $define['assoc_options'];
-            $link['table_obj'] = $assoc_table;
-            $link['mapping_name'] = $define['alias'];
-
-            switch ($define['assoc']) {
-            case QDB_Table::has_one:
-            case QDB_Table::has_many:
-                if (empty($link['assoc_key'])) {
-                    $link['assoc_key'] = strtolower($class) . '_id';
-                }
-                break;
-            case QDB_Table::belongs_to:
-                if (empty($link['main_key'])) {
-                    $link['main_key'] = strtolower($define['class']) . '_id';
-                }
-                break;
-            case QDB_Table::many_to_many:
-                if (empty($link['mid_main_key'])) {
-                    $link['mid_main_key'] = strtolower($class) . '_id';
-                }
-                if (empty($link['mid_assoc_key'])) {
-                    $link['mid_assoc_key'] = strtolower($define['class']) . '_id';
-                }
-            }
-
-            $table->createLinks($link, $define['assoc']);
-            $table->getLink($define['alias'])->init();
-        }
-    }
-
-    /**
      * 将对象附着到一个包含对象属性的数组，等同于将数组的属性值复制到对象
      *
      * @param array $row
      */
-    private function __attach(array $row)
+    private function _attach(array $row)
     {
         $alias = self::$__ref[$this->__class]['alias'];
         foreach (self::$__ref[$this->__class]['attribs'] as $field => $define) {
@@ -846,10 +498,10 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
             if ($define['readonly'] || !$define['public'] || $define['assoc']) {
                 if ($define['assoc']) {
                     if ($define['assoc'] == 'has_many' ||  $define['assoc'] == 'many_to_many') {
-                        $this->__props[$a] = new QColl($define['class']);
+                        $this->_props[$a] = new QColl($define['class']);
                     }
                     if (!isset($row[$field])) {
-                        $this->__props[$a] = null;
+                        $this->_props[$a] = null;
                         continue;
                     } elseif (!is_array($row[$field])) {
                         // LC_MSG: Property "%s" type mismatch. expected is "%s", actual is "%s".
@@ -857,21 +509,21 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
                         throw new QDB_ActiveRecord_Exception(__($msg, "\$row[{$field}]", 'array', gettype($row[$field])));
                     } else {
                         if ($define['assoc'] == 'has_one' ||  $define['assoc'] == 'belongs_to') {
-                            $this->__props[$a] = new $define['class']($row[$field]);
+                            $this->_props[$a] = new $define['class']($row[$field]);
                         } else {
                             foreach ($row[$field] as $assoc_row) {
-                                $this->__props[$a][] = new $define['class']($assoc_row);
+                                $this->_props[$a][] = new $define['class']($assoc_row);
                             }
                         }
                     }
-                    $this->__all_props[$a] =& $this->__props[$a];
+                    $this->_props[$a] =& $this->_props[$a];
                 } else {
-                    $this->__props[$a] = $row[$field];
-                    $this->__all_props[$a] =& $this->__props[$a];
+                    $this->_props[$a] = $row[$field];
+                    $this->_props[$a] =& $this->_props[$a];
                 }
             } else {
                 $this->{$a} = $row[$field];
-                $this->__all_props[$a] =& $this->{$a};
+                $this->_props[$a] =& $this->{$a};
             }
         }
     }
@@ -892,12 +544,12 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
 
         // 根据 create_reject 数组，将属性设置为 QDB_ActiveRecord_Removed_Prop 对象
         foreach ($ref['create_reject'] as $prop) {
-            $this->__all_props[$prop] = $null;
+            $this->_props[$prop] = $null;
         }
 
         // 根据 create_autofill 设置对属性进行填充
         foreach ($ref['create_autofill'] as $prop => $fill) {
-            $this->__all_props[$prop] = $fill;
+            $this->_props[$prop] = $fill;
         }
 
         // 进行 create 验证
@@ -905,7 +557,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
 
         // 引发 before_create 事件
         $this->beforeCreate($recursion);
-        $this->__doCallbacks(self::before_create, $recursion);
+        $this->_meta->event(self::before_create, $recursion);
 
         // 将对象属性转换为名值对数组
         $row = $this->toDbArray(0);
@@ -919,29 +571,29 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
 
         // 将名值对保存到数据库
         $id = $table->create($row, 0);
-        $this->__all_props[$this->idname()] = $id;
+        $this->_props[$this->idname()] = $id;
 
         // 遍历关联的对象，并调用对象的save()方法
         foreach ($ref['links'] as $prop => $null) {
-            if (!isset($this->__all_props[$prop])) { continue; }
+            if (!isset($this->_props[$prop])) { continue; }
 
             $link = $table->getLink($prop);
             /* @var $link QDB_Table_Link */
             $mk = $this->alias_name($link->main_key);
 
             if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
-                if (!isset($this->__all_props[$prop]) || !is_object($this->__all_props[$prop])) {
+                if (!isset($this->_props[$prop]) || !is_object($this->_props[$prop])) {
                     continue;
                 }
                 // 务必为关联对象设置 assoc_key 字段值
-                $obj = $this->__all_props[$prop];
+                $obj = $this->_props[$prop];
                 $ak = $obj->alias_name($link->assoc_key);
                 $obj->{$ak} = $this->{$mk};
                 $obj->save(false, $recursion - 1);
             } else {
                 $ak = null;
                 $mkv = $this->{$mk};
-                foreach ($this->__all_props[$prop] as $obj) {
+                foreach ($this->_props[$prop] as $obj) {
                     if (is_null($ak)) { $ak = $obj->alias_name($link->assoc_key); }
                     $obj->{$ak} = $mkv;
                     $obj->save(false, $recursion - 1);
@@ -950,13 +602,13 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
         }
 
         // 引发after_create事件
-        $this->__doCallbacks(self::after_create, $recursion);
+        $this->_meta->event(self::after_create, $recursion);
         $this->afterCreate($recursion);
 
         // 将所有为QDB_ActiveRecord_Removed_Prop的属性设置为null
-        foreach ($this->__all_props as $prop => $value) {
+        foreach ($this->_props as $prop => $value) {
             if (is_object($value) && ($value instanceof QDB_ActiveRecord_Removed_Prop)) {
-                $this->__all_props[$prop] = null;
+                $this->_props[$prop] = null;
             }
         }
     }
@@ -977,12 +629,12 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
 
         // 根据 update_reject 设置，将属性设置为 QDB_ActiveRecord_Removed_Prop 对象
         foreach ($ref['update_reject'] as $prop) {
-            $this->__all_props[$prop] = $null;
+            $this->_props[$prop] = $null;
         }
 
         // 根据 update_autofill 设置对属性进行填充
         foreach ($ref['update_autofill'] as $prop => $fill) {
-            $this->__all_props[$prop] = $fill;
+            $this->_props[$prop] = $fill;
         }
 
         // 进行 update 验证
@@ -990,7 +642,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
 
         // 引发before_update事件
         $this->beforeUpdate($recursion);
-        $this->__doCallbacks(self::before_update, $recursion);
+        $this->_meta->event(self::before_update, $recursion);
 
         // 将对象属性转换为名值对数组
         $row = $this->toDbArray(0);
@@ -1007,25 +659,25 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
 
         // 遍历关联的对象，并调用对象的save()方法
         foreach ($ref['links'] as $prop => $null) {
-            if (!isset($this->__all_props[$prop])) { continue; }
+            if (!isset($this->_props[$prop])) { continue; }
 
             $link = $table->getLink($prop);
             /* @var $link QDB_Table_Link */
             $mk = $this->alias_name($link->main_key);
 
             if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
-                if (!isset($this->__all_props[$prop]) || !is_object($this->__all_props[$prop])) {
+                if (!isset($this->_props[$prop]) || !is_object($this->_props[$prop])) {
                     continue;
                 }
                 // 务必为关联对象设置 assoc_key 字段值
-                $obj = $this->__all_props[$prop];
+                $obj = $this->_props[$prop];
                 $ak = $obj->alias_name($link->assoc_key);
                 $obj->{$ak} = $this->{$mk};
                 $obj->save(false, $recursion - 1);
             } else {
                 $ak = null;
                 $mkv = $this->{$mk};
-                foreach ($this->__all_props[$prop] as $obj) {
+                foreach ($this->_props[$prop] as $obj) {
                     if (is_null($ak)) { $ak = $obj->alias_name($link->assoc_key); }
                     $obj->{$ak} = $mkv;
                     $obj->save(false, $recursion - 1);
@@ -1034,13 +686,13 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
         }
 
         // 引发after_create事件
-        $this->__doCallbacks(self::after_update, $recursion);
+        $this->_meta->event(self::after_update, $recursion);
         $this->afterUpdate($recursion);
 
         // 将所有为QDB_ActiveRecord_Removed_Prop的属性设置为null
-        foreach ($this->__all_props as $prop => $value) {
+        foreach ($this->_props as $prop => $value) {
             if (is_object($value) && ($value instanceof QDB_ActiveRecord_Removed_Prop)) {
-                $this->__all_props[$prop] = null;
+                $this->_props[$prop] = null;
             }
         }
     }
@@ -1150,20 +802,6 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Interface, 
             }
         }
         return $error;
-    }
-
-    /**
-     * 调用指定类型的 callback 方法
-     *
-     * @param int $type
-     * @param int $recursion
-     */
-    protected function __doCallbacks($type, $recursion = 0)
-    {
-        if (!isset(self::$__callbacks[$this->__class][$type])) { return; }
-        foreach (self::$__callbacks[$this->__class][$type] as $callback) {
-            call_user_func_array($callback, array($this, $this->__all_props, $recursion));
-        }
     }
 
     /**

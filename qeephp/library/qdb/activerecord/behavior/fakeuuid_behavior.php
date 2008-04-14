@@ -51,7 +51,7 @@ class Behavior_Fakeuuid extends QDB_ActiveRecord_Behavior_Abstract
     function __callbacks()
     {
         return array(
-            array(self::before_create, array($this, 'beforeCreate')),
+            array(self::before_create, 'beforeCreate'),
         );
     }
 

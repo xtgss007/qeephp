@@ -62,33 +62,18 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
     );
 
     /**
-     * 该方法返回行为插件定义的回调事件以及扩展的方法
-     *
-     * @return array
+     * 绑定行为插件
      */
-    function __callbacks()
+    function bind()
     {
-        return array(
-            array(self::before_create,   array($this, 'beforeCreate')),
-            array(self::custom_callback, array($this, 'encodePassword')),
-            array(self::custom_callback, array($this, 'checkPassword')),
-            array(self::custom_callback, array($this, 'changePassword')),
-            array(self::custom_callback, array($this, 'updateLogin')),
-            array(self::custom_callback, array($this, 'getAclData')),
-            array(self::custom_callback, array($this, 'getAclRoles'))
-        );
-    }
-
-    /**
-     * 插件绑定完成后调用
-     *
-     * @param array $ref
-     */
-    function __bindFinished(array & $ref)
-    {
-        parent::__bindFinished($ref);
-        // 确保更新时不更新密码字段
-        $ref['update_reject'][] = $this->field_name($this->settings['password_prop']);
+        $this->meta->addEventHandler(self::before_create, array($this, 'beforeCreate'));
+        $this->meta->addDynamicMethod('encodePassword',   array($this, 'encodePassword'));
+        $this->meta->addDynamicMethod('checkPassword',    array($this, 'checkPassword'));
+        $this->meta->addDynamicMethod('changePassword',   array($this, 'changePassword'));
+        $this->meta->addDynamicMethod('updateLogin',      array($this, 'updateLogin'));
+        $this->meta->addDynamicMethod('getAclData',       array($this, 'getAclData'));
+        $this->meta->addDynamicMethod('getAclRoles',      array($this, 'getAclRoles'));
+        $this->meta->setUpdateRejectProp($this->settings['password_prop'], true);
     }
 
     /**
@@ -97,13 +82,13 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      * @param QDB_ActiveRecord_Abstract $obj
      * @param array $props
      */
-    function beforeCreate(QDB_ActiveRecord_Abstract $obj, array & $props)
+    function beforeCreate(QDB_ActiveRecord_Abstract $obj)
     {
         if ($this->settings['unique_username']) {
-            $f = $this->settings['username_prop'];
-            $username = $props[$f];
+            $pn = $this->settings['username_prop'];
+            $username = $obj->{$pn};
             $row = $obj->getTable()
-                       ->find(array($this->field_name($f) => $username))
+                       ->find(array($pn => $username))
                        ->recursion(0)
                        ->count()
                        ->query();
@@ -114,21 +99,21 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
         }
 
         if ($this->settings['unique_email']) {
-            $f = $this->settings['email_prop'];
-            $email = $props[$f];
-            $row = $obj->getTable()->find(array($this->field_name($f) => $email))->count()->query();
+            $pn = $this->settings['email_prop'];
+            $email = $obj->{$pn};
+            $row = $obj->getTable()->find(array($pn => $email))->count()->query();
             if (!empty($row) && $row['row_count'] > 0) {
                 // 找到相同的 EMAIL
                 throw new QACL_User_Exception(sprintf($this->settings['err_duplicate_email'], $email));
             }
         }
 
-        $f = $this->settings['password_prop'];
-        $props[$f] = $this->encodePassword($props[$f]);
+        $pn = $this->settings['password_prop'];
+        $obj->{$pn} = $this->encodePassword($obj->{$pn});
 
-        $f = $this->settings['register_ip_prop'];
-        if (array_key_exists($f, $props)) {
-            $props[$f] = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'none';
+        $pn = $this->settings['register_ip_prop'];
+        if (isset($obj->{$pn})) {
+            $obj->{$pn} = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'none';
         }
     }
 
@@ -179,7 +164,7 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      * @param string $old_password
      * @param string $new_password
      */
-    function changePassword(QDB_ActiveRecord_Abstract $obj, array & $props, $old_password, $new_password)
+    function changePassword(QDB_ActiveRecord_Abstract $obj, $old_password, $new_password)
     {
         if ($obj->checkPassword($old_password)) {
             $f = $this->settings['password_prop'];
@@ -199,7 +184,7 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      * @param QDB_ActiveRecord_Abstract $obj
      * @param array $props
      */
-    function updateLogin(QDB_ActiveRecord_Abstract $obj, array & $props)
+    function updateLogin(QDB_ActiveRecord_Abstract $obj)
     {
         $row = array();
         $f = $this->settings['login_count_prop'];

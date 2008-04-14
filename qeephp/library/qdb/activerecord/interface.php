@@ -41,21 +41,11 @@ interface QDB_ActiveRecord_Interface
     static function find();
 
     /**
-     * 实例化所有符合条件的对象，并调用这些对象的 destroy() 方法，返回成功删除的对象的数量
+     * 返回当前 ActiveRecord 类的元数据对象
      *
      * @static
      *
-     * @return int
+     * @return QDB_ActiveRecord_Meta
      */
-    static function destroyWhere();
-
-    /**
-     * 对数据进行验证，返回所有未通过验证数据的名称错误信息
-     *
-     * @param array $data
-     * @param array|string $fields
-     *
-     * @return array
-     */
-    static function validate(array $data, $fields = null);
+    static function meta();
 }
