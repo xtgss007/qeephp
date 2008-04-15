@@ -238,6 +238,56 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         }
     }
 
+
+    /**
+     * 为一个 ActiveRecord 类定义一个关联
+     *
+     * @param string $class
+     * @param string $mapping_name
+     * @param array $options
+     */
+    static function bind($class, $mapping_name, array $options)
+    {
+        self::reflection($class);
+
+        $define = array('public' => false);
+        $define['readonly'] = isset($options['readonly']) ? $options['readonly'] : false;
+        $define['alias']    = isset($options['alias'])    ? $options['alias']    : $mapping_name;
+        $define['getter']   = isset($options['getter'])   ? $options['getter']   : null;
+        $define['setter']   = isset($options['setter'])   ? $options['setter']   : null;
+        $define['default']  = null;
+
+        if (!empty($options['has_one'])) {
+            $define['assoc'] = 'has_one';
+            $define['class'] = $options['has_one'];
+        }
+        if (!empty($options['has_many'])) {
+            $define['assoc'] = 'has_many';
+            $define['class'] = $options['has_many'];
+        }
+        if (!empty($options['belongs_to'])) {
+            $define['assoc'] = 'belongs_to';
+            $define['class'] = $options['belongs_to'];
+        }
+        if (!empty($options['many_to_many'])) {
+            $define['assoc'] = 'many_to_many';
+            $define['class'] = $options['many_to_many'];
+        }
+
+        unset($options['readonly']);
+        unset($options['alias']);
+        unset($options['setter']);
+        unset($options['getter']);
+        $define['assoc_options'] = $options;
+        $define['virtual'] = true;
+
+        self::$__ref[$class]['attribs'][$mapping_name] = $define;
+        self::$__ref[$class]['alias'][$mapping_name] = $define['alias'];
+        self::$__ref[$class]['ralias'][$mapping_name['alias']] = $mapping_name;
+        self::$__ref[$class]['links'][$mapping_name] = $define;
+    }
+
+
     /**
      * 完成对象间的关联
      *
@@ -501,6 +551,90 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             // 通过 table_class 指定表数据入口
             $this->setTable(Q::getSingleton($ref['table_class']));
         }
+    }
+
+
+    /**
+     * 开启一个查询
+     *
+     * @param string $class
+     * @param array $args
+     *
+     * @return QDB_Select
+     */
+    protected static function __find($class, array $args)
+    {
+        self::__bindAll($class);
+        $select = QDB_Select::beginSelectFromActiveRecord($class, self::$__ref[$class]['table']);
+        if (!empty(self::$__callbacks[$class][self::after_find])) {
+            $select->bindCallbacks(self::$__callbacks[$class][self::after_find]);
+        }
+        if (!empty($args)) {
+            call_user_func_array(array($select, 'where'), $args);
+        }
+        return $select;
+    }
+
+    /**
+     * 实例化符合条件的对象，并调用对象的 destroy() 方法
+     *
+     * @param string $class
+     * @param array $args
+     */
+    protected static function __destroyWhere($class, array $args)
+    {
+        $objs = self::__find($class, $args)->all()->query();
+        foreach ($objs as $obj) {
+            $obj->destroy();
+        }
+    }
+
+    /**
+     * 对数据进行验证，返回所有未通过验证数据的名称错误信息
+     *
+     * @param string $class
+     * @param array $data
+     * @param array|string $props
+     *
+     * @return array
+     */
+    protected static function __validate($class, array $data, $props = null)
+    {
+        self::reflection($class);
+        if (!is_null($props)) {
+            $props = Q::normalize($props);
+            $props = array_flip($props);
+        } else {
+            $props = self::$__ref[$class]['ralias'];
+        }
+
+        $error = array();
+        $v = new QValidate_Validator(null);
+
+        foreach (self::$__ref[$class]['validation'] as $prop => $rules) {
+            if (!isset($props[$prop])) { continue; }
+            if (is_object($data[$prop]) && ($data[$prop] instanceof QDB_ActiveRecord_RemovedProp)) { continue; }
+
+            $v->setData($data[$prop]);
+            $v->id = $prop;
+            foreach ($rules as $rule) {
+                $check = $rule[0];
+                if (is_array($check)) {
+                    $rule[0] = $data[$prop];
+                    $check = reset($check);
+                    if (!call_user_func_array(array($class, $check), $rule)) {
+                        $error[$prop][$check] = $rule[count($rule) - 1];
+                    }
+                } else {
+                    $v->runRule($rule);
+                }
+            }
+
+            if (!$v->isPassed()) {
+                $error[$prop] = $v->getFailed();
+            }
+        }
+        return $error;
     }
 
 
