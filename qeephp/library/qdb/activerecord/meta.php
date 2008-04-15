@@ -114,6 +114,13 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     public $static_methods = array();
 
     /**
+     * 对象间的关联
+     *
+     * @var array of QDB_Link_Abstract
+     */
+    public $links = array();
+
+    /**
      * Meta 对应的 ActiveRecord 继承类
      *
      * @var string
@@ -436,12 +443,10 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
 
         // 处理对象聚合
         foreach (self::$assoc_types as $type) {
-            if (!empty($config[$type])) {
-                $params['assoc'] = $type;
-                $params['assoc_class'] = $config[$type];
-                $params['assoc_params'] = (!empty($config['assoc_params'])) ? (array)$config['assoc_params'] : null;
-                break;
-            }
+            if (empty($config[$type])) { continue; }
+            $params['assoc'] = $type;
+            $params['assoc_class'] = $config[$type];
+            $params['assoc_params'] = (!empty($config['assoc_params'])) ? (array)$config['assoc_params'] : null;
         }
 
         // 根据数据表的元信息确定属性是否是虚拟属性

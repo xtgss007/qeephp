@@ -186,7 +186,12 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
 
         foreach ($this->_meta->props as $prop_name => $params) {
             if ($params['assoc']) {
-                // TODO: ActiveRecord 的层叠删除
+                $assoc_params = $params['assoc_params'];
+                if ($params['assoc'] == 'has_one' || $params['assoc'] == 'belongs_to') {
+
+                } else {
+
+                }
             }
         }
 
