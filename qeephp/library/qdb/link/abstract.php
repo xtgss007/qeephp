@@ -38,6 +38,13 @@ abstract class QDB_Link_Abstract
     public $name;
 
     /**
+     * 目标数据映射到来源数据的哪一个键
+     *
+     * @var string
+     */
+    public $mapping_name;
+
+    /**
      * 确定关联关系时，来源方使用哪一个键
      *
      * @var string
@@ -66,65 +73,101 @@ abstract class QDB_Link_Abstract
     public $on_find = 'all';
 
     /**
-     * 查询关联表时使用的查询条件
+     * 查询目标数据时要使用的查询条件
      *
      * @var array|string
      */
     public $on_find_where = null;
 
     /**
-     * 指示按照什么排序规则查询关联的记录
+     * 查询目标数据时的排序
+     *
+     * @var string
      */
     public $on_find_order = null;
 
     /**
-     * 指示在读取关联记录时，只获取关联记录的哪些字段
+     * 查询目标数据时要查询哪些属性
+     *
+     * @var array|string
      */
-    public $on_find_fields = '*';
+    public $on_find_keys = '*';
 
     /**
-     * 指示在删除主表记录时，如何处理关联的记录
+     * 指示在来源数据时，如何处理相关的目标数据
      *
-     * cascade   - 删除所有的关联记录
-     * set_null  - 将关联记录的外键字段设置为 NULL
-     * set_value - 将关联记录的外键字段设置为指定的值
-     * skip      - 不处理关联记录
-     * reject    - 拒绝删除
+     * cascade|true - 删除关联的目标数据
+     * set_null     - 将目标数据的 target_key 键设置为 NULL
+     * set_value    - 将目标数据的 target_key 键设置为指定的值
+     * skip|false   - 不处理关联记录
+     * reject       - 拒绝对来源数据的删除
      *
-     * 对于 belongs to 和 many to many 关联，on_delete 的默认值是 skip
      * 对于 has many 和 has one 关联，默认值则是 cascade
+     * 对于 belongs to 和 many to many 关联，on_delete 设置固定为 skip
      *
      * @var string|boolean
      */
     public $on_delete = 'skip';
 
     /**
-     * 如果 on_delete 为 set_value，则通过 on_delete_set_value 指定要填充的值。on_delete_set_value 的默认值为 null
+     * 如果 on_delete 为 set_value，则通过 on_delete_set_value 指定要填充的值
      *
      * @var mixed
      */
     public $on_delete_set_value = null;
 
     /**
-     * 指示是否保存关联的记录
+     * 指示保存来源数据时，似乎否保存关联的目标数据
      *
-     * save        - 根据关联记录是否具有主键值来决定是创建记录还是更新现有记录
-     * create      - 强制创建新记录
-     * update      - 强制更新记录
-     * replace     - 使用数据库的 replace 操作来尝试替换记录
-     * skip        - 不处理关联记录
-     * only_create - 仅仅保存需要创建的记录（根据是否具备主键值判断）
-     * only_update - 仅仅保存需要更新的记录（根据是否具备主键值判断）
+     * save|true    - 根据目标数据是否有 ID 或主键值来决定是创建新的目标数据还是更新已有的目标数据
+     * create       - 强制创建新的目标数据
+     * update       - 强制更新已有的目标数据
+     * replace      - 尝试替换已有的目标数据
+     * skip|false   - 保存来源数据时，不保存目标数据
+     * only_create  - 仅仅保存需要新建的目标数据
+     * only_update  - 仅仅保存需要更新的目标数据
      *
-     * 对于 belongs to 和 many to many 关联，on_save 的默认值是 skip
+     * 对于 many to many 关联，on_save 的默认值是 skip
      * 对于 has many 和 has one 关联，on_save 的默认值是 save
+     * 对于 belongs to 关联，on_save 设置固定为 skip
      *
      * @var string
      */
     public $on_save = 'skip';
 
     /**
-     * 指示关联两个数据集的行时，是一对一关联还是一对多关联
+     * 查询多对多关联时，中间数据使用哪一个键关联到来源方
+     *
+     * @var string
+     */
+    public $mid_source_key;
+
+    /**
+     * 查询多对多关联时，中间数据使用哪一个键关联到目标方
+     *
+     * @var string
+     */
+    public $mid_target_key;
+
+    /**
+     * 查询多对多关联时，是否也要把中间数据放到结果中
+     *
+     * 如果 mid_on_find_keys 为 null，则不查询。如果为特定属性名，
+     * 则会根据 mid_mapping_to 将中间数据指定为目标数据的一个键。
+     *
+     * @var array|string
+     */
+    public $mid_on_find_keys = null;
+
+    /**
+     * 查询多对多关联时，中间数据要指定到目标数据的哪一个键
+     *
+     * @var string
+     */
+    public $mid_mapping_to;
+
+    /**
+     * 指示关联两个数据时，是一对一关联还是一对多关联
      *
      * @var boolean
      */
@@ -133,7 +176,7 @@ abstract class QDB_Link_Abstract
     /**
      * 关联的类型
      *
-     * @var const
+     * @var int
      */
     public $type;
 
@@ -147,13 +190,6 @@ abstract class QDB_Link_Abstract
     public $enabled = true;
 
     /**
-     * 指示关联的表数据入口是否已经初始化
-     *
-     * @var boolean
-     */
-    private $is_init = false;
-
-    /**
      * 用于初始化关联对象的参数
      *
      * @var array
@@ -164,24 +200,28 @@ abstract class QDB_Link_Abstract
         'on_find',
         'on_find_where',
         'on_find_order',
-        'on_find_fields',
+        'on_find_keys',
         'on_delete',
         'on_delete_set_value',
         'on_save',
+        'mid_source_key',
+        'mid_target_key',
+        'mid_on_find_keys',
+        'mid_mapping_to',
     );
-
 
     /**
      * 构造函数
      *
-     * @param array $params
+     * @param string $name
      * @param int $type
+     * @param array $params
      *
      * @return QDB_Link_Abstract
      */
-    function __construct(array $params, $type)
+    function __construct($name, $type, array $params)
     {
-        $this->name = strtolower($params['name']);
+        $this->name = strtolower($name);
         $this->type = $type;
 
         foreach (self::$init_params as $key) {
@@ -189,27 +229,5 @@ abstract class QDB_Link_Abstract
                 $this->{$key} = $params[$key];
             }
         }
-    }
-
-    /**
-     * 允许使用该关联
-     *
-     * @return QDB_Link_Abstract
-     */
-    function enable()
-    {
-        $this->enabled = true;
-        return $this;
-    }
-
-    /**
-     * 禁用该关联
-     *
-     * @return QDB_Link_Abstract
-     */
-    function disable()
-    {
-        $this->enabled = false;
-        return $this;
     }
 }

@@ -654,7 +654,6 @@ class QDB_Table
      */
     function save(array $row, $recursion = 99, $method = 'save')
     {
-        $tran = $this->dbo->beginTrans();
         if ($this->is_cpk) {
             // 如果是复合主键，并且需要自动判断使用 create() 或 update()，则抛出异常
             if ($method == 'save' || $method == 'only_create' || $method == 'only_update') {
@@ -662,6 +661,7 @@ class QDB_Table
                 throw new QDB_Table_Exception(__('QDB_Table::save() 对复合主键的支持尚未实现.'));
             }
         }
+
         if ($method == 'create') {
             return $this->create($row, $recursion);
         } elseif ($method == 'update') {
