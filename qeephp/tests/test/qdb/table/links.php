@@ -21,9 +21,9 @@ class Test_QDB_Table_Links extends PHPUnit_Framework_TestCase
 {
     function __construct()
     {
-        $dsn = Q::getIni('default_dsn');
+        $dsn = Q::getIni('db_dsn_pool/default');
         if (empty($dsn)) {
-            Q::setIni('default_dsn', Q::getIni('dsn_mysql'));
+            Q::setIni('db_dsn_pool/default', Q::getIni('db_dsn_mysql'));
         }
         parent::__construct();
     }
@@ -120,9 +120,9 @@ class Test_QDB_Table_Links extends PHPUnit_Framework_TestCase
         $this->assertTrue(!empty($first['title']), "!empty(reset(\$author['contents']['title']))");
 
         $link_contents = $tableAuthors->getLink('contents');
-        $on_find_fields = Q::normalize($link_contents->on_find_fields);
+        $on_find_keys = Q::normalize($link_contents->on_find_keys);
 
-        $this->assertEquals(count($on_find_fields), count($first), "count(\$first) == 1");
+        $this->assertEquals(count($on_find_keys), count($first), "count(\$first) == 1");
 
         if (is_int($link_contents->on_find)) {
             // $this->assertEquals($link_contents->on_find, count($author['contents']), "count(\$author['contents']) == " . $link_contents->on_find);

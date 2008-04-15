@@ -15,12 +15,23 @@
  * @version $Id$
  */
 
+class QDB_ActiveRecord_Link_Abstract extends QDB_Link_Abstract
+{
+
+    /**
+     * 读取目标数据时，要读取数据的哪些属性
+     *
+     * @var array|string
+     */
+    public $on_find_fields = '*';
+}
+
 /**
  * QDB_ActiveRecord_Link_HasOne 封装了 ActiveRecord 对象间的 has one 关联
  *
  * @package databsae
  */
-class QDB_ActiveRecord_Link_HasOne extends QDB_Link_Abstract
+class QDB_ActiveRecord_Link_HasOne extends QDB_ActiveRecord_Link_Abstract
 {
     function __construct(array $params)
     {

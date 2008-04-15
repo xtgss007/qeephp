@@ -274,13 +274,24 @@ class QDB_Select
      * 设置递归关联查询的层数（默认为1层）
      *
      * @param int $recursion
-     * @param QDB_Table_Link $link
      *
      * @return QDB_Select
      */
-    function recursion($recursion, QDB_Table_Link $link = null)
+    function recursion($recursion)
     {
         $this->recursion = abs($recursion);
+        return $this;
+    }
+
+    /**
+     * 设置递归查询的来源
+     *
+     * @param QDB_Table_Link_Abstract $link
+     *
+     * @return QDB_Select
+     */
+    function setRecursionSource(QDB_Table_Link_Abstract $link)
+    {
         $this->recursion_link = $link;
         return $this;
     }
@@ -619,16 +630,17 @@ class QDB_Select
             // 进行关联查询，并组装数据集
             foreach ($used_links as $link) {
                 /* @var $link QDB_Table_Link */
-                $aka = $link->assoc_key_alias;
-                $mka = $link->main_key_alias;
+                $aka = $link->target_key_alias;
+                $mka = $link->source_key_alias;
                 if (empty($refs_value[$mka])) {
                     continue;
                 }
 
-                $select = $link->assoc_table->find("[{$link->assoc_key}] IN (?)", $refs_value[$mka])
-                                            ->recursion($this->recursion - 1, $link)
+                $select = $link->target_table->find("[{$link->target_key}] IN (?)", $refs_value[$mka])
+                                            ->recursion($this->recursion - 1)
+                                            ->setRecursionSource($link)
                                             ->order($link->on_find_order)
-                                            ->select($link->on_find_fields)
+                                            ->select($link->on_find_keys)
                                             ->where($link->on_find_where);
                 if (is_int($link->on_find) || is_array($link->on_find)) {
                     $select->limit($link->on_find);
@@ -769,10 +781,10 @@ class QDB_Select
         $next_select = '';
         if (!$this->is_stat) {
             if ($this->recursion_link) {
-                $conn = $this->recursion_link->assoc_table->getConn();
-                $sql .= $conn->qfield($this->recursion_link->assoc_key) .
+                $conn = $this->recursion_link->target_table->getConn();
+                $sql .= $conn->qfield($this->recursion_link->target_key) .
                         ' AS ' .
-                        $conn->qfield($this->recursion_link->assoc_key_alias) . ', ';
+                        $conn->qfield($this->recursion_link->target_key_alias) . ', ';
             }
 
             $sql .= $this->toStringPart($this->select);
@@ -784,24 +796,24 @@ class QDB_Select
                     /* @var $link QDB_Table_Link */
                     if (!$link->enabled || $link->on_find == 'skip') { continue; }
                     $link->init();
-                    // if ($link->assoc_table === $this->recursion_link) { continue; }
+                    // if ($link->target_table === $this->recursion_link) { continue; }
 
                     switch ($link->type) {
                     case QDB_Table::has_one:
                     case QDB_Table::has_many:
                     case QDB_Table::belongs_to:
-                        $sql .= ', ' . $conn->qfield($link->main_key, $this->table->full_table_name) .
-                                " AS {$link->main_key_alias}";
-                        $used_links[$link->main_key_alias] = $link;
+                        $sql .= ', ' . $conn->qfield($link->source_key, $this->table->full_table_name) .
+                                " AS {$link->source_key_alias}";
+                        $used_links[$link->source_key_alias] = $link;
                         break;
                     case QDB_Table::many_to_many:
-                        if (empty($link->mid_on_find_fields)) {
-                            $sql .= ', ' . $conn->qfield($link->mid_assoc_key, $link->mid_table->full_table_name) .
-                                    " AS {$link->main_key_alias}";
+                        if (empty($link->mid_on_find_keys)) {
+                            $sql .= ', ' . $conn->qfield($link->mid_target_key, $link->mid_table->full_table_name) .
+                                    " AS {$link->source_key_alias}";
                             $join[] = "LEFT JOIN {$link->mid_table->qtable_name} ON " .
-                                      $conn->qfield($link->mid_main_key, $link->mid_table->full_table_name) .
-                                      ' = ' . $conn->qfield($link->main_key, $this->table->full_table_name);
-                            $used_links[$link->main_key_alias] = $link;
+                                      $conn->qfield($link->mid_source_key, $link->mid_table->full_table_name) .
+                                      ' = ' . $conn->qfield($link->source_key, $this->table->full_table_name);
+                            $used_links[$link->source_key_alias] = $link;
                         } else {
                             // 结果中要包含中间表的数据
                         }

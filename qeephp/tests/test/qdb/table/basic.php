@@ -26,17 +26,17 @@ class Test_QDB_Table_Basic extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $dsn = Q::getIni('default_dsn');
+        $dsn = Q::getIni('db_dsn_pool/default');
         if (empty($dsn)) {
-            Q::setIni('default_dsn', Q::getIni('dsn_mysql'));
+            Q::setIni('db_dsn_pool/default', Q::getIni('db_dsn_mysql'));
         }
-        $dbo = QDB::getConn();
+        $conn = QDB::getConn();
         $params = array(
             'table_name' => 'posts',
             'pk'         => 'post_id',
-            'dbo'        => $dbo
+            'conn'       => $conn
         );
-        $this->table = new QDB_Table($params, false);
+        $this->table = new QDB_Table($params);
     }
 
     function testFind()
@@ -69,6 +69,7 @@ class Test_QDB_Table_Basic extends PHPUnit_Framework_TestCase
         $this->assertEquals($row['title'], $find['title']);
         $this->assertEquals($row['body'], $find['body']);
         $this->assertFalse(empty($find['created']));
+        QDebug::dump($find);
         $this->assertFalse(empty($find['updated']));
     }
 

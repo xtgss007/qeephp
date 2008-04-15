@@ -25,20 +25,29 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
     /**
      * 构造函数
      *
-     * @param string $name
      * @param array $params
      * @param QDB_Table $source_table
      *
      * @return QDB_Table_Link
      */
-    function __construct($name, array $params, QDB_Table $source_table)
+    protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct($name, self::has_many, $params, $source_table);
+        parent::__construct(self::has_many, $params, $source_table);
         $this->one_to_one = false;
-        $this->main_key  = !empty($params['main_key'])    ? $params['main_key']  : $this->source_table->pk;
-        $this->target_key = !empty($params['target_key']) ? $params['target_key'] : $this->source_table->pk;
-        $this->on_delete = !empty($params['on_delete'])   ? $params['on_delete'] : 'cascade';
-        $this->on_save   = !empty($params['on_save'])     ? $params['on_save']   : 'save';
+    }
+
+    /**
+     * 初始化
+     */
+    function init()
+    {
+        if ($this->is_init) { return; }
+        parent::init();
+        $params = $this->init_params;
+        $this->main_key   = !empty($params['main_key'])    ? $params['main_key']   : $this->source_table->pk;
+        $this->target_key = !empty($params['target_key'])  ? $params['target_key'] : $this->source_table->pk;
+        $this->on_delete  = !empty($params['on_delete'])   ? $params['on_delete']  : 'cascade';
+        $this->on_save    = !empty($params['on_save'])     ? $params['on_save']    : 'save';
     }
 
     /**
@@ -50,6 +59,7 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
      */
     function saveTargetData(array $target_data, $source_key_value, $recursion)
     {
+        $this->init();
         if ($this->on_save === false || $this->on_save == 'skip') { return; }
         foreach (array_keys($target_data) as $offset) {
             $target_data[$offset][$this->target_key] = $source_key_value;
@@ -65,6 +75,7 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
      */
     function removeTargetData($source_key_value, $recursion)
     {
+        $this->init();
         if ($this->on_delete === false || $this->on_delete == 'skip') { return; }
         if ($this->on_delete === true || $this->on_delete == 'cascade') {
             $this->target_table->removeByField($this->target_key, $source_key_value, $recursion);

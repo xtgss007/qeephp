@@ -32,7 +32,7 @@ class Table_Authors extends QDB_Table
         array(
             'table_class'   => 'Table_Contents',
             'mapping_name'  => 'contents',
-            'link_field'    => 'author_id',
+            'source_key'    => 'author_id',
             'count_cache'   => 'contents_count',
 
             /**
@@ -43,7 +43,7 @@ class Table_Authors extends QDB_Table
             /**
              * 指示在读取关联的内容记录时，只需要内容记录的哪些字段
              */
-            'on_find_fields' => 'content_id, title',
+            'on_find_keys' => 'content_id, title',
 
             /**
              * 指示按照什么排序规则查询关联的内容记录
@@ -67,7 +67,7 @@ class Table_Authors extends QDB_Table
         array(
             'table_class'   => 'Table_Comments',
             'mapping_name'  => 'comments',
-            'link_field'    => 'author_id',
+            'source_key'    => 'author_id',
             'count_cache'   => 'comments_count',
 
             /**
@@ -87,8 +87,8 @@ class Table_Authors extends QDB_Table
             'table_class' => 'Table_Books',
             'mapping_name' => 'books',
             'mid_table_class' => 'Table_BooksHasAuthors',
-            'mid_on_find_fields' => 'remark',
-            'on_find_fields' => 'title',
+            'mid_on_find_keys' => 'remark',
+            'on_find_keys' => 'title',
         )
     );
 

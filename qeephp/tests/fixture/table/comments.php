@@ -29,17 +29,17 @@ class Table_Comments extends QDB_Table
         array(
             'table_class'   => 'Table_Contents',
             'mapping_name'  => 'content',
-            'foreign_key'   => 'content_id',
+            'target_key'    => 'content_id',
             'count_cache'   => 'comments_count',
-            'on_find_fields' => 'title',
+            'on_find_keys'  => 'title',
         ),
 
         array(
             'table_class'   => 'Table_Authors',
             'mapping_name'  => 'author',
-            'foreign_key'   => 'author_id',
+            'target_key'    => 'author_id',
             'count_cache'   => 'comments_count',
-            'on_find_fields' => 'name',
+            'on_find_keys'  => 'name',
         )
     );
 }

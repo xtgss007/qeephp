@@ -20,25 +20,10 @@
  *
  * @package database
  */
-abstract class QDB_Link_Abstract
+abstract class QDB_Link_Abstract implements QDB_Link_Consts
 {
     /**
-     * 定义四种关联关系
-     */
-    const has_one       = 'has_one';
-    const has_many      = 'has_many';
-    const belongs_to    = 'belongs_to';
-    const many_to_many  = 'many_to_many';
-
-    /**
-     * 该关联的名字
-     *
-     * @var string
-     */
-    public $name;
-
-    /**
-     * 目标数据映射到来源数据的哪一个键
+     * 目标数据映射到来源数据的哪一个键，同时 mapping_name 也是关联的名字
      *
      * @var string
      */
@@ -213,16 +198,20 @@ abstract class QDB_Link_Abstract
     /**
      * 构造函数
      *
-     * @param string $name
      * @param int $type
      * @param array $params
      *
      * @return QDB_Link_Abstract
      */
-    function __construct($name, $type, array $params)
+    protected function __construct($type, array $params)
     {
-        $this->name = strtolower($name);
         $this->type = $type;
+        if (empty($params['mapping_name'])) {
+            // LC_MSG: 创建关联必须指定关联的 mapping_name 属性.
+            throw new QDB_Link_Exception(__('创建关联必须指定关联的 mapping_name 属性.'));
+        } else {
+            $this->mapping_name = strtolower($params['mapping_name']);
+        }
 
         foreach (self::$init_params as $key) {
             if (!empty($params[$key])) {

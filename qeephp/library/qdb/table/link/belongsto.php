@@ -25,20 +25,30 @@ class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
     /**
      * 构造函数
      *
-     * @param string $name
      * @param array $params
      * @param QDB_Table $source_table
      *
      * @return QDB_Table_Link
      */
-    function __construct($name, array $params, QDB_Table $source_table)
+    protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct($name, self::belongs_to, $params, $source_table);
+        parent::__construct(self::belongs_to, $params, $source_table);
         $this->one_to_one = true;
+    }
+
+    /**
+     * 初始化
+     */
+    function init()
+    {
+        if ($this->is_init) { return; }
+        parent::init();
+        $params = $this->init_params;
         $this->main_key   = !empty($params['main_key'])   ? $params['main_key']   : $this->target_table->pk;
         $this->target_key = !empty($params['target_key']) ? $params['target_key'] : $this->target_table->pk;
         $this->on_delete  = 'skip';
         $this->on_save    = 'skip';
+
     }
 
     /**

@@ -48,7 +48,7 @@ class Table_Contents extends QDB_Table
         array(
             'table_class'   => 'Table_Authors',
             'mapping_name'  => 'author',
-            'link_field'    => 'author_id',
+            'source_key'    => 'author_id',
             /**
              * 指示在 Table_Authors 封装的数据表中使用什么字段存储关联内容的记录总数
              */
@@ -57,7 +57,7 @@ class Table_Contents extends QDB_Table
             /**
              * 指示在读取作者信息时，只获取作者表的哪些字段
              */
-            'on_find_fields' => array('author_id', 'name' => 'name_alias'),
+            'on_find_keys' => array('author_id', 'name' => 'name_alias'),
         ),
     );
 
@@ -73,7 +73,7 @@ class Table_Contents extends QDB_Table
         array(
             'table_class'   => 'Table_Comments',
             'mapping_name'  => 'comments',
-            'foreign_key'   => 'content_id',
+            'target_key'    => 'content_id',
             /**
              * count_cache 指示在 contents 表中用什么字段存储关联评论的记录总数
              */

@@ -27,10 +27,10 @@ class Table_Tags extends QDB_Table
 
     protected $many_to_many = array(
         array(
-            'table_class' => 'Table_Contents',
-            'mapping_name' => 'contents',
+            'table_class'    => 'Table_Contents',
+            'mapping_name'   => 'contents',
             'mid_table_name' => 'contents_has_tags',
-            'on_find' => 'skip',
+            'on_find'        => 'skip',
         ),
     );
 

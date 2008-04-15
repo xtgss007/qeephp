@@ -25,16 +25,25 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
     /**
      * 构造函数
      *
-     * @param string $name
      * @param array $params
      * @param QDB_Table $source_table
      *
      * @return QDB_Table_Link
      */
-    function __construct($name, array $params, QDB_Table $source_table)
+    protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct($name, self::many_to_many, $params, $source_table);
+        parent::__construct(self::many_to_many, $params, $source_table);
         $this->one_to_one = false;
+    }
+
+    /**
+     * 初始化
+     */
+    function init()
+    {
+        if ($this->is_init) { return; }
+        parent::init();
+        $params = $this->init_params;
 
         /**
          * mid_table_obj、mid_table_class、mid_table_name 三者只需要指定一个，三者的优先级从上到下。
@@ -80,6 +89,7 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
      */
     function saveTargetData(array $target_data, $source_key_value, $recursion)
     {
+        $this->init();
         /**
          * 算法：
          *
@@ -162,6 +172,7 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
      */
     function removeTargetData($source_key_value, $recursion)
     {
+        $this->init();
         // 必须删除中间表里面，来源数据与目标数据的关联
         $this->mid_table->removeByField($this->mid_source_key, $source_key_value, $recursion);
     }

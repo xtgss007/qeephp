@@ -30,7 +30,7 @@ class Table_Books extends QDB_Table
             'table_class' => 'Table_Authors',
             'mapping_name' => 'authors',
             'mid_table_class' => 'Table_BooksHasAuthors',
-            'mid_on_find_fields' => 'remark',
+            'mid_on_find_keys' => 'remark',
         )
     );
 }

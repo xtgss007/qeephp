@@ -38,4 +38,4 @@ $dsn = array(
     'prefix'    => 'q_',
     'charset'   => 'utf8',
 );
-Q::setIni('dsn_mysql', $dsn);
+Q::setIni('db_dsn_mysql', $dsn);
