@@ -213,21 +213,13 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     /**
      * 开启一个查询
      *
-     * @param arary $args
+     * @param arary $where
      *
      * @return QDB_ActiveRecord_Select
      */
-    function find(array $args)
+    function find(array $where)
     {
-        $select = new QDB_ActiveRecord_Select($this, $args, $this->links);
-//        if (!empty(self::$__callbacks[$class][self::after_find])) {
-//            $select->bindCallbacks(self::$__callbacks[$class][self::after_find]);
-//        }
-//        if (!empty($args)) {
-//            call_user_func_array(array($select, 'where'), $args);
-//        }
-        return $select;
-
+        return new QDB_ActiveRecord_Select($this, $where);
     }
 
     /**
