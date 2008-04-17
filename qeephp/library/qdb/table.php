@@ -44,7 +44,7 @@ class QDB_Table implements QDB_Link_Consts
     public $full_table_name;
 
     /**
-     * 数据表的完全限定名（不包含 schema）
+     * 数据表的完全限定名（含 schema）
      *
      * @var string
      */
@@ -881,7 +881,7 @@ class QDB_Table implements QDB_Link_Consts
         } elseif (empty($this->full_table_name)) {
             $this->full_table_name = $this->table_name;
         }
-        $this->qtable_name = $this->conn->qtable($this->full_table_name);
+        $this->qtable_name = $this->conn->qtable($this->full_table_name, $this->schema);
     }
 
     /**
@@ -1119,12 +1119,12 @@ class QDB_Table implements QDB_Link_Consts
                 $field = $arr[2];
                 break;
             case 2:
-                $schema = $this->schema;
+                $schema = null;
                 $table = $arr[0];
                 $field = $arr[1];
                 break;
             default:
-                $schema = $this->schema;
+                $schema = null;
                 $table = $this->full_table_name;
                 $field = $arr[0];
             }

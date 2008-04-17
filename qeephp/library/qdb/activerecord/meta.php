@@ -577,12 +577,12 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      * @param string $class
      * @param array $args
      *
-     * @return QDB_Select
+     * @return QDB_Table_Select
      */
     protected static function __find($class, array $args)
     {
         self::__bindAll($class);
-        $select = QDB_Select::beginSelectFromActiveRecord($class, self::$__ref[$class]['table']);
+        $select = QDB_Table_Select::beginSelectFromActiveRecord($class, self::$__ref[$class]['table']);
         if (!empty(self::$__callbacks[$class][self::after_find])) {
             $select->bindCallbacks(self::$__callbacks[$class][self::after_find]);
         }
