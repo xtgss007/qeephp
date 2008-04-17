@@ -44,7 +44,7 @@ class QDB_Expr
      *
      * @return string
      */
-    function toString()
+    function __toString()
     {
         return $this->expr;
     }

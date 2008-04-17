@@ -43,7 +43,7 @@ class <?php echo $class_name; ?> extends QDB_ActiveRecord_Abstract
 
             // 指定数据表记录字段与对象属性之间的映射关系
             // 没有在此处指定的属性，QeePHP 会自动设置将属性映射为对象的可读写属性
-            'fields' => array(
+            'props' => array(
                 // 主键应该是只读，确保领域对象的“不变量”
 <?php foreach ($pk as $p): ?>
                 '<?php echo $p; ?>' => array('readonly' => true),
@@ -60,7 +60,7 @@ class <?php echo $class_name; ?> extends QDB_ActiveRecord_Abstract
                 /**
                  *  可以在此添加其他属性的设置
                  */
-                # 'other_field' => array('readonly' => true),
+                # 'other_prop' => array('readonly' => true),
 
                 /**
                  * 添加对象间的关联
@@ -156,39 +156,26 @@ if (empty($rules)) { continue; }
      *
      * @static
      *
-     * @return QDB_Select
+     * @return QDB_ActiveRecord_Select
      */
     static function find()
     {
         $args = func_get_args();
-        return parent::__find(__CLASS__, $args);
+        return QDB_ActiveRecord_Meta::getInstance(__CLASS__)->find($args);
     }
 
     /**
-     * 实例化所有符合条件的对象，并调用这些对象的 destroy() 方法，返回成功删除的对象的数量
+     * 返回当前 ActiveRecord 类的元数据对象
      *
      * @static
      *
-     * @return int
+     * @return QDB_ActiveRecord_Meta
      */
-    static function destroyWhere()
+    static function meta()
     {
-        $args = func_get_args();
-        return parent::__destroyWhere(__CLASS__, $args);
+        return QDB_ActiveRecord_Meta::getInstance(__CLASS__);
     }
 
-    /**
-     * 对数据进行验证，返回所有未通过验证数据的名称错误信息
-     *
-     * @param array $data
-     * @param array|string $props
-     *
-     * @return array
-     */
-    static function validate(array $data, $props = null)
-    {
-        return parent::__validate(__CLASS__, $data, $props);
-    }
 
 /* -------------------------------------------------------------------- */
 
@@ -202,43 +189,14 @@ if (empty($rules)) { continue; }
 class <?php echo $class_name; ?>_Null extends <?php echo $class_name; ?>
 
 {
-    function __construct(array $data = null)
-    {
-        parent::__construct();
-    }
-
-    function setProps(array $props)
-    {
-    }
-
-    function save($force_create = false, $recursion = 99)
-    {
-    }
-
-    function reload($recursion = 1)
-    {
-    }
-
-    function doValidate($mode = 'general')
-    {
-    }
-
-    function destroy($recursion = 99)
-    {
-    }
-
-    function id()
-    {
-        return null;
-    }
-
-    protected function create($recursion = 99)
-    {
-    }
-
-    protected function update($recursion = 99)
-    {
-    }
+    function id() { return null; }
+    function setProps(array $props) {}
+    function save($force_create = false, $recursion = 99) {}
+    function reload($recursion = 1) {}
+    function validate($mode = 'general', $throw = false) {}
+    function destroy($recursion = 99) {}
+    protected function create($recursion = 99) {}
+    protected function update($recursion = 99) {}
 }
 
 /**

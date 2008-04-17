@@ -160,7 +160,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      *
      * @param string $class
      */
-    protected function __constrcut($class)
+    protected function __construct($class)
     {
         $this->init($class);
     }
@@ -172,7 +172,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      *
      * @return QDB_ActiveRecord_Meta
      */
-    function getInstance($class)
+    static function getInstance($class)
     {
         if (!isset(self::$metas[$class])) {
             self::$metas[$class] = new QDB_ActiveRecord_Meta($class);
@@ -208,6 +208,26 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     function setTable(QDB_Table $table)
     {
         $this->table = $table;
+    }
+
+    /**
+     * 开启一个查询
+     *
+     * @param arary $args
+     *
+     * @return QDB_ActiveRecord_Select
+     */
+    function find(array $args)
+    {
+        $select = new QDB_ActiveRecord_Select($this, $args, $this->links);
+//        if (!empty(self::$__callbacks[$class][self::after_find])) {
+//            $select->bindCallbacks(self::$__callbacks[$class][self::after_find]);
+//        }
+//        if (!empty($args)) {
+//            call_user_func_array(array($select, 'where'), $args);
+//        }
+        return $select;
+
     }
 
     /**

@@ -48,5 +48,4 @@ class QDB_Table_Link_HasOne extends QDB_Table_Link_HasMany
     {
         parent::saveTargetData(array($target_data), $source_key_value, $recursion);
     }
-
 }

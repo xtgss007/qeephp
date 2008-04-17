@@ -193,6 +193,7 @@ abstract class QDB_Link_Abstract implements QDB_Link_Consts
         'mid_target_key',
         'mid_on_find_keys',
         'mid_mapping_to',
+        'enabled',
     );
 
     /**

@@ -36,7 +36,7 @@ interface QDB_ActiveRecord_Interface
      *
      * @static
      *
-     * @return QDB_Select
+     * @return QDB_ActiveRecord_Select
      */
     static function find();
 

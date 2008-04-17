@@ -41,7 +41,7 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
      */
     function init()
     {
-        if ($this->is_init) { return; }
+        if ($this->is_init) { return $this; }
         parent::init();
         $params = $this->init_params;
 
@@ -70,14 +70,18 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
         }
         $this->mid_table->connect();
 
-        $this->main_key         = !empty($params['main_key']) ? $params['main_key'] : $this->source_table->pk;
+        $this->source_key       = !empty($params['source_key']) ? $params['source_key'] : $this->source_table->pk;
         $this->target_key       = !empty($params['target_key']) ? $params['target_key'] : $this->target_table->pk;
-        $this->mid_main_key     = !empty($params['mid_main_key']) ? $params['mid_main_key'] : $this->source_table->pk;
+        $this->source_key_alias = $this->mapping_name . '_' . $this->source_key;
+        $this->target_key_alias = $this->mapping_name . '_' . $this->target_key;
+
+        $this->mid_source_key   = !empty($params['mid_source_key']) ? $params['mid_source_key'] : $this->source_table->pk;
         $this->mid_target_key   = !empty($params['mid_target_key']) ? $params['mid_target_key'] : $this->target_table->pk;
         $this->mid_on_find_keys = !empty($params['mid_on_find_keys']) ? $params['mid_on_find_keys'] : null;
         $this->mid_mapping_to   = !empty($params['mid_mapping_to']) ? $params['mid_mapping_to'] : 'mid_data';
         $this->on_delete        = 'skip';
         $this->on_save          = !empty($params['on_save']) ? $params['on_save']       : 'skip';
+        return $this;
     }
 
     /**
@@ -175,5 +179,21 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
         $this->init();
         // 必须删除中间表里面，来源数据与目标数据的关联
         $this->mid_table->removeByField($this->mid_source_key, $source_key_value, $recursion);
+    }
+
+    /**
+     * 返回用于 JOIN 操作的 SQL 字符串
+     *
+     * @return string
+     */
+    function getJoinSQL()
+    {
+        $this->init();
+        $sk = $this->source_table->qfields($this->source_key);
+        $tk = $this->target_table->qfields($this->target_key);
+        $msk = $this->mid_table->qfields($this->mid_source_key);
+        $mtk = $this->mid_table->qfields($this->mid_target_key);
+
+        return " INNER JOIN {$this->mid_table->qtable_name} ON {$msk} = {$sk} INNER JOIN {$this->target_table->qtable_name} ON {$tk} = {$mtk}";
     }
 }

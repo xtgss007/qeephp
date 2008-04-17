@@ -374,15 +374,12 @@ class QDB_Table implements QDB_Link_Consts
     /**
      * 创建一个查询对象
      *
-     * @param string|array $where
-     *
-     * @return QDB_Select
+     * @return QDB_Table_Select
      */
-    function find($where = null)
+    function find()
     {
-        $args = func_get_args();
-        array_shift($args);
-        return QDB_Select::beginSelectFromTable($this, $where, $args, $this->links);
+        $where = func_get_args();
+        return new QDB_Table_Select($this, $this->links, $where);
     }
 
     /**

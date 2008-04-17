@@ -77,8 +77,6 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
      * @param int $type
      * @param array $params
      * @param QDB_Table $source_table
-     *
-     * @return QDB_Table_Link
      */
     protected function __construct($type, array $params, QDB_Table $source_table)
     {
@@ -89,10 +87,12 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
 
     /**
      * 初始化关联
+     *
+     * @return QDB_Table_Link_Abstract
      */
     function init()
     {
-        if ($this->is_init) { return; }
+        if ($this->is_init) { return $this; }
 
         $this->source_table->connect();
         $params = $this->init_params;
@@ -129,10 +129,8 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
         $this->on_find_order       = !empty($params['on_find_order'])       ? $params['on_find_order']       : null;
         $this->on_delete_set_value = !empty($params['on_delete_set_value']) ? $params['on_delete_set_value'] : null;
 
-        $this->source_key_alias = $this->mapping_name . '_' . $this->source_key;
-        $this->target_key_alias = $this->mapping_name . '_' . $this->target_key;
-
         $this->is_init = true;
+        return $this;
     }
 
     /**
@@ -177,4 +175,11 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
      * @param int $recursion
      */
     abstract function removeTargetData($source_key_value, $recursion);
+
+    /**
+     * 返回用于 JOIN 操作的 SQL 字符串
+     *
+     * @return string
+     */
+    abstract function getJoinSQL();
 }

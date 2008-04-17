@@ -41,14 +41,16 @@ class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
      */
     function init()
     {
-        if ($this->is_init) { return; }
+        if ($this->is_init) { return $this; }
         parent::init();
         $params = $this->init_params;
         $this->main_key   = !empty($params['main_key'])   ? $params['main_key']   : $this->target_table->pk;
         $this->target_key = !empty($params['target_key']) ? $params['target_key'] : $this->target_table->pk;
+        $this->source_key_alias = $this->mapping_name . '_' . $this->source_key;
+        $this->target_key_alias = $this->mapping_name . '_' . $this->target_key;
         $this->on_delete  = 'skip';
         $this->on_save    = 'skip';
-
+        return $this;
     }
 
     /**
@@ -72,5 +74,19 @@ class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
     function removeTargetData($source_key_value, $recursion)
     {
         return;
+    }
+
+    /**
+     * 返回用于 JOIN 操作的 SQL 字符串
+     *
+     * @return string
+     */
+    function getJoinSQL()
+    {
+        $this->init();
+        $sk = $this->source_table->qfields($this->source_key);
+        $tk = $this->target_table->qfields($this->target_key);
+
+        return " LEFT JOIN {$this->target_table->qtable_name} ON {$sk} = {$tk} ";
     }
 }

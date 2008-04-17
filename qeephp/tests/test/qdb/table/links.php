@@ -77,16 +77,16 @@ class Test_QDB_Table_Links extends PHPUnit_Framework_TestCase
 
         $tableContents->disableLinks('comments, marks, tags');
         $content = array(
-            'title' => '测试标题',
+            'title' => 'Test Title',
             'author_id' => $authors['liaoyulei'],
         );
         $id = $tableContents->create($content);
 
-        $find = $tableContents->find($id)->query();
+        $find = $tableContents->find('%PK% = ?', $id)->query();
         $tableContents->enableAllLinks();
         $tableContents->getConn()->completeTrans(false);
 
-        QDebug::dump($find, 'testFindBelongsTo');
+        // QDebug::dump($find, 'testFindBelongsTo');
 
         $this->assertEquals($content['title'], $find['title'], "\$find['title'] == \$content['title']");
         $this->assertTrue(!empty($find['author']), "!empty(\$find['author'])");
@@ -111,7 +111,7 @@ class Test_QDB_Table_Links extends PHPUnit_Framework_TestCase
         $author = $tableAuthors->find($authors['liaoyulei'])->query();
         $tableAuthors->getConn()->completeTrans(false);
 
-        QDebug::dump($author, 'testFindHasMany');
+        // QDebug::dump($author, 'testFindHasMany');
 
         $this->assertTrue(!empty($author['contents']), "!empty(\$author['contents'])");
         $this->assertType('array', $author['contents'], "type of \$author['contents'] == array");
@@ -131,6 +131,11 @@ class Test_QDB_Table_Links extends PHPUnit_Framework_TestCase
         $first = reset($author['contents']);
         $next = next($author['contents']);
         $this->assertTrue($first['content_id'] < $next['content_id'], "\$first['content_id'] < \$next['content_id']");
+    }
+
+    function testManyToMany()
+    {
+
     }
 
     /**

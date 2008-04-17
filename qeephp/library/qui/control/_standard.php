@@ -241,7 +241,7 @@ class Control_Hidden extends Control_Input_Abstract
 {
     function render($return = false)
     {
-        return $this->_make('hiden', $return);
+        return $this->_make('hidden', $return);
     }
 }
 

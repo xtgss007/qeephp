@@ -41,13 +41,16 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
      */
     function init()
     {
-        if ($this->is_init) { return; }
+        if ($this->is_init) { return $this; }
         parent::init();
         $params = $this->init_params;
         $this->main_key   = !empty($params['main_key'])    ? $params['main_key']   : $this->source_table->pk;
         $this->target_key = !empty($params['target_key'])  ? $params['target_key'] : $this->source_table->pk;
         $this->on_delete  = !empty($params['on_delete'])   ? $params['on_delete']  : 'cascade';
         $this->on_save    = !empty($params['on_save'])     ? $params['on_save']    : 'save';
+        $this->source_key_alias = $this->mapping_name . '_' . $this->source_key;
+        $this->target_key_alias = $this->mapping_name . '_' . $this->target_key;
+        return $this;
     }
 
     /**
@@ -90,5 +93,19 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
             $fill = ($this->on_delete == 'set_null') ? null : $this->on_delete_set_value;
             $this->target_table->updateWhere(array($this->target_key => $fill), array($this->target_key => $source_key_value));
         }
+    }
+
+    /**
+     * 返回用于 JOIN 操作的 SQL 字符串
+     *
+     * @return string
+     */
+    function getJoinSQL()
+    {
+        $this->init();
+        $sk = $this->source_table->qfields($this->source_key);
+        $tk = $this->target_table->qfields($this->target_key);
+
+        return " LEFT JOIN {$this->target_table->qtable_name} ON {$sk} = {$tk} ";
     }
 }
