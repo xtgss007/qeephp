@@ -107,6 +107,13 @@ class QDB_Table_Select
     protected $page_query = false;
 
     /**
+     * 用于分页查询的 SQL
+     *
+     * @var string
+     */
+    protected $page_query_sql = '';
+
+    /**
      * 添加 GROUP BY 子句
      *
      * @var string
@@ -337,6 +344,9 @@ class QDB_Table_Select
      */
     function getPager()
     {
+        if (is_null($this->pager)) {
+            $this->preparePagedQuery();
+        }
         return $this->pager;
     }
 
@@ -938,14 +948,15 @@ class QDB_Table_Select
         }
 
         /**
-         * 6. 开始构造 SQL
+         * 6. 开始构造 SQL（查询和用于分页统计的两种）
          */
-        $sql = 'SELECT ';
-        if ($this->distinct) { $sql .= 'DISTINCT '; }
-        $sql .= implode(',' , $strings['select']);
+        $arr = array();
+        $arr[] = 'SELECT ';
+        if ($this->distinct) { $arr[] = 'DISTINCT '; }
+        $arr[] = implode(',' , $strings['select']);
 
         // FROM
-        $sql .= " FROM {$this->table->qtable_name}";
+        $arr[] = " FROM {$this->table->qtable_name}";
 
         // JOIN
         $joined = array();
@@ -956,15 +967,19 @@ class QDB_Table_Select
             }
         }
         if (!empty($joined)) {
-            $sql .= ' ' . implode(' ', $joined);
+            $arr[] = ' ' . implode(' ', $joined);
         }
 
         // WHERE ...
-        $sql .= $strings['where'];
-        $sql .= $strings['group'];
-        $sql .= $strings['having'];
-        $sql .= $strings['order'];
+        $arr[] = $strings['where'];
+        $arr[] = $strings['group'];
+        $arr[] = $strings['having'];
+        $arr[] = $strings['order'];
+
+        $sql = implode('', $arr);
         if ($this->for_update) { $sql .= ' FOR UPDATE'; }
+        $arr[1] = 'COUNT(*) as total_count';
+        $this->page_query_sql = implode('', $arr);
 
         return array($sql, $find_links);
     }
@@ -1042,16 +1057,10 @@ class QDB_Table_Select
      */
     protected function preparePagedQuery()
     {
-        $sql = 'SELECT ';
-        if ($this->distinct) {
-            $sql .= 'DISTINCT ';
+        if (empty($this->page_query_sql)) {
+            $this->toStringInternal();
         }
-        $sql .= " COUNT(*) FROM {$this->table->qtable_name}";
-        $sql .= $this->toStringWhere();
-        $sql .= $this->toStringGroup();
-        $sql .= $this->toStringHaving();
-
-        $count = (int)$this->table->conn->getOne($sql);
+        $count = (int)$this->table->conn->getOne($this->page_query_sql);
 
         $pager = array();
         $pager['page_count'] = ceil($count / $this->page_size);
