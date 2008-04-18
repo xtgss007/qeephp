@@ -196,18 +196,16 @@ abstract class QDB_Result_Abstract
      */
     function fetchAllRefby(array $fields, & $fields_value, & $ref, $clean_up)
     {
-        $fields_value = array();
-        $ref = array();
+        $ref = $fields_value = $data = array();
         $offset = 0;
-        $data = array();
 
         if ($clean_up) {
             while (($row = $this->fetchRow())) {
                 $data[$offset] = $row;
                 foreach ($fields as $field) {
-                    $fieldValue = $row[$field];
-                    $fields_value[$field][$offset] = $fieldValue;
-                    $ref[$field][$fieldValue][] =& $data[$offset];
+                    $field_value = $row[$field];
+                    $fields_value[$field][$offset] = $field_value;
+                    $ref[$field][$field_value][] =& $data[$offset];
                     unset($data[$offset][$field]);
                 }
                 $offset++;
@@ -216,9 +214,9 @@ abstract class QDB_Result_Abstract
             while (($row = $this->fetchRow())) {
                 $data[$offset] = $row;
                 foreach ($fields as $field) {
-                    $fieldValue = $row[$field];
-                    $fields_value[$field][$offset] = $fieldValue;
-                    $ref[$field][$fieldValue][] =& $data[$offset];
+                    $field_value = $row[$field];
+                    $fields_value[$field][$offset] = $field_value;
+                    $ref[$field][$field_value][] =& $data[$offset];
                 }
                 $offset++;
             }

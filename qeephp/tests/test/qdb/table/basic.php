@@ -50,9 +50,7 @@ class Test_QDB_Table_Basic extends PHPUnit_Framework_TestCase
         $conditions = '[post_id] = :post_id AND created > :created';
         $select = $this->table->find($conditions, array('post_id' => 1, 'created' => 0));
         $actual = trim($select->toString());
-        $expected = 'SELECT `q_posts`.* FROM `qeephp_test`.`q_posts` WHERE (`q_posts`.`post_id` = 1 AND created > 0)';
-        QDebug::dump($actual);
-        QDebug::dump($expected);
+        $expected = 'SELECT `q_posts`.* FROM `qeephp_test_db`.`q_posts` WHERE (`q_posts`.`post_id` = 1 AND created > 0)';
         $this->assertEquals($expected, $actual);
     }
 

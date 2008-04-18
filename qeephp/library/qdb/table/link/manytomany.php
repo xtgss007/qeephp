@@ -32,7 +32,7 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct(self::many_to_many, $params, $source_table);
+        parent::__construct(QDB::many_to_many, $params, $source_table);
         $this->one_to_one = false;
     }
 
@@ -72,8 +72,8 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
 
         $this->source_key       = !empty($params['source_key']) ? $params['source_key'] : $this->source_table->pk;
         $this->target_key       = !empty($params['target_key']) ? $params['target_key'] : $this->target_table->pk;
-        $this->source_key_alias = $this->mapping_name . '_' . $this->source_key;
-        $this->target_key_alias = $this->mapping_name . '_' . $this->target_key;
+        $this->source_key_alias = $this->mapping_name . '_source_key';
+        $this->target_key_alias = $this->mapping_name . '_target_key';
 
         $this->mid_source_key   = !empty($params['mid_source_key']) ? $params['mid_source_key'] : $this->source_table->pk;
         $this->mid_target_key   = !empty($params['mid_target_key']) ? $params['mid_target_key'] : $this->target_table->pk;
@@ -129,14 +129,13 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
         }
 
         // 取出现有的关联信息
-        $conn = $this->mid_table->getConn();
         $sql = sprintf('SELECT %s FROM %s WHERE %s = %s',
-                       $conn->qfield($this->mid_target_key),
+                       $this->mid_table->conn->qfield($this->mid_target_key),
                        $this->mid_table->qtable_name,
-                       $conn->qfield($this->mid_source_key),
-                       $conn->qstr($source_key_value)
+                       $this->mid_table->conn->qfield($this->mid_source_key),
+                       $this->mid_table->conn->qstr($source_key_value)
         );
-        $exists_mid = $conn->getCol($sql);
+        $exists_mid = $this->mid_table->conn->getCol($sql);
 
         // 然后确定要添加的关联信息
         $insert_mid = array_flip(array_diff($target_key_values, $exists_mid));

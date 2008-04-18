@@ -138,7 +138,7 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
         }
     }
 
-    function nextID($tablename, $fieldname = null, $schema = null, $start_value = 1)
+    function nextID($tablename, $fieldname, $schema = null, $start_value = 1)
     {
         $full_tablename = $tablename . '_' . $fieldname . '_seq';
         $qtable = $this->qtable($full_tablename, $schema);

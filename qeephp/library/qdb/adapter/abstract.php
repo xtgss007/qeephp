@@ -518,7 +518,7 @@ abstract class QDB_Adapter_Abstract
      *
      * @return int
      */
-    abstract function nextID($tablename, $fieldname = null, $schema = null, $start_value = 1);
+    abstract function nextID($tablename, $fieldname, $schema = null, $start_value = 1);
 
     /**
      * 创建一个新的序列，失败时抛出异常

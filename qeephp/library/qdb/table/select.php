@@ -32,7 +32,7 @@ class QDB_Table_Select
     /**
      * 要查询的关联
      *
-     * @var array of QDB_Link_Abstract
+     * @var array of QDB_Table_Link_Abstract
      */
     protected $links;
 
@@ -62,7 +62,7 @@ class QDB_Table_Select
      *
      * @var string
      */
-    protected $order = null;
+    protected $order;
 
     /**
      * 限定结果集大小
@@ -97,7 +97,7 @@ class QDB_Table_Select
      *
      * @var array
      */
-    protected $pager = null;
+    protected $pager;
 
     /**
      * 指示是否是分页查询
@@ -111,7 +111,7 @@ class QDB_Table_Select
      *
      * @var string
      */
-    protected $group = null;
+    protected $group;
 
     /**
      * 添加 HAVING 子句
@@ -142,13 +142,6 @@ class QDB_Table_Select
     protected $recursion = 1;
 
     /**
-     * 指示是否将查询到的数据封装为对象
-     *
-     * @var string
-     */
-    protected $as_object = null;
-
-    /**
      * 查询中是否使用了统计函数
      *
      * @var boolean
@@ -160,35 +153,56 @@ class QDB_Table_Select
      *
      * @var string
      */
-    protected $count = null;
+    protected $count;
 
     /**
      * 统计平均值
      *
      * @var string
      */
-    protected $avg = null;
+    protected $avg;
 
     /**
      * 统计最大值
      *
      * @var string
      */
-    protected $max = null;
+    protected $max;
 
     /**
      * 统计最小值
      *
      * @var string
      */
-    protected $min = null;
+    protected $min;
 
     /**
      * 统计合计
      *
      * @var string
      */
-    protected $sum = null;
+    protected $sum;
+
+    /**
+     * 当前查询所服务的 ActiveRecord 继承类的元信息对象
+     *
+     * @var QDB_ActiveRecord_Meta
+     */
+    protected $meta;
+
+    /**
+     * 查询结果是否返回为数组
+     *
+     * @var boolean
+     */
+    protected $return_as_array = true;
+
+    /**
+     * 查询ID
+     *
+     * @var int
+     */
+    static private $query_id = 0;
 
     /**
      * 构造函数
@@ -197,13 +211,47 @@ class QDB_Table_Select
      * @param array $links
      * @param array $where
      */
-    function __construct(QDB_Table $table, array $links, array $where)
+    protected function __construct(QDB_Table $table, array $links, array $where = null)
     {
+        self::$query_id++;
         $this->links = $links;
         $this->table = $table;
         if (!empty($where)) {
             call_user_func_array(array($this, 'where'), $where);
         }
+    }
+
+    /**
+     * 开始一个针对表数据入口的查询
+     *
+     * @param QDB_Table $table
+     * @param array $links
+     * @param array $where
+     *
+     * @return QDB_Table_Select
+     */
+    static function beginQueryForTable(QDB_Table $table, array $links, array $where)
+    {
+        return new QDB_Table_Select($table, $links, $where);
+    }
+
+    /**
+     * 开始一个针对 ActiveRecord 的查询
+     *
+     * @param QDB_ActiveRecord_Meta $meta
+     * @param array $where
+     *
+     * @return QDB_Table_Select
+     */
+    static function beginQueryForActiveRecord(QDB_ActiveRecord_Meta $meta, array $where)
+    {
+        $select = new QDB_Table_Select($meta->table, $meta->table->links);
+        $select->meta = $meta;
+        $select->return_as_array = false;
+        if (!empty($where)) {
+            call_user_func_array(array($select, 'where'), $where);
+        }
+        return $select;
     }
 
     /**
@@ -275,6 +323,8 @@ class QDB_Table_Select
         $this->page = $page;
         $this->pager = null;
         $this->page_query = true;
+        $this->limit = array($page_size, ($page - $base) * $page_size);
+
         return $this;
     }
 
@@ -413,7 +463,8 @@ class QDB_Table_Select
      */
     function asObject($class_name)
     {
-        $this->as_object = $class_name;
+        $this->meta = QDB_ActiveRecord_Meta::getInstance($class_name);
+        $this->return_as_array = false;
         return $this;
     }
 
@@ -424,7 +475,8 @@ class QDB_Table_Select
      */
     function asArray()
     {
-        $this->as_object = null;
+        $this->meta = null;
+        $this->return_as_array = true;
         return $this;
     }
 
@@ -546,26 +598,28 @@ class QDB_Table_Select
     /**
      * 执行查询
      *
-     * @param boolean $clean_up 是否清理数据集中的临时字段
-     *
      * @return mixed
      */
-    function query($clean_up = true)
+    function query()
     {
-        // 构造查询 SQL，并取得查询中用到的关联
-        list($sql, $find_links) = $this->toStringInternal();
-
-        // 对主表进行查询
-        if (!is_array($this->limit)) {
-            if (is_null($this->limit)) {
-                $handle = $this->table->getConn()->execute($sql);
-            } else {
-                $handle = $this->table->getConn()->selectLimit($sql, intval($this->limit));
-            }
+        if ($this->return_as_array) {
+            return $this->queryArray();
         } else {
-            list($count, $offset) = $this->limit;
-            $handle = $this->table->getConn()->selectLimit($sql, $count, $offset);
+            return $this->queryObjects();
         }
+    }
+
+
+    /**
+     * 查询，并返回数组结果
+     *
+     * @param boolean $clean_up 是否清理数据集中的临时字段
+     *
+     * @return array
+     */
+    function queryArray($clean_up = true)
+    {
+        list($handle, $find_links) = $this->getQueryHandle();
         /* @var $handle QDB_Result_Abstract */
 
         if ($this->recursion > 0 && !empty($find_links)) {
@@ -583,18 +637,18 @@ class QDB_Table_Select
                 if (empty($refs_value[$ska])) { continue; }
 
                 $select = $link->target_table->find("[{$link->target_key}] IN (?)", $refs_value[$ska])
-                                            ->recursion($this->recursion - 1)
-                                            ->recursionForTarget($link)
-                                            ->order($link->on_find_order)
-                                            ->select($link->on_find_keys)
-                                            ->where($link->on_find_where);
+                                             ->recursion($this->recursion - 1)
+                                             ->recursionForTarget($link)
+                                             ->order($link->on_find_order)
+                                             ->select($link->on_find_keys)
+                                             ->where($link->on_find_where);
                 if (is_int($link->on_find) || is_array($link->on_find)) {
                     $select->limit($link->on_find);
                 } else {
                     $select->all();
                 }
 
-                $target_rowset = $select->query(false);
+                $target_rowset = $select->queryArray(false);
                 if ($link->on_find === 1) {
                     $target_rowset = array($target_rowset);
                 }
@@ -646,29 +700,120 @@ class QDB_Table_Select
             $row = reset($rowset);
         }
 
-        if ($this->as_object) {
-            Q::loadClass($this->as_object);
-        }
-
         if (isset($row)) {
-            // 返回单行记录或单个对象
-            if (is_array($row) && $this->as_object) {
-                return new $this->as_object($row);
-            } else {
-                return $row;
-            }
-        }
-
-        // 返回多行记录或多个对象
-        if (is_array($rowset) && $this->as_object) {
-            $objects = array();
-            foreach (array_keys($rowset) as $offset) {
-                $objects[] = new $this->as_object($rowset[$offset]);
-            }
-            return $objects;
+            return $row;
         } else {
             return $rowset;
         }
+    }
+
+    /**
+     * 查询，并返回对象或对象集合
+     *
+     * @param boolean $coll_as_array
+     *
+     * @return QColl|QDB_ActiveRecord_Abstract
+     */
+    function queryObjects($coll_as_array = false)
+    {
+        /**
+         * 执行查询，获得一个查询句柄
+         *
+         * $find_links 是查询涉及到的关联（关联别名 => 关联对象）
+         */
+
+        list($handle, $find_links) = $this->getQueryHandle(Q::normalize($this->table->pk));
+        /* @var $handle QDB_Result_Abstract */
+
+        /**
+         * $batch_refs_value 是一个二维数组
+         *
+         * 格式是：
+         *
+         *    link1 mapping_name => array(
+         *      source_key_value => 对象ID
+         *      ....
+         *    ),
+         *    link2 mapping_name => array(
+         *    ),
+         */
+        $batch_refs_value = null;
+        $class_name = $this->meta->class_name;
+        $rowset = array();
+        while (($row = $handle->fetchRow())) {
+            $obj = new $class_name($row);
+            $id = $obj->id();
+            foreach ($find_links as $alias_name => $link) {
+                $batch_refs_value[$link->mapping_name][$row[$alias_name]] = $id;
+            }
+            $rowset[] = $obj;
+        }
+
+        if (empty($rowset)) {
+            // 没有查询到数据时，返回 Null 对象或空集合
+            if ($this->limit == 1) {
+                return $this->meta->newNullObject();
+            } else {
+                return new QColl($this->meta->class_name);
+            }
+        }
+
+        if ($this->limit == 1) {
+            // 创建一个单独的对象
+            $this->meta->register($rowset[0], $batch_refs_value, self::$query_id);
+            return $rowset[0];
+        } else{
+            foreach ($rowset as $obj) {
+                $this->meta->register($obj, $batch_refs_value, self::$query_id);
+            }
+
+            if ($coll_as_array) {
+                return $rowset;
+            } else {
+                return QColl::createFromArray($rowset, $class_name);
+            }
+        }
+    }
+
+    /**
+     * 查询，并返回对象或对象集合
+     *
+     * @param string $target_key
+     * @param string $target_key_alias
+     * @param QDB_ActiveRecord_Meta $target_meta
+     *
+     * @return array
+     */
+    function queryObjectsForAssemble($target_key, $target_key_alias, $target_meta)
+    {
+        /**
+         * 与 queryObjects() 的区别在于，queryObjectsForAssemble() 会查询出关联的 target_key_value
+         * 并且返回结果按照 taget_key_value 进行了分组
+         *
+         *   target_key_value => array(
+         *     array(
+         *         object,
+         *         ....
+         *     )
+         *   ),
+         */
+        list($handle, $find_links) = $this->getQueryHandle(array($target_key => $target_key_alias, $this->table->pk));
+        /* @var $handle QDB_Result_Abstract */
+
+        $batch_refs_value = null;
+        $rowset = array();
+        $class_name = $target_meta->class_name;
+
+        while (($row = $handle->fetchRow())) {
+            $obj = new $class_name($row);
+            $id = $obj->id();
+            foreach ($find_links as $alias_name => $link) {
+                $batch_refs_value[$link->mapping_name][$row[$alias_name]] = $id;
+            }
+            $rowset[$row[$target_key_alias]][] = $obj;
+        }
+
+        return $rowset;
     }
 
     /**
@@ -678,16 +823,18 @@ class QDB_Table_Select
      */
     function toString()
     {
-        list($sql) = $this->toStringInternal(false);
+        list($sql) = $this->toStringInternal();
         return $sql;
     }
 
     /**
      * 返回查询语句以及相关关联的信息
      *
+     * @param array $more_keys
+     *
      * @return array
      */
-    function toStringInternal()
+    function toStringInternal(array $more_keys = array())
     {
         $used_links = array();
         $find_links = array();
@@ -700,17 +847,26 @@ class QDB_Table_Select
         $strings['select'][] = $string;
         $used_links[] = $links;
 
+        foreach ($more_keys as $key => $alias) {
+            if (!is_int($key) && $key != $alias) {
+                $strings['select'][] = $this->table->qfields($key) . ' AS ' . $this->table->conn->qfield($alias);
+            } else {
+                $strings['select'][] = $this->table->qfields($alias);
+            }
+        }
+
         /**
          * 1.1 确定要查询的关联，从而确保查询主表时能够得到相关的关联字段
          */
         if ($this->recursion > 0) {
             foreach ($this->links as $link) {
                 /* @var $link QDB_Table_Link_Abstract */
+                $link->init();
                 if (!$link->enabled || $link->on_find === false || $link->on_find == 'skip') { continue; }
                 $link->init();
                 $strings['select'][] = $link->source_table->qfields($link->source_key) .
                                        ' AS ' .
-                                       $link->source_table->getConn()->qfield($link->source_key_alias);
+                                       $link->source_table->conn->qfield($link->source_key_alias);
                 $find_links[$link->source_key_alias] = $link;
             }
         }
@@ -722,7 +878,7 @@ class QDB_Table_Select
             $link = $this->link_of_recursion;
             $strings['select'][] = $link->target_table->qfields($link->target_key) .
                                    ' AS ' .
-                                   $link->target_table->getConn()->qfield($link->target_key_alias);
+                                   $link->target_table->conn->qfield($link->target_key_alias);
         }
 
         /**
@@ -832,7 +988,6 @@ class QDB_Table_Select
 
         $used_links = array();
         $parts = array();
-        $conn = $this->table->getConn();
         foreach ($fields as $offset => $field) {
             if (!is_int($offset)) {
                 $alias = $field;
@@ -856,9 +1011,11 @@ class QDB_Table_Select
             }
 
             if ($alias) {
-                $parts[] = $conn->qfield($field, $table) . ' AS ' . $conn->qfield($alias);
+                $parts[] = $this->table->conn->qfield($field, $table) .
+                           ' AS ' .
+                           $this->table->conn->qfield($alias);
             } else {
-                $parts[] = $conn->qfield($field, $table);
+                $parts[] = $this->table->conn->qfield($field, $table);
             }
         }
         return array(implode(',', $parts), $used_links);
@@ -894,7 +1051,7 @@ class QDB_Table_Select
         $sql .= $this->toStringGroup();
         $sql .= $this->toStringHaving();
 
-        $count = (int)$this->table->getConn()->getOne($sql);
+        $count = (int)$this->table->conn->getOne($sql);
 
         $pager = array();
         $pager['page_count'] = ceil($count / $this->page_size);
@@ -924,5 +1081,32 @@ class QDB_Table_Select
 
         $this->pager = $pager;
         $this->limit = array($this->page_size, ($this->page - 1) * $this->page_size);
+    }
+
+    /**
+     * 执行查询，返回结果句柄
+     *
+     * @param array $more_keys
+     *
+     * @return array of list($handle, $find_links)
+     */
+    protected function getQueryHandle(array $more_keys = array())
+    {
+        // 构造查询 SQL，并取得查询中用到的关联
+        list($sql, $find_links) = $this->toStringInternal($more_keys);
+
+        // 对主表进行查询
+        if (!is_array($this->limit)) {
+            if (is_null($this->limit)) {
+                $handle = $this->table->conn->execute($sql);
+            } else {
+                $handle = $this->table->conn->selectLimit($sql, intval($this->limit));
+            }
+        } else {
+            list($count, $offset) = $this->limit;
+            $handle = $this->table->conn->selectLimit($sql, $count, $offset);
+        }
+
+        return array($handle, $find_links);
     }
 }

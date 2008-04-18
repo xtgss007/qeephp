@@ -79,7 +79,7 @@ class Behavior_Fakeuuid extends QDB_ActiveRecord_Behavior_Abstract
     function beforeCreate(QDB_ActiveRecord_Abstract $obj, array & $props)
     {
         $idname = $obj->idname();
-        $props[$idname] = $this->encodeID($obj->getTable()->nextID($idname));
+        $props[$idname] = $this->encodeID($obj->getMeta()->table->nextID($idname));
     }
 
     /**

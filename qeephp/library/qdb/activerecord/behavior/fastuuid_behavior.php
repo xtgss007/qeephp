@@ -35,15 +35,11 @@ class Behavior_Fastuuid extends QDB_ActiveRecord_Behavior_Abstract
     );
 
     /**
-     * 该方法返回行为插件定义的回调事件以及扩展的方法
-     *
-     * @return array
+     * 绑定行为插件
      */
-    function __callbacks()
+    function bind()
     {
-        return array(
-            array(self::before_create, 'beforeCreate'),
-        );
+        $this->meta->addEventHandler(self::before_create, array($this, 'beforeCreate'));
     }
 
     /**

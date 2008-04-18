@@ -114,25 +114,18 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     public $static_methods = array();
 
     /**
-     * 对象间的关联
+     * 表数据入口
      *
-     * @var array of QDB_Link_Abstract
+     * @var QDB_Table
      */
-    public $links = array();
+    public $table;
 
     /**
      * Meta 对应的 ActiveRecord 继承类
      *
      * @var string
      */
-    protected $class_name;
-
-    /**
-     * 表数据入口
-     *
-     * @var QDB_Table
-     */
-    protected $table;
+    public $class_name;
 
     /**
      * 行为插件对象
@@ -142,11 +135,39 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     private $behaviors = array();
 
     /**
+     * 所有托管的对象
+     *
+     * @var array of QDB_ActiveRecord_Abstract objects
+     */
+    public $objects = array();
+
+    /**
+     * 托管对象的关联参考
+     *
+     * @var array
+     */
+    private $objects_refs = array();
+
+    /**
+     * 关联参考到对象
+     *
+     * @var array
+     */
+    private $refs_to_objects = array();
+
+    /**
+     * 指示是否已经初始化了对象的关联
+     *
+     * @var boolean
+     */
+    private $links_inited = false;
+
+    /**
      * 可用的对象聚合类型
      *
      * @var array
      */
-    static private $assoc_types = array('has_one', 'has_many', 'belongs_to', 'many_to_many');
+    static private $assoc_types = array(QDB::has_one, QDB::has_many, QDB::belongs_to, QDB::many_to_many);
 
     /**
      * 所有 ActiveRecord 继承类的 Meta 对象
@@ -181,45 +202,136 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     }
 
     /**
-     * 返回 ActiveRecord 继承类的类名称
-     *
-     * @return string
-     */
-    function getClassName()
-    {
-        return $this->class_name;
-    }
-
-    /**
-     * 返回当前使用的表数据入口
-     *
-     * @return QDB_Table
-     */
-    function getTable()
-    {
-        return $this->table;
-    }
-
-    /**
-     * 设置要使用的表数据入口对象
-     *
-     * @param QDB_Table $table
-     */
-    function setTable(QDB_Table $table)
-    {
-        $this->table = $table;
-    }
-
-    /**
      * 开启一个查询
      *
      * @param arary $where
      *
-     * @return QDB_ActiveRecord_Select
+     * @return QDB_Table_Select
      */
     function find(array $where)
     {
-        return new QDB_ActiveRecord_Select($this, $where);
+        if (!$this->links_inited) {
+            $this->initLinks();
+        }
+        return QDB_Table_Select::beginQueryForActiveRecord($this, $where);
+    }
+
+    /**
+     * 获得一个新的 Null 对象
+     *
+     * @return QDB_ActiveRecord_Abstract
+     */
+    function newNullObject()
+    {
+        $class_name = $this->class_name . '_Null';
+        return new $class_name();
+    }
+
+    /**
+     * 注册一个对象
+     *
+     * @param QDB_ActiveRecord_Abstract $object
+     * @param array $batch_refs
+     * @param mixed $query_id
+     */
+    function register(QDB_ActiveRecord_Abstract $object, array $batch_refs = null, $query_id = null)
+    {
+        $id = $object->id();
+        $this->objects[$id] = $object;
+        if (!is_null($batch_refs)) {
+            $this->refs_to_objects[$query_id] = $batch_refs;
+            $this->objects_refs[$id] = $query_id;
+        }
+    }
+
+    /**
+     * 检查指定 ID 的对象是否已经被注册
+     *
+     * @param mixed $id
+     *
+     * @return boolean
+     */
+    function isRegistered($id)
+    {
+        return isset($this->objects[$id]);
+    }
+
+    /**
+     * 删除对一个对象的注册
+     *
+     * @param mixed $id
+     */
+    function unregister($id)
+    {
+        unset($this->objects[$id]);
+        unset($this->objects_refs[$id]);
+    }
+
+    /**
+     * 组装指定 ID 对象的指定关联对象
+     *
+     * @param mixed $id
+     * @param string $prop_name
+     */
+    function assembleAssocObjects($id, $prop_name)
+    {
+        $query_id = $this->objects_refs[$id];
+        if (isset($this->refs_to_objects[$query_id][$prop_name])) {
+
+            /**
+             * refs_to_objects 是一个二维数组
+             *
+             * 格式是：
+             *
+             *    mapping_name => array(
+             *      source_key_value => 对象ID
+             *      ....
+             *    ),
+             */
+            $refs = $this->refs_to_objects[$query_id][$prop_name];
+            $link = $this->table->links[$prop_name];
+            /* @var $link QDB_Table_Link_Abstract */
+            $target_meta = self::getInstance($this->props[$prop_name]['assoc_class']);
+
+            $target_values = array_keys($refs);
+            switch ($link->type) {
+            case QDB::has_one:
+            case QDB::has_many:
+                $where = array(array($link->target_key => $target_values));
+                $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
+                                           ->all()
+                                           ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
+                break;
+            case QDB::belongs_to:
+                $where = array(array($link->target_key => $target_values));
+                $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
+                                           ->all()
+                                           ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
+                break;
+            case QDB::many_to_many:
+                break;
+
+            }
+
+            // 将这些查询出来的对象指定给已有的各个对象
+            if ($link->one_to_one) {
+                foreach ($refs as $target_value => $source_obj_id) {
+                    if (isset($objects[$target_value])) {
+                        $this->objects[$source_obj_id]->{$prop_name} = $objects[$target_value][0];
+                    } else {
+                        $this->objects[$source_obj_id]->{$prop_name} = $target_meta->newNullObject();
+                    }
+                }
+            } else {
+                foreach ($refs as $target_value => $source_obj_id) {
+                    $this->objects[$source_obj_id]->{$prop_name} = QColl::createFromArray($objects[$target_value], $target_meta->class_name);
+                }
+            }
+        } else {
+            // LC_MSG: 不能通过未登记的对象 ID: "%s" 查找属性 "%s" 关联的聚合对象.
+            throw new QDB_ActiveRecord_Exception(__('不能通过未登记的对象 ID: "%s" 查找属性 "%s" 关联的聚合对象.',
+                                                    $id, $prop_name));
+        }
     }
 
     /**
@@ -257,7 +369,6 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         }
     }
 
-
     /**
      * 为一个 ActiveRecord 类定义一个关联
      *
@@ -265,7 +376,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      * @param string $mapping_name
      * @param array $options
      */
-    static function bind($class, $mapping_name, array $options)
+    function bindAssoc($class, $mapping_name, array $options)
     {
         self::reflection($class);
 
@@ -304,53 +415,6 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         self::$__ref[$class]['alias'][$mapping_name] = $define['alias'];
         self::$__ref[$class]['ralias'][$mapping_name['alias']] = $mapping_name;
         self::$__ref[$class]['links'][$mapping_name] = $define;
-    }
-
-
-    /**
-     * 完成对象间的关联
-     *
-     * @param string $class
-     */
-    private static function __bindAll($class)
-    {
-        self::reflection($class);
-        $table = self::$__ref[$class]['table'];
-        /* @var $table QDB_Table */
-        foreach (self::$__ref[$class]['links'] as $define) {
-            $mapping_name = $define['alias'];
-            if ($table->existsLink($mapping_name)) { continue; }
-            $ref = QDB_ActiveRecord_Abstract::reflection($define['class']);
-            $assoc_table = $ref['table'];
-
-            $link = $define['assoc_options'];
-            $link['table_obj'] = $assoc_table;
-            $link['mapping_name'] = $define['alias'];
-
-            switch ($define['assoc']) {
-            case QDB_Table::has_one:
-            case QDB_Table::has_many:
-                if (empty($link['assoc_key'])) {
-                    $link['assoc_key'] = strtolower($class) . '_id';
-                }
-                break;
-            case QDB_Table::belongs_to:
-                if (empty($link['main_key'])) {
-                    $link['main_key'] = strtolower($define['class']) . '_id';
-                }
-                break;
-            case QDB_Table::many_to_many:
-                if (empty($link['mid_main_key'])) {
-                    $link['mid_main_key'] = strtolower($class) . '_id';
-                }
-                if (empty($link['mid_assoc_key'])) {
-                    $link['mid_assoc_key'] = strtolower($define['class']) . '_id';
-                }
-            }
-
-            $table->createLinks($link, $define['assoc']);
-            $table->getLink($define['alias'])->init();
-        }
     }
 
     /**
@@ -453,14 +517,6 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             $field_name = $prop_name;
         }
 
-        // 处理对象聚合
-        foreach (self::$assoc_types as $type) {
-            if (empty($config[$type])) { continue; }
-            $params['assoc'] = $type;
-            $params['assoc_class'] = $config[$type];
-            $params['assoc_params'] = (!empty($config['assoc_params'])) ? (array)$config['assoc_params'] : null;
-        }
-
         // 根据数据表的元信息确定属性是否是虚拟属性
         if (!empty($this->table_meta[$field_name])) {
             $params['virtual'] = false;
@@ -474,6 +530,14 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             $params['default'] = null;
         }
 
+        // 处理对象聚合
+        foreach (self::$assoc_types as $type) {
+            if (empty($config[$type])) { continue; }
+            $params['assoc'] = $type;
+            $params['assoc_class'] = $config[$type];
+            $params['assoc_params'] = $config;
+        }
+
         // 设置属性信息
         $this->props[$prop_name] = $params;
 
@@ -484,6 +548,45 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         if (!empty($config['getter'])) {
             $this->setPropGetter($prop_name, $config['getter']);
         }
+    }
+
+    /**
+     * 添加一个对象聚合关联
+     *
+     * @param string $prop_name
+     * @param array $params
+     */
+    function addAssoc($prop_name, array $params)
+    {
+        $target_meta = QDB_ActiveRecord_Meta::getInstance($params['assoc_class']);
+
+        switch ($params['assoc']) {
+        case QDB::has_one:
+        case QDB::has_many:
+            if (empty($params['target_key'])) {
+                $params['target_key'] = strtolower($this->class_name) . '_id';
+            }
+            break;
+        case QDB::belongs_to:
+            if (empty($params['source_key'])) {
+                $params['source_key'] = strtolower($target_meta->class_name) . '_id';
+            }
+            break;
+        case QDB::many_to_many:
+            if (empty($params['mid_source_key'])) {
+                $params['mid_source_key'] = strtolower($this->class_name) . '_id';
+            }
+            if (empty($params['mid_target_key'])) {
+                $params['mid_target_key'] = strtolower($target_meta->class_name) . '_id';
+            }
+            break;
+        }
+
+        $link = $params['assoc_params'];
+        $link['mapping_name'] = $prop_name;
+        $link['table_obj'] = $target_meta->table;
+
+        $this->table->createLinks($link, $params['assoc']);
     }
 
     /**
@@ -517,9 +620,9 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         }
 
         // 绑定行为插件
-        if (isset($this->ref['behaviors'])) {
-            $config = isset($this->ref['behaviors_settings']) ? $this->ref['behaviors_settings'] : array();
-            $this->bindBehaviors($this->ref['behaviors'], $config);
+        if (isset($ref['behaviors'])) {
+            $config = isset($ref['behaviors_settings']) ? $ref['behaviors_settings'] : array();
+            $this->bindBehaviors($ref['behaviors'], $config);
         }
 
         // 设置其他选项
@@ -555,41 +658,19 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             // 通过 table_name 指定数据表
             $obj_id = 'activerecord_table_' . strtolower($this->class_name);
             if (Q::isRegistered($obj_id)) {
-                $this->setTable(Q::registry($obj_id));
+                $this->table = Q::registry($obj_id);
             } else {
                 Q::loadClass('QDB_Table');
                 $table_params = isset($ref['table_params']) ? (array)$ref['table_params'] : array();
                 $table_params['table_name'] = $ref['table_name'];
                 $table = new QDB_Table($table_params);
                 Q::register($table, $obj_id);
-                $this->setTable($table);
+                $this->table = $table;
             }
         } elseif (!empty($ref['table_class'])) {
             // 通过 table_class 指定表数据入口
-            $this->setTable(Q::getSingleton($ref['table_class']));
+            $this->table = Q::getSingleton($ref['table_class']);
         }
-    }
-
-
-    /**
-     * 开启一个查询
-     *
-     * @param string $class
-     * @param array $args
-     *
-     * @return QDB_Table_Select
-     */
-    protected static function __find($class, array $args)
-    {
-        self::__bindAll($class);
-        $select = QDB_Table_Select::beginSelectFromActiveRecord($class, self::$__ref[$class]['table']);
-        if (!empty(self::$__callbacks[$class][self::after_find])) {
-            $select->bindCallbacks(self::$__callbacks[$class][self::after_find]);
-        }
-        if (!empty($args)) {
-            call_user_func_array(array($select, 'where'), $args);
-        }
-        return $select;
     }
 
     /**
@@ -654,5 +735,15 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         return $error;
     }
 
+    /**
+     * 初始化对象间的关联
+     */
+    private function initLinks()
+    {
+        foreach ($this->props as $prop_name => $params) {
+            if (!$params['assoc']) { continue; }
 
+            $this->addAssoc($prop_name, $params);
+        }
+    }
 }

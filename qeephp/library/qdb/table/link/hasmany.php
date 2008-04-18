@@ -32,7 +32,7 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct(self::has_many, $params, $source_table);
+        parent::__construct(QDB::has_many, $params, $source_table);
         $this->one_to_one = false;
     }
 
@@ -44,12 +44,12 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
         if ($this->is_init) { return $this; }
         parent::init();
         $params = $this->init_params;
-        $this->main_key   = !empty($params['main_key'])    ? $params['main_key']   : $this->source_table->pk;
-        $this->target_key = !empty($params['target_key'])  ? $params['target_key'] : $this->source_table->pk;
-        $this->on_delete  = !empty($params['on_delete'])   ? $params['on_delete']  : 'cascade';
-        $this->on_save    = !empty($params['on_save'])     ? $params['on_save']    : 'save';
-        $this->source_key_alias = $this->mapping_name . '_' . $this->source_key;
-        $this->target_key_alias = $this->mapping_name . '_' . $this->target_key;
+        $this->source_key   = !empty($params['source_key']) ? $params['source_key'] : $this->source_table->pk;
+        $this->target_key = !empty($params['target_key'])   ? $params['target_key'] : $this->source_table->pk;
+        $this->on_delete  = !empty($params['on_delete'])    ? $params['on_delete']  : 'cascade';
+        $this->on_save    = !empty($params['on_save'])      ? $params['on_save']    : 'save';
+        $this->source_key_alias = $this->mapping_name . '_source_key';
+        $this->target_key_alias = $this->mapping_name . '_target_key';
         return $this;
     }
 
@@ -86,8 +86,8 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
             $row = $this->target_table->find(array($this->target_key => $source_key_value))->count()->query();
             if (intval($row['row_count']) > 0) {
                 // LC_MSG: 关联 "%s" 拒绝删除来源 "%s" 的数据.
-                throw new QDB_Link_Remove_Reject_Exception(__('关联 "%s" 拒绝删除来源 "%s" 的数据.',
-                                                              $this->name, $this->source_table->table_name));
+                throw new QDB_Table_Link_Remove_Exception(__('关联 "%s" 拒绝删除来源 "%s" 的数据.',
+                                                             $this->name, $this->source_table->table_name));
             }
         } else {
             $fill = ($this->on_delete == 'set_null') ? null : $this->on_delete_set_value;

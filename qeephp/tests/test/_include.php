@@ -32,9 +32,9 @@ Q::import(FIXTURE_DIR);
 $dsn = array(
     'driver'    => 'mysql',
     'host'      => 'localhost',
-    'login'     => 'root',
+    'login'     => 'qeephp_test',
     'password'  => '',
-    'database'  => 'qeephp_test',
+    'database'  => 'qeephp_test_db',
     'prefix'    => 'q_',
     'charset'   => 'utf8',
 );

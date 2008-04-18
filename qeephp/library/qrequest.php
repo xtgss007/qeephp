@@ -145,8 +145,7 @@ class QRequest
      */
     function __set($key, $value)
     {
-        // LC_MSG: Setting values in superglobals not allowed.
-        throw new QException(__('Setting values in superglobals not allowed.'));
+        $this->params[$key] = $value;
     }
 
     /**

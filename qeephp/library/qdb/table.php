@@ -20,7 +20,7 @@
  *
  * @package database
  */
-class QDB_Table implements QDB_Link_Consts
+class QDB_Table
 {
     /**
      * 数据表的 schema
@@ -58,11 +58,52 @@ class QDB_Table implements QDB_Link_Consts
     public $pk;
 
     /**
-     * 转义后的主键字段名
+     * 指示是否使用了复合主键
      *
-     * @var string|array
+     * @var boolean
      */
-    public $qpk;
+    public $is_cpk;
+
+    /**
+     * 指示主键字段的总数
+     *
+     * @var int
+     */
+    public $pk_count;
+
+    /**
+     * 创建记录时，要自动填入当前时间的字段
+     *
+     * 只要数据表具有下列字段之一，则调用 create() 方法创建记录时，
+     * 将以服务器时间自动填充该字段。
+     *
+     * @var array
+     */
+    public $created_time_fields = array('created', 'updated');
+
+    /**
+     * 创建和更新记录时，要自动填入当前时间的字段
+     *
+     * 只要数据表具有下列字段之一，则调用 create() 方法创建记录或 update() 更新记录时，
+     * 将以服务器时间自动填充该字段。
+     *
+     * @var array
+     */
+    public $updated_time_fields = array('updated');
+
+    /**
+     * 保存该表数据入口的所有关联
+     *
+     * @var array
+     */
+    public $links = array();
+
+    /**
+     * 数据访问对象
+     *
+     * @var QDB_Adapter_Abstract
+     */
+    public $conn;
 
     /**
      * 定义 HAS ONE 关联
@@ -91,54 +132,6 @@ class QDB_Table implements QDB_Link_Consts
      * @var array
      */
     protected $many_to_many;
-
-    /**
-     * 创建记录时，要自动填入当前时间的字段
-     *
-     * 只要数据表具有下列字段之一，则调用 create() 方法创建记录时，
-     * 将以服务器时间自动填充该字段。
-     *
-     * @var array
-     */
-    protected $created_time_fields = array('created', 'updated');
-
-    /**
-     * 创建和更新记录时，要自动填入当前时间的字段
-     *
-     * 只要数据表具有下列字段之一，则调用 create() 方法创建记录或 update() 更新记录时，
-     * 将以服务器时间自动填充该字段。
-     *
-     * @var array
-     */
-    protected $updated_time_fields = array('updated');
-
-    /**
-     * 保存该表数据入口的所有关联
-     *
-     * @var array
-     */
-    protected $links = array();
-
-    /**
-     * 指示是否使用了复合主键
-     *
-     * @var boolean
-     */
-    protected $is_cpk;
-
-    /**
-     * 指示主键字段的总数
-     *
-     * @var int
-     */
-    protected $pk_count;
-
-    /**
-     * 数据访问对象
-     *
-     * @var QDB_Adapter_Abstract
-     */
-    protected $conn;
 
     /**
      * 当前表数据入口对象元信息的缓存id
@@ -203,16 +196,16 @@ class QDB_Table implements QDB_Link_Consts
     {
         $this->removeAllLinks();
         if (is_array($this->has_one)) {
-            $this->createLinks($this->has_one, self::has_one);
+            $this->createLinks($this->has_one, QDB::has_one);
         }
         if (is_array($this->belongs_to)) {
-            $this->createLinks($this->belongs_to, self::belongs_to);
+            $this->createLinks($this->belongs_to, QDB::belongs_to);
         }
         if (is_array($this->has_many)) {
-            $this->createLinks($this->has_many, self::has_many);
+            $this->createLinks($this->has_many, QDB::has_many);
         }
         if (is_array($this->many_to_many)) {
-            $this->createLinks($this->many_to_many, self::many_to_many);
+            $this->createLinks($this->many_to_many, QDB::many_to_many);
         }
     }
 
@@ -379,7 +372,7 @@ class QDB_Table implements QDB_Link_Consts
     function find()
     {
         $where = func_get_args();
-        return new QDB_Table_Select($this, $this->links, $where);
+        return QDB_Table_Select::beginQueryForTable($this, $this->links, $where);
     }
 
     /**
@@ -816,12 +809,25 @@ class QDB_Table implements QDB_Link_Consts
     /**
      * 为当前数据表产生一个新的主键值
      *
+     * 没有提供 $field_name 时，则根据下列情况分别处理：
+     * 如果数据表是单一主键，则 $field_name 设置为主键；
+     * 如果数据表是复合主键或没有主键，将抛出异常。
+     *
      * @param $field_name
      *
      * @return mixed
      */
-    function nextID($field_name = '')
+    function nextID($field_name = null)
     {
+        if (empty($field_name)) {
+            if ($this->is_cpk || $this->pk_count == 0) {
+                // LC_MSG: 如果数据表 "%s" 采用了复合主键或没有设置主键，nextID() 的 $field_name 参数就不能为空.
+                throw new QTable_Exception(__('如果数据表 "%s" 采用了复合主键或没有设置主键，' .
+                                              'nextID() 的 $field_name 参数就不能为空.', $this->table_name));
+            }
+            $field_name = $this->pk;
+        }
+
         return $this->conn->nextID($this->full_table_name, $field_name, $this->schema);
     }
 
@@ -917,10 +923,6 @@ class QDB_Table implements QDB_Link_Consts
         $this->is_cpk = $this->pk_count > 1;
         $this->pk = ($this->is_cpk) ? $pk : reset($pk);
 
-        $this->qpk = ($this->is_cpk) ?
-                     $this->conn->qfields($this->pk, $this->full_table_name, null, true) :
-                     $this->conn->qfield($this->pk, $this->full_table_name);
-
         // 过滤 created_time_fields 和 updated_time_fields
         foreach ($this->created_time_fields as $offset => $field) {
             if (!isset(self::$tables_meta[$this->meta_cache_id][strtolower($field)])) {
@@ -939,21 +941,23 @@ class QDB_Table implements QDB_Link_Consts
      *
      * @param string|array $fields
      * @param boolean $return_array
+     * @param boolean $use_schema
      *
      * @return string|array
      */
-    function qfields($fields, $return_array = false)
+    function qfields($fields, $return_array = false, $use_schema = false)
     {
         if (!is_array($fields)) {
             $fields = Q::normalize($fields);
         }
         $return = array();
+        $schema = $use_schema ? $this->schema : null;
         foreach ($fields as $key => $value) {
             if (is_string($key)) {
-                $field = $this->conn->qfield($key, $this->full_table_name, $this->schema);
+                $field = $this->conn->qfield($key, $this->full_table_name, $schema);
                 $return[] =  $field . ' AS ' . $this->conn->qfield($value);
             } else {
-                $return[] = $this->conn->qfield($value, $this->full_table_name, $this->schema);
+                $return[] = $this->conn->qfield($value, $this->full_table_name, $schema);
             }
         }
 
@@ -992,7 +996,7 @@ class QDB_Table implements QDB_Link_Consts
     function parseSQLInternal($sql, array $args = null)
     {
         if (is_int($sql)) {
-            return array("{$this->qpk} = {$sql}", array(), null);
+            return array($this->conn->qfield($this->pk, $this->full_table_name) . ' = ' . $sql, array(), null);
         }
         if (empty($sql)) { return array(null, null, null); }
         if (is_null($args)) {
@@ -1292,15 +1296,5 @@ class QDB_Table implements QDB_Link_Consts
             // 缓存数据
             Q::setCache($this->meta_cache_id, $meta, $policy, $backend);
         }
-    }
-
-    /**
-     * 准备主键
-     */
-    private function preparePK()
-    {
-        $this->pk = Q::normalize($this->pk);
-        $this->is_cpk = count($this->pk) > 1;
-        $this->qpk = $this->conn->qfields($this->pk, $this->full_table_name);
     }
 }

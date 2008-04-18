@@ -41,9 +41,9 @@ class QDebug
             $content .= htmlspecialchars(print_r($vars, true));
             $content .= "\n</pre>\n";
         } else {
-            $content = '';
+            $content = "\n";
             if ($label) { $content .= $label . " :\n"; }
-            $content .= print_r($vars, true) . "\n\n";
+            $content .= print_r($vars, true) . "\n";
         }
         if ($return) { return $content; }
         echo $content;

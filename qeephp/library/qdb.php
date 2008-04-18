@@ -20,7 +20,7 @@
  *
  * @package database
  */
-class QDB
+abstract class QDB
 {
     /**
      * 参数占位符类型
@@ -35,6 +35,14 @@ class QDB
      */
     const fetch_mode_array  = 1; // 返回的每一个记录就是一个索引数组
     const fetch_mode_assoc  = 2; // 返回的每一个记录就是一个以字段名作为键名的数组
+
+    /**
+     * 定义四种关联关系
+     */
+    const has_one       = 'has_one';
+    const has_many      = 'has_many';
+    const belongs_to    = 'belongs_to';
+    const many_to_many  = 'many_to_many';
 
     /**
      * 开发者必须通过该方法获得数据库访问对象实例

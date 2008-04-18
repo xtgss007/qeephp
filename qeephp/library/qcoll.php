@@ -47,6 +47,23 @@ class QColl implements Iterator, ArrayAccess, Countable
     }
 
     /**
+     * 从数组创建一个集合
+     *
+     * @param array $coll
+     * @param string $type
+     *
+     * @return QColl
+     */
+    static function createFromArray(array $coll, $type)
+    {
+        $obj = new QColl($type);
+        foreach ($coll as $item) {
+            $obj[] = $item;
+        }
+        return $obj;
+    }
+
+    /**
      * 遍历集合中的所有对象，返回包含特定属性值的数组
      *
      * @param string $field

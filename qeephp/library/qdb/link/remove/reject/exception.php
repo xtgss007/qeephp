@@ -9,17 +9,17 @@
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 QDB_Link_Remove_Reject_Exception 异常
+ * 定义 QDB_Table_Link_Remove_Exception 异常
  *
  * @package database
  * @version $Id$
  */
 
 /**
- * QDB_Link_Remove_Reject_Exception 指示删除目标数据被拒绝
+ * QDB_Table_Link_Remove_Exception 指示删除目标数据被拒绝
  *
  * @package database
  */
-class QDB_Link_Remove_Reject_Exception extends QException
+class QDB_Table_Link_Remove_Exception extends QException
 {
 }

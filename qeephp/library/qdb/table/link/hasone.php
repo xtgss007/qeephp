@@ -33,7 +33,7 @@ class QDB_Table_Link_HasOne extends QDB_Table_Link_HasMany
     protected function __construct(array $params, QDB_Table $source_table)
     {
         parent::__construct($params, $source_table);
-        $this->type = self::has_one;
+        $this->type = QDB::has_one;
         $this->one_to_one = true;
     }
 

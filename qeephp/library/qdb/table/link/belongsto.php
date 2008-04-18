@@ -32,7 +32,7 @@ class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct(self::belongs_to, $params, $source_table);
+        parent::__construct(QDB::belongs_to, $params, $source_table);
         $this->one_to_one = true;
     }
 
@@ -44,37 +44,31 @@ class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
         if ($this->is_init) { return $this; }
         parent::init();
         $params = $this->init_params;
-        $this->main_key   = !empty($params['main_key'])   ? $params['main_key']   : $this->target_table->pk;
-        $this->target_key = !empty($params['target_key']) ? $params['target_key'] : $this->target_table->pk;
-        $this->source_key_alias = $this->mapping_name . '_' . $this->source_key;
-        $this->target_key_alias = $this->mapping_name . '_' . $this->target_key;
+        $this->source_key   = !empty($params['source_key']) ? $params['source_key'] : $this->target_table->pk;
+        $this->target_key = !empty($params['target_key'])   ? $params['target_key'] : $this->target_table->pk;
+        $this->source_key_alias = $this->mapping_name . '_source_key';
+        $this->target_key_alias = $this->mapping_name . '_target_key';
         $this->on_delete  = 'skip';
         $this->on_save    = 'skip';
         return $this;
     }
 
     /**
-     * 保存 belongs to 目标数据
+     * 保存目标数据
      *
      * @param array $target_data
      * @param mixed $source_key_value
      * @param int $recursion
      */
-    function saveTargetData(array $target_data, $source_key_value, $recursion)
-    {
-        return;
-    }
+    function saveTargetData(array $target_data, $source_key_value, $recursion) {}
 
     /**
      * 删除目标数据
      *
-     * @param mixed $source_key_value
+     * @param mixed $target_key_value
      * @param int $recursion
      */
-    function removeTargetData($source_key_value, $recursion)
-    {
-        return;
-    }
+    function removeTargetData($source_key_value, $recursion) {}
 
     /**
      * 返回用于 JOIN 操作的 SQL 字符串

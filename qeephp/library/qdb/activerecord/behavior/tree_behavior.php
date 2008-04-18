@@ -60,8 +60,7 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
      */
     function beforeCreate(QDB_ActiveRecord_Abstract $obj, array & $props)
     {
-        $table = $obj->getTable();
-        $conn = $table->getConn();
+        $table = $obj->getMeta()->table;
 
         $rgt = $this->settings['right'];
         $lft = $this->settings['left'];
@@ -71,16 +70,16 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
         if ($parent_id) {
             $idname = $obj->idname();
             $sql = "SELECT * FROM {$table->qtable_name} WHERE {$idname} = {$parent_id}";
-            $parent = $conn->getRow($sql);
+            $parent = $table->conn->getRow($sql);
             if (empty($parent)) {
                 throw new QException("指定的 {$pid} 值 {$parent_id} 无效。");
             }
 
             // 根据父节点的左值和右值更新数据
             $sql = "UPDATE {$table->qtable_name} SET {$lft} = {$lft} + 2 WHERE {$lft} >= {$parent[$rgt]}";
-            $conn->execute($sql);
+            $table->conn->execute($sql);
             $sql = "UPDATE {$table->qtable_name} SET {$rgt} = {$rgt} + 2 WHERE {$rgt} >= {$parent[$rgt]}";
-            $conn->execute($sql);
+            $table->conn->execute($sql);
 
             $props[$lft] = $parent[$rgt];
             $props[$rgt] = $parent[$rgt] + 1;
@@ -99,18 +98,17 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
      */
     function afterDestroy(QDB_ActiveRecord_Abstract $obj, array $props)
     {
-        $table = $obj->getTable();
-        $conn = $table->getConn();
+        $table = $obj->getMeta()->table;
         $rgt = $this->settings['right'];
         $lft = $this->settings['left'];
 
         $span = $props[$rgt] - $props[$lft] + 1;
         $sql = "DELETE FROM {$table->qtable_name} WHERE {$lft} >= {$props[$lft]} AND {$rgt} <= {$props[$rgt]}";
-        $conn->execute($sql);
+        $table->conn->execute($sql);
         $sql = "UPDATE {$table->qtable_name} SET {$lft} = {$lft} - {$span} WHERE {$lft} > {$props[$lft]}";
-        $conn->execute($sql);
+        $table->conn->execute($sql);
         $sql = "UPDATE {$table->qtable_name} SET {$rgt} = {$rgt} - {$span} WHERE {$rgt} > {$props[$rgt]}";
-        $conn->execute($sql);
+        $table->conn->execute($sql);
     }
 
     /**
@@ -142,7 +140,7 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
         $rgt = $this->settings['right'];
         $lft = $this->settings['left'];
 
-        $select = $obj->getTable()
+        $select = $obj->getMeta()->table
                       ->find("[{$lft}] < ? AND [{$rgt}] > ?", $props[$lft], $props[$rgt])
                       ->all()
                       ->order($this->settings['left'] . ' ASC');
@@ -165,7 +163,7 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
      */
     function getSubNodes(QDB_ActiveRecord_Abstract $obj, array $props, $asArray = false)
     {
-        $select = $obj->getTable()
+        $select = $obj->getMeta()->table
                       ->find("[{$this->settings['parent_id']}] = ?", $obj->id())
                       ->all()
                       ->order($this->settings['left'] . ' ASC');
@@ -191,7 +189,7 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
         $rgt = $this->settings['right'];
         $lft = $this->settings['left'];
 
-        $select = $obj->getTable()
+        $select = $obj->getMeta()->table
                       ->find("[{$lft}] BETWEEN ? AND ?", $props[$lft], $props[$rgt])
                       ->all()
                       ->order($this->settings['left'] . ' ASC');
@@ -216,7 +214,7 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
     {
         $pid = $this->settings['parent_id'];
 
-        $select = $obj->getTable()
+        $select = $obj->getMeta()->table
                       ->find("[{$pid}] = ?", $props[$pid])
                       ->all()
                       ->order($this->settings['left'] . ' ASC');
@@ -248,12 +246,12 @@ class Behavior_Tree extends QDB_ActiveRecord_Behavior_Abstract
      */
     protected function testNode(QDB_ActiveRecord_Abstract $obj)
     {
-        $table = $obj->getTable();
+        $table = $obj->getMeta()->table;
         $idname = $obj->idname();
         $id = $obj->id();
         if (!empty($id)) {
             $sql = "SELECT COUNT(*) FROM {$table->qtable_name} WHERE {$idname} = {$id}";
-            $count = (int)$table->getConn()->getOne($sql);
+            $count = (int)$table->conn->getOne($sql);
         } else {
             $count = 0;
         }

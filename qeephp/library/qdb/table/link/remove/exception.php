@@ -9,18 +9,17 @@
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 QDB_Link_Exception 异常
+ * 定义 QDB_Table_Link_Remove_Exception 异常
  *
  * @package database
- * @version $Id$
+ * @version $Id: exception.php 303 2008-04-15 20:00:46Z dualface $
  */
 
 /**
- * QDB_Link_Exception 封装与 QDB_Link 有关的异常
+ * QDB_Table_Link_Remove_Exception 指示删除目标数据被拒绝
  *
  * @package database
  */
-class QDB_Link_Exception extends QException
+class QDB_Table_Link_Remove_Exception extends QException
 {
-
 }

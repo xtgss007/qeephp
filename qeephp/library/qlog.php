@@ -125,9 +125,8 @@ class QLog
      *
      * @param string $msg
      * @param int $type
-     * @param string $group
      */
-    static function log($msg, $type, $group = 'default')
+    static function log($msg, $type)
     {
         static $instance;
 
@@ -135,7 +134,7 @@ class QLog
             $instance = Q::getService('log');
         }
         /* @var $instance QLog */
-        $instance->append($msg, $type, $group);
+        $instance->append($msg, $type);
     }
 
     /**
@@ -143,9 +142,8 @@ class QLog
      *
      * @param string $msg
      * @param int $type
-     * @param string $group
      */
-    function append($msg, $type, $group = 'default')
+    function append($msg, $type)
     {
         if (isset($this->priorities['indexs'][$type])) {
             $type_name = $this->priorities['indexs'][$type];
