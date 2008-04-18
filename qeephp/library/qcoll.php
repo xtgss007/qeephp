@@ -49,18 +49,18 @@ class QColl implements Iterator, ArrayAccess, Countable
     /**
      * 从数组创建一个集合
      *
-     * @param array $coll
+     * @param array $arr
      * @param string $type
      *
      * @return QColl
      */
-    static function createFromArray(array $coll, $type)
+    static function createFromArray(array $arr, $type)
     {
-        $obj = new QColl($type);
-        foreach ($coll as $item) {
-            $obj[] = $item;
+        $coll = new QColl($type);
+        foreach ($arr as $item) {
+            $coll[] = $item;
         }
-        return $obj;
+        return $coll;
     }
 
     /**

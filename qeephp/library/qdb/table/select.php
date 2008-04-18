@@ -619,7 +619,6 @@ class QDB_Table_Select
         }
     }
 
-
     /**
      * 查询，并返回数组结果
      *

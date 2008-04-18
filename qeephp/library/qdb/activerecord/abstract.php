@@ -375,8 +375,15 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
                 }
                 $this->_props[$varname] = $value;
             } else {
-                if (!isset($this->_props[$varname])) {
-                    $this->_props[$varname] = new QColl($params['assoc_class']);
+                if (!is_array($value) && !($value instanceof Iterator)) {
+                    // LC_MSG: 对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型的对象.
+                    throw new QDB_ActiveRecord_Exception(__('对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型对象的集合.',
+                                                            $this->_class, $varname, $params['assoc_class']));
+                }
+                if (is_object($value)) {
+                    $this->_props[$varname] = $value;
+                } else {
+                    $this->_props[$varname] = QColl::createFromArray($value, $params['assoc_class']);
                 }
             }
         } else {

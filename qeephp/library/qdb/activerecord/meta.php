@@ -297,11 +297,6 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             switch ($link->type) {
             case QDB::has_one:
             case QDB::has_many:
-                $where = array(array($link->target_key => $target_values));
-                $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
-                                           ->all()
-                                           ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
-                break;
             case QDB::belongs_to:
                 $where = array(array($link->target_key => $target_values));
                 $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
@@ -324,7 +319,8 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
                 }
             } else {
                 foreach ($refs as $target_value => $source_obj_id) {
-                    $this->objects[$source_obj_id]->{$prop_name} = QColl::createFromArray($objects[$target_value], $target_meta->class_name);
+                    $coll = QColl::createFromArray($objects[$target_value], $target_meta->class_name);
+                    $this->objects[$source_obj_id]->{$prop_name} = $coll;
                 }
             }
         } else {
