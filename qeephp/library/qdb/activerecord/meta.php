@@ -128,18 +128,18 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     public $class_name;
 
     /**
-     * 行为插件对象
-     *
-     * @var array of QDB_ActiveRecord_Behavior_Abstract objects
-     */
-    private $behaviors = array();
-
-    /**
      * 所有托管的对象
      *
      * @var array of QDB_ActiveRecord_Abstract objects
      */
     public $objects = array();
+
+    /**
+     * 行为插件对象
+     *
+     * @var array of QDB_ActiveRecord_Behavior_Abstract objects
+     */
+    private $behaviors = array();
 
     /**
      * 托管对象的关联参考
