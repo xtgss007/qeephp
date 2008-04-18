@@ -239,6 +239,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         $row = array();
         $meta = self::$_metas[$this->_class];
         foreach ($meta->fields2prop as $prop_name) {
+            if (!isset($this->_props[$prop_name])) { continue; }
             if ($meta->props[$prop_name]['assoc']) {
                 if ($recursion <= 0) { continue; }
                 if ($meta->props[$prop_name]['assoc'] == QDB::has_one
@@ -250,7 +251,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
                         $row[$prop_name][] = $obj->toArray($recursion - 1);
                     }
                 }
-            } else {
+            } elseif (!$meta->props[$prop_name]['virtual']) {
                 $row[$prop_name] = $this->_props[$prop_name];
             }
         }
