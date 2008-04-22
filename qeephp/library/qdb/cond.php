@@ -29,6 +29,9 @@ class QDB_Cond
      */
     protected $_parts = array();
 
+    const BEGIN_GROUP = '(';
+    const END_GROUP = ')';
+
     /**
      * 构造函数
      */
@@ -92,6 +95,41 @@ class QDB_Cond
     }
 
     /**
+     * 开始一个条件组，AND
+     *
+     * @return QDB_Cond
+     */
+    function andGroup()
+    {
+        $this->_parts[] = array(self::BEGIN_GROUP, true);
+        $this->_parts[] = array(func_get_args(), true);
+        return $this;
+    }
+
+    /**
+     * 开始一个条件组，OR
+     *
+     * @return QDB_Cond
+     */
+    function orGroup()
+    {
+        $this->_parts[] = array(self::BEGIN_GROUP, false);
+        $this->_parts[] = array(func_get_args(), false);
+        return $this;
+    }
+
+    /**
+     * 结束一个条件组
+     *
+     * @return QDB_Cond
+     */
+    function endGroup()
+    {
+        $this->_parts[] = array(self::END_GROUP, null);
+        return $this;
+    }
+
+    /**
      * 格式化为字符串
      *
      * @param QDB_Adapter_Abstract $conn
@@ -101,8 +139,35 @@ class QDB_Cond
     {
         $sql = '';
 
-        $last = '';
-        while (list($args, $bool) = each($this->_parts)) {
+        $skip = true;
+        $bool = true;
+        foreach ($this->_parts as $part) {
+            list($args, $_bool) = $part;
+            if (empty($args)) { continue; }
+
+            if (!is_null($_bool)) {
+                $bool = $_bool;
+            }
+
+            if (!is_array($args)) {
+                if ($args == self::BEGIN_GROUP) {
+                    if (!$skip) {
+                        $sql .= ($bool) ? ' AND ' : ' OR ';
+                    }
+                    $sql .= self::BEGIN_GROUP;
+                    $skip = true;
+                } else {
+                    $sql .= self::END_GROUP;
+                }
+                continue;
+            } else {
+                if ($skip) {
+                    $skip = false;
+                } else {
+                    $sql .= ($bool) ? ' AND ' : ' OR ';
+                }
+            }
+
             $cond = reset($args);
             array_shift($args);
             if ($cond instanceof QDB_Cond || $cond instanceof QDB_Expr) {
@@ -112,20 +177,15 @@ class QDB_Cond
                 foreach ($cond as $field => $value) {
                     $part[] = $conn->qfield($field, $table_name) . '=' . $conn->qstr($value);
                 }
-                $part = '(' . implode(' AND ', $part) . ')';
+                $part = implode(' AND ', $part);
             } else {
                 $style = (strpos($cond, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
-                $part = '(' . $conn->qinto($conn->qfieldsInto($cond, $table_name), $args, $style) . ')';
+                $part = $conn->qinto($conn->qfieldsInto($cond, $table_name), $args, $style);
             }
 
-            if ($bool) {
-                $last = ' AND ';
-            } else {
-                $last = ' OR ';
-            }
-            $sql .= $part . $last;
+            $sql .= $part;
         }
 
-        return '(' . substr($sql, 0, - strlen($last)) . ')';
+        return '(' . $sql . ')';
     }
 }
