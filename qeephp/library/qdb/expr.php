@@ -48,4 +48,15 @@ class QDB_Expr
     {
         return $this->expr;
     }
+
+    /**
+     * 格式化为字符串
+     *
+     * @param QDB_Adapter_Abstract $conn
+     * @param string $table_name
+     */
+    function formatToString($conn, $table_name = null)
+    {
+        return $conn->qfieldsInto($this->expr, $table_name);
+    }
 }
