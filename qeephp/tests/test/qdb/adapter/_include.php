@@ -71,19 +71,19 @@ abstract class Test_QDB_Adapter_Abstract extends PHPUnit_Framework_TestCase
     function testQinto()
     {
         switch($this->dbo->paramStyle()) {
-        case QDB::param_qm:
+        case QDB::PARAM_QM:
             $sql = "SELECT * FROM testtable WHERE level_ix > ? AND int_x = ?";
             $args = array(1, 2);
             break;
-        case QDB::param_cl_named:
+        case QDB::PARAM_CL_NAMED:
             $sql = "SELECT * FROM testtable WHERE level_ix > :level_ix AND int_x = :int_x";
             $args = array('level_ix' => 1, 'int_x' => 2);
             break;
-        case QDB::param_dl_sequence:
+        case QDB::PARAM_DL_NAMED:
             $sql = "SELECT * FROM testtable WHERE level_ix > $1 AND int_x = $2";
             $args = array(1, 2);
             break;
-        case QDB::param_at_named:
+        case QDB::PARAM_AT_NAMED:
             $sql = "SELECT * FROM testtable WHERE level_ix > @level_ix AND int_x = @int_x";
             $args = array('level_ix' => 1, 'int_x' => 2);
             break;
@@ -99,22 +99,22 @@ abstract class Test_QDB_Adapter_Abstract extends PHPUnit_Framework_TestCase
             array(
                 "SELECT * FROM testtable WHERE level_ix > ? AND int_x = ?",
                 array(1, 2),
-                QDB::param_qm
+                QDB::PARAM_QM
             ),
             array(
                 "SELECT * FROM testtable WHERE level_ix > :level_ix AND int_x = :int_x",
                 array('level_ix' => 1, 'int_x' => 2),
-                QDB::param_cl_named
+                QDB::PARAM_CL_NAMED
             ),
             array(
                 "SELECT * FROM testtable WHERE level_ix > $1 AND int_x = $2",
                 array(1, 2),
-                QDB::param_dl_sequence
+                QDB::PARAM_DL_NAMED
             ),
             array(
                 "SELECT * FROM testtable WHERE level_ix > @level_ix AND int_x = @int_x",
                 array('level_ix' => 1, 'int_x' => 2),
-                QDB::param_at_named
+                QDB::PARAM_AT_NAMED
             ),
         );
 
