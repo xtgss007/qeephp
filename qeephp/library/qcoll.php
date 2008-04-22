@@ -202,17 +202,31 @@ class QColl implements Iterator, ArrayAccess, Countable
     }
 
     /**
-     * 将所有内部元素返回为对象
+     * 返回包含所有元素内容的数组
+     *
+     * @param int $recursion
      *
      * @return array
      */
-    function toArray()
+    function toArray($recursion = 99)
     {
         $arr = array();
         foreach ($this->coll as $obj) {
-            $arr[] = $obj->toArray();
+            $arr[] = $obj->toArray($recursion);
         }
         return $arr;
+    }
+
+    /**
+     * 返回包含所有元素内容的 JSON 字符串
+     *
+     * @param int $recursion
+     *
+     * @return string
+     */
+    function toJSON($recursion = 99)
+    {
+        return json_encode($this->toArray($recursion));
     }
 
     /**
