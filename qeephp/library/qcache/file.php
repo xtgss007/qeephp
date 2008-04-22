@@ -25,11 +25,18 @@
 class QCache_File
 {
     /**
+     * 是否允许使用缓存
+     *
+     * @var boolean
+     */
+    protected $_enabled = true;
+
+    /**
      * 默认的缓存策略
      *
      * @var array
      */
-    protected $default_policy = array(
+    protected $_default_policy = array(
         /**
          * 缓存有效时间
          *
@@ -81,6 +88,27 @@ class QCache_File
     );
 
     /**
+     * 固定要写入缓存文件头部的内容
+     *
+     * @var string
+     */
+    static protected $_static_head = '<?php die(); ?>';
+
+    /**
+     * 固定头部的长度
+     *
+     * @var int
+     */
+    static protected $_static_head_len = 15;
+
+    /**
+     * 缓存文件头部长度
+     *
+     * @var int
+     */
+    static protected $_head_len = 64;
+
+    /**
      * 构造函数
      *
      * @param 默认的缓存策略 $default_policy
@@ -88,11 +116,12 @@ class QCache_File
     function __construct(array $default_policy = null)
     {
         if (!is_null($default_policy)) {
-            $this->default_policy = array_merge($this->default_policy, $default_policy);
+            $this->_default_policy = array_merge($this->_default_policy, $default_policy);
         }
-        if (empty($this->default_policy['cache_dir'])) {
-            $this->default_policy['cache_dir'] = Q::getIni('runtime_cache_dir');
+        if (empty($this->_default_policy['cache_dir'])) {
+            $this->_default_policy['cache_dir'] = Q::getIni('runtime_cache_dir');
         }
+        //$this->_enabled = !empty($this->_default_policy['cache_dir']);
     }
 
     /**
@@ -104,50 +133,50 @@ class QCache_File
      */
     function set($id, $data, array $policy = null)
     {
-        $policy = $this->policy($policy);
+        if (!$this->_enabled) { return; }
+
+        $policy = $this->_policy($policy);
         if ($policy['serialize']) {
             $data = serialize($data);
         }
-        // 取得文件名
-        $filename = $this->filename($id, $policy['encoding_filename']);
 
-        // 确定缓存目录
-        if ($policy['cache_dir_depth'] > 0) {
-            $root = $this->dirname($policy['cache_dir'], $policy['cache_dir_depth'], $filename, $policy['cache_dir_umask']);
-        } else {
-            $root = rtrim($policy['cache_dir'], '\\/') . DIRECTORY_SEPARATOR;
+        $path = $this->_path($id, $policy);
+
+        // 构造缓存文件头部
+        $head = self::$_static_head;
+        $head .= pack('ISS', $policy['life_time'], $policy['serialize'], $policy['test_validity']);
+        $head .= sprintf('% 8s', $policy['test_method']);
+        $head .= str_repeat(' ', self::$_head_len - strlen($head));
+
+        $content = $head;
+        if ($policy['test_validity']) {
+            // 接下来的 32 个字节写入用于验证数据完整性的验证码
+            $content .= $this->_hash($data, $policy['test_method']);
         }
-        $fp = fopen($root . $filename, 'wb');
-        if ($fp) {
-            if ($policy['file_locking']) { flock($fp, LOCK_EX); }
-            // 缓存文件头部的 32 个字节写入该缓存的策略信息
-            $head = pack('ISS', $policy['life_time'], $policy['serialize'], $policy['test_validity']);
-            $head .= sprintf('% 8s', $policy['test_method']);
-            $head .= '                ';
-            fwrite($fp, $head, 32);
-            if ($policy['test_validity']) {
-                // 接下来的 32 个字节写入用于验证数据完整性的验证码
-                fwrite($fp, $this->hash($data, $policy['test_method']), 32);
-            }
-            fwrite($fp, $data, strlen($data));
-            if ($policy['file_locking']) { flock($fp, LOCK_UN); }
-            fclose($fp);
+        $content .= $data;
+        unset($data);
+
+        // 写入缓存
+        if ($policy['file_locking']) {
+            file_put_contents($path, $content, LOCK_EX);
         } else {
-            // LC_MSG: Unable to write cache file "%s".
-            throw new QCache_Exception(__('Unable to write cache file "%s".',  $root . $filename));
+            file_put_contents($path, $content);
         }
     }
 
     /**
-     * 读取缓存，缓存失效时返回 false
+     * 读取缓存，失败或缓存撒失效时返回 false
      *
      * @param string $id
      * @param array $policy
+     *
      * @return mixed
      */
     function get($id, array $policy = null)
     {
-        $policy = $this->policy($policy);
+        if (!$this->_enabled) { return false; }
+
+        $policy = $this->_policy($policy);
         // 如果缓存策略 life_time 为 null，表示缓存数据永不过期
         if (is_null($policy['life_time'])) {
             $refresh_time = null;
@@ -155,42 +184,31 @@ class QCache_File
             $refresh_time = time();
         }
 
-        // 确定缓存文件名和目录名
-        $filename = $this->filename($id, $policy['encoding_filename']);
-        if ($policy['cache_dir_depth'] > 0) {
-            $root = $this->dirname($policy['cache_dir'], $policy['cache_dir_depth'], $filename, $policy['cache_dir_umask']);
-        } else {
-            $root = rtrim($policy['cache_dir'], '\\/') . DIRECTORY_SEPARATOR;
-        }
-        $path = $root . $filename;
-
-        // 清除PHP缓存的相关状态信息
+        $path = $this->_path($id, $policy);
         clearstatcache();
-
-        // 如果文件不存在，返回 false
         if (!file_exists($path)) { return false; }
 
-
+        // 读取文件头部
         $fp = fopen($path, 'rb');
         if (!$fp) { return false; }
-
         if ($policy['file_locking']) { flock($fp, LOCK_SH); }
-        clearstatcache();
+
         $len = filesize($path);
         $mqr = get_magic_quotes_runtime();
         set_magic_quotes_runtime(0);
 
         // 头部的 32 个字节存储了该缓存的策略
-        $head = fread($fp, 32);
-        $len -= 32;
+        $head = fread($fp, self::$_head_len);
+        $head = substr($head, self::$_static_head_len);
+        $len -= self::$_head_len;
         $tmp = unpack('Il/Ss/St', substr($head, 0, 8));
         $policy['life_time'] = $tmp['l'];
         $policy['serialize'] = $tmp['s'];
         $policy['test_validity'] = $tmp['t'];
         $policy['test_method'] = trim(substr($head, 8, 8));
 
-        // 检查缓存是否已经过期
         do {
+            // 检查缓存是否已经过期
             if (!is_null($refresh_time)) {
                 if (filemtime($path) <= $refresh_time - $policy['life_time']) {
                     $hashtest = null;
@@ -215,9 +233,10 @@ class QCache_File
 
         if ($policy['file_locking']) { flock($fp, LOCK_UN); }
         fclose($fp);
+        if ($data === false) { return false; }
 
         if ($policy['test_validity']) {
-            $hash = $this->hash($data, $policy['test_method']);
+            $hash = $this->_hash($data, $policy['test_method']);
             if ($hash != $hashtest) {
                 if (is_null($refresh_time)) {
                     // 如果是永不过期的缓存文件没通过验证，则直接删除
@@ -230,9 +249,10 @@ class QCache_File
             }
         }
 
-        if ($policy['serialize'] && is_string($data)) {
-            $data = unserialize($data);
+        if ($policy['serialize']) {
+            $data = @unserialize($data);
         }
+
         return $data;
     }
 
@@ -244,18 +264,39 @@ class QCache_File
      */
     function remove($id, array $policy = null)
     {
-        $policy = $this->policy($policy);
-        $filename = $this->filename($id, $policy['encoding_filename']);
-        if ($policy['cache_dir_depth'] > 0) {
-            $root = $this->dirname($policy['cache_dir'], $policy['cache_dir_depth'], $filename, $policy['cache_dir_umask'], false);
+        unlink($this->_path($id, $this->_policy($policy)));
+    }
+
+    /**
+     * 确定缓存文件名，并创建需要的次级缓存目录
+     *
+     * @param string $id
+     * @param array $policy
+     *
+     * @return string
+     */
+    protected function _path($id, array $policy)
+    {
+        if ($policy['encoding_filename']) {
+            $filename = 'cache_' . md5($id) . '.php';
         } else {
-            $root = rtrim($policy['cache_dir'], '\\/') . DIRECTORY_SEPARATOR;
+            $filename = 'cache_' . $id . '.php';
         }
-        if (unlink($root . $filename)) {
-            // LC_MSG: Unable to remove cache file "%s".
-            throw new Cache_Exception('Unable to remove cache file "%s".', $root . $filename);
+
+        $root_dir = rtrim($policy['cache_dir'], '\\/') . DIRECTORY_SEPARATOR;
+        if ($policy['cache_dir_depth'] <= 0) {
+            return $root_dir . $filename;
         }
-        return $this->_unlink($this->_file);
+
+        $hash = md5($filename);
+        $root_dir .= 'cache_';
+        for ($i = 1; $i <= $policy['cache_dir_depth']; $i++) {
+            $root_dir .= substr($hash, 0, $i) . DIRECTORY_SEPARATOR;
+            if (is_dir($root_dir)) { continue; }
+            mkdir($root_dir, $policy['cache_dir_umask']);
+        }
+
+        return $root_dir . $filename;
     }
 
     /**
@@ -264,44 +305,9 @@ class QCache_File
      * @param array $policy
      * @return array
      */
-    protected function policy(array $policy = null)
+    protected function _policy(array $policy = null)
     {
-        return !is_null($policy) ? array_merge($this->default_policy, $policy) : $this->default_policy;
-    }
-
-    /**
-     * 获得缓存目录名
-     *
-     * @param string $root
-     * @param int $depth
-     * @param string $filename
-     * @param int $umask
-     * @param boolean $create
-     */
-    protected function dirname($root, $depth, $filename, $umask, $create = true)
-    {
-        $root = rtrim($root, '\\/') . DIRECTORY_SEPARATOR;
-        $hash = md5($filename);
-        $root .= 'cache_';
-        for ($i = 1; $i <= $depth; $i++) {
-            $root .= substr($hash, 0, $i) . DIRECTORY_SEPARATOR;
-            if (!$create) { continue; }
-            if (is_dir($root)) { continue; }
-            mkdir($root, $umask);
-        }
-        return $root;
-    }
-
-    /**
-     * 获得缓存文件名
-     *
-     * @param string $id
-     * @param boolean $encoding_filename
-     * @return string
-     */
-    protected function filename($id, $encoding_filename)
-    {
-        return $encoding_filename ? 'cache_' . md5($id) : 'cache_' . $id;
+        return !is_null($policy) ? array_merge($this->_default_policy, $policy) : $this->_default_policy;
     }
 
     /**
@@ -311,7 +317,7 @@ class QCache_File
      * @param string $type
      * @return string
      */
-    protected function hash($data, $type)
+    protected function _hash($data, $type)
     {
         switch ($type) {
         case 'md5':
@@ -321,8 +327,8 @@ class QCache_File
         case 'strlen':
             return sprintf('% 32d', strlen($data));
         default:
-            // LC_MSG: Unknown test_method ! (available values are only 'md5', 'crc32', 'strlen').
-            throw new Cache_Exception("Unknown test_method ! (available values are only 'md5', 'crc32', 'strlen').");
+            // LC_MSG: 无效的 hash 方法 "%s".
+            throw new Cache_Exception('无效的 hash 方法 "%s".', $type);
         }
     }
 }
