@@ -74,7 +74,7 @@ abstract class Chili_Runner_Abstract
             throw new Chili_Exception(__('Creation application dir "%s" failed.', $appdir));
         }
 
-        $this->content_replace = array(dirname(Q_DIR), $appname);
+        $this->content_replace = array(str_replace(DS, '/', dirname(Q_DIR)), $appname);
 
         echo "Building application {$appname}......\n\n";
         $this->copydir($theme_dir, $appdir);

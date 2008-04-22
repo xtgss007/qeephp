@@ -63,14 +63,17 @@ class QGenerator_Table extends QGenerator_Abstract
         /**
          * 首先判断指定的数据表是否存在
          */
-        $dbo = QDB::getConn();
-        $dbo->connect();
-        $tables = $dbo->metaTables();
-        if (!in_array($table_name, $tables)) {
+
+        try {
+            Q::loadClass('QDB_Table');
+            $params = array('table_name' => $table_name);
+            $table = new QDB_Table($params);
+        } catch (Exception $ex) {
             echo "Database table '{$table_name}' not exists.\n";
             return -1;
         }
-        $meta = $dbo->metaColumns($table_name);
+
+        $meta = $table->columns();
         $pk = array();
         foreach ($meta as $field) {
             if ($field['pk']) {
@@ -79,7 +82,7 @@ class QGenerator_Table extends QGenerator_Abstract
         }
 
         $viewdata = array(
-            'table_name' => $table_name,
+            'table_name' => $table->table_name,
             'class_name' => $class_name,
             'pk' => $pk,
         );
