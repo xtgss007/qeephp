@@ -32,7 +32,7 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct(QDB::many_to_many, $params, $source_table);
+        parent::__construct(QDB::MANY_TO_MANY, $params, $source_table);
         $this->one_to_one = false;
     }
 
@@ -56,7 +56,10 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
             $this->mid_table = Q::getSingleton($params['mid_table_class']);
         } else {
             $mid_table_params = !empty($params['mid_table_params']) ? (array)$params['mid_table_params'] : array();
-            if (empty($params['mid_table_name']) && empty($mid_table_params['table_name'])) {
+            if (!empty($params['mid_table_name'])) {
+                $mid_table_params['table_name'] = $params['mid_table_name'];
+            }
+            if (empty($mid_table_params['mid_table_name']) && empty($mid_table_params['table_name'])) {
                 // 尝试自动设置中间表名称
                 $t1 = $this->source_table->table_name;
                 $t2 = $this->target_table->table_name;

@@ -18,6 +18,14 @@
 /**
  * QDB_Table_Select 类封装了表数据入口的查询操作
  *
+ * 开发者无需直接构造 QDB_Table_Select 查询对象，而是通过某个表数据入口对象的 find() 方法或
+ * ActiveRecord 继承类的 find() 方法发起查询来获得一个查询对象。
+ *
+ * 可以通过连贯方法改变查询对象的行为， 但要特别注意的是一旦使用了任何统计方法，
+ * 包括 count、avg、min、max 和 sum。则返回的查询结果都只是一个一维数组，其中包含了统计结果。
+ *
+ * 因此如果要使用统计方法，就不要和其他数据一起查询。这可以通过分别构造两个不同的查询对象来解决。
+ *
  * @package database
  */
 class QDB_Table_Select
@@ -231,9 +239,9 @@ class QDB_Table_Select
     /**
      * 开始一个针对表数据入口的查询
      *
-     * @param QDB_Table $table
-     * @param array $links
-     * @param array $where
+     * @param QDB_Table $table 查询哪一个表数据入口
+     * @param array $links 查询中要使用的关联
+     * @param array $where 指定查询条件
      *
      * @return QDB_Table_Select
      */
@@ -245,8 +253,8 @@ class QDB_Table_Select
     /**
      * 开始一个针对 ActiveRecord 的查询
      *
-     * @param QDB_ActiveRecord_Meta $meta
-     * @param array $where
+     * @param QDB_ActiveRecord_Meta $meta 查询哪一个 ActiveRecord 继承类
+     * @param array $where 指定查询条件
      *
      * @return QDB_Table_Select
      */
@@ -264,7 +272,7 @@ class QDB_Table_Select
     /**
      * 指定 SELECT 子句后要查询的内容
      *
-     * @param array|string|QDB_Expr $expr
+     * @param array|string|QDB_Expr $expr 要查询的字段或表达式
      *
      * @return QDB_Table_Select
      */
@@ -277,7 +285,7 @@ class QDB_Table_Select
     /**
      * 指定查询的排序
      *
-     * @param string $expr
+     * @param string $expr 排序字段或表达式
      *
      * @return QDB_Table_Select
      */
@@ -301,8 +309,8 @@ class QDB_Table_Select
     /**
      * 限制查询结果总数
      *
-     * @param int $count
-     * @param int $offset
+     * @param int $count 只查询多少条数据
+     * @param int $offset 从结果集的哪个位置开始查询（0 为第一条）
      *
      * @return QDB_Table_Select
      */
@@ -315,9 +323,17 @@ class QDB_Table_Select
     /**
      * 设置分页查询
      *
-     * @param int $page
-     * @param int $page_size
-     * @param int $base
+     * limitPage() 是用于分页查询的主要方法。
+     * 使用时通常只需要指定 $page 和 $page_size 参数。
+     *
+     * $page 参数指定要查询哪一页的数据，$page_size 指定了页大小。
+     * 默认情况下，$page 为 1 时表示要查询第 1 页。
+     *
+     * 如果希望用 $page = 0 来表示查询第一页，应该指定 $base 参数为 0。
+     *
+     * @param int $page 要查询的页码
+     * @param int $page_size 页的大小
+     * @param int $base 页码基数
      *
      * @return QDB_Table_Select
      */
@@ -338,7 +354,21 @@ class QDB_Table_Select
     /**
      * 获得分页信息
      *
-     * 必须先使用 limitPage() 指定有效分页参数。
+     * 要使用该方法，必须先用 limitPage() 指定有效的分页参数。
+     *
+     * 该方法返回一个数组，包含下列信息：
+     *
+     * record_count: 符合查询条件的记录数
+     * page_count: 按照页大小计算出来的总页数
+     * first: 第一页的索引，等同于 limitPage() 的 $base 参数，默认为 1
+     * last: 最后一页的索引
+     * current: 当前页的索引
+     * next: 下一页的索引
+     * prev: 上一页的索引
+     * page_size: 页大小
+     * page_base: 页码基数（也就是第一页的索引值，默认为 1）
+     *
+     * 获得这个数组后，就可以通过 WebControls 或者其他途径构造分页导航条等用户界面内容。
      *
      * @return array
      */
@@ -360,10 +390,14 @@ class QDB_Table_Select
     function group($expr)
     {
         $this->group = $expr;
+        return $this;
     }
 
     /**
      * 是否构造一个 FOR UPDATE 查询
+     *
+     * 如果查询出记录后马上就要更新并写回数据库，则可以调用 forUpdate() 方法来指示这种情况。
+     * 此时数据库会尝试对查询出来的记录加锁，避免在数据更新回数据库之前被其他查询改变。
      *
      * @param boolean $flag
      *
@@ -392,8 +426,8 @@ class QDB_Table_Select
     /**
      * 统计符合条件的记录数
      *
-     * @param string $expr
-     * @param string $alias
+     * @param string $expr 用于统计的字段名或表达式
+     * @param string $alias 用什么别名在返回记录中保存统计结果
      *
      * @return QDB_Table_Select
      */
@@ -407,8 +441,8 @@ class QDB_Table_Select
     /**
      * 统计平均值
      *
-     * @param string $expr
-     * @param string $alias
+     * @param string $expr 用于统计的字段名或表达式
+     * @param string $alias 用什么别名在返回记录中保存统计结果
      *
      * @return QDB_Table_Select
      */
@@ -422,8 +456,8 @@ class QDB_Table_Select
     /**
      * 统计最大值
      *
-     * @param string $expr
-     * @param string $alias
+     * @param string $expr 用于统计的字段名或表达式
+     * @param string $alias 用什么别名在返回记录中保存统计结果
      *
      * @return QDB_Table_Select
      */
@@ -437,8 +471,8 @@ class QDB_Table_Select
     /**
      * 统计最小值
      *
-     * @param string $expr
-     * @param string $alias
+     * @param string $expr 用于统计的字段名或表达式
+     * @param string $alias 用什么别名在返回记录中保存统计结果
      *
      * @return QDB_Table_Select
      */
@@ -452,8 +486,8 @@ class QDB_Table_Select
     /**
      * 统计合计
      *
-     * @param string $expr
-     * @param string $alias
+     * @param string $expr 用于统计的字段名或表达式
+     * @param string $alias 用什么别名在返回记录中保存统计结果
      *
      * @return QDB_Table_Select
      */
@@ -466,6 +500,11 @@ class QDB_Table_Select
 
     /**
      * 指示将查询结果封装为特定的 ActiveRecord 对象
+     *
+     * 通常对于从 ActiveRecord 发起的查询不需要再调用该方法，QeePHP 会确保此类查询都返回对象。
+     * 但如果是从表数据入口发起的查询，并且希望返回对象，就应该调用这个方法指定一个类名称。
+     *
+     * 类名称所指定的 ActiveRecord 继承类应该是一个适合返回结果数据结构的对象，否则会导致构造对象失败。
      *
      * @param string $class_name
      *
@@ -481,6 +520,8 @@ class QDB_Table_Select
     /**
      * 指示将查询结果返回为数组
      *
+     * 指示不管查询是由什么来源发起的，都将查询结果以数组方式返回。
+     *
      * @return QDB_Table_Select
      */
     function asArray()
@@ -492,6 +533,14 @@ class QDB_Table_Select
 
     /**
      * 设置递归关联查询的层数（默认为1层）
+     *
+     * 假设 A 关联到 B，B 关联到 C，而 C 关联到 D。则通过 recursion 参数，
+     * 我们可以指定从 A 出发的查询要到达哪一个关联层次才停止。
+     *
+     * 默认的 $recursion = 1，表示从 A 出发的查询只查询到 B 的数据就停止。
+     *
+     * 注意：对于来自 ActiveRecord 的查询，无需指定该参数。
+     * 因为可以利用 ActiveRecord 的延迟加载能力自动查询更深层次的数据。
      *
      * @param int $recursion
      *
@@ -505,6 +554,10 @@ class QDB_Table_Select
 
     /**
      * 添加查询条件
+     *
+     * 为查询对象增加一个查询条件。多个查询条件之间以 AND 布尔运算符连接。
+     *
+     * 因此如果要添加一个
      *
      * @param array|string $where
      *
@@ -608,9 +661,11 @@ class QDB_Table_Select
     /**
      * 执行查询
      *
+     * @param array|string $included_links 指定查询时要包含的关联
+     *
      * @return mixed
      */
-    function query()
+    function query($included_links = null)
     {
         if ($this->return_as_array) {
             return $this->queryArray();
@@ -637,10 +692,15 @@ class QDB_Table_Select
             $refs = null;
             $used_alias = array_keys($find_links);
             $rowset = $handle->fetchAllRefby($used_alias, $refs_value, $refs, $clean_up);
+            $keys = array_keys($rowset);
 
             // 进行关联查询，并组装数据集
             foreach ($find_links as $link) {
                 /* @var $link QDB_Table_Link_Abstract */
+                foreach ($keys as $key) {
+                    $rowset[$key][$link->mapping_name] = $link->one_to_one ? null : array();
+                }
+
                 $tka = $link->target_key_alias;
                 $ska = $link->source_key_alias;
                 if (empty($refs_value[$ska])) { continue; }
@@ -651,6 +711,10 @@ class QDB_Table_Select
                                              ->order($link->on_find_order)
                                              ->select($link->on_find_keys)
                                              ->where($link->on_find_where);
+                if ($link->type == QDB::MANY_TO_MANY) {
+                    // SELECT {$fields} FROM {$this->joinTDG->qtableName} INNER JOIN {$this->assocTDG->qtableName} ON {$this->assocTDG->qpk} = {$this->qassocForeignKey}
+                    $select->join($link->mid_table->table_name, "[{$link->mid_target_key}] = [{$link->target_key}]");
+                }
                 if (is_int($link->on_find) || is_array($link->on_find)) {
                     $select->limit($link->on_find);
                 } else {
@@ -1062,6 +1126,7 @@ class QDB_Table_Select
         $count = (int)$this->table->conn->getOne($this->page_query_sql);
 
         $pager = array();
+        $pager['record_count'] = $count;
         $pager['page_count'] = ceil($count / $this->page_size);
         $pager['first'] = $this->page_base;
         $pager['last'] = $pager['page_count'] + $this->page_base - 1;

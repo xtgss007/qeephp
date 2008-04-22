@@ -339,13 +339,13 @@ abstract class QDB_Table_Link_Abstract
     static function createLink($type, array $params, QDB_Table $source_table)
     {
         switch ($type) {
-        case QDB::has_one:
+        case QDB::HAS_ONE:
             return new QDB_Table_Link_HasOne($params, $source_table);
-        case QDB::has_many:
+        case QDB::HAS_MANY:
             return new QDB_Table_Link_HasMany($params, $source_table);
-        case QDB::belongs_to:
+        case QDB::BELONGS_TO:
             return new QDB_Table_Link_BelongsTo($params, $source_table);
-        case QDB::many_to_many:
+        case QDB::MANY_TO_MANY:
             return new QDB_Table_Link_ManyToMany($params, $source_table);
         default:
             // LC_MSG: 无效的关联类型 "%s".

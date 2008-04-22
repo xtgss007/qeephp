@@ -242,8 +242,8 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
             if (!isset($this->_props[$prop_name])) { continue; }
             if ($meta->props[$prop_name]['assoc']) {
                 if ($recursion <= 0) { continue; }
-                if ($meta->props[$prop_name]['assoc'] == QDB::has_one
-                    || $meta->props[$prop_name]['assoc'] == QDB::belongs_to) {
+                if ($meta->props[$prop_name]['assoc'] == QDB::HAS_ONE
+                    || $meta->props[$prop_name]['assoc'] == QDB::BELONGS_TO) {
                     $row[$prop_name] = $this->_props[$prop_name]->toArray($recursion - 1);
                 } else {
                     $row[$prop_name] = array();
@@ -272,8 +272,8 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         foreach ($meta->fields2prop as $field_name => $prop_name) {
             if ($meta->props[$prop_name]['assoc']) {
                 if ($recursion <= 0) { continue; }
-                if ($meta->props[$prop_name]['assoc'] == QDB::has_one
-                    || $meta->props[$prop_name]['assoc'] == QDB::belongs_to) {
+                if ($meta->props[$prop_name]['assoc'] == QDB::HAS_ONE
+                    || $meta->props[$prop_name]['assoc'] == QDB::BELONGS_TO) {
                     $row[$field_name] = $this->_props[$prop_name]->toArray($recursion - 1);
                 } else {
                     $row[$field_name] = array();
@@ -325,11 +325,13 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
 
         if (!isset($this->_props[$varname]) && $params['assoc']) {
             // assembleAssocObjects() 会完成对象聚合的组装，因此下一步可以直接返回属性
+
+            QDebug::dump($varname, __METHOD__);
             $meta->assembleAssocObjects($this->_props[$this->_idname], $varname);
 
             // 没有查询到对象
             if (!isset($this->_props[$varname])) {
-                if ($params['assoc'] == QDB::has_one || $params['assoc'] == QDB::belongs_to) {
+                if ($params['assoc'] == QDB::HAS_ONE || $params['assoc'] == QDB::BELONGS_TO) {
                     $this->_props[$varname] = QDB_ActiveRecord_Meta::getInstance($params['assoc_class'])->newNullObject();
                 } else {
                     $this->_props[$varname] = new QColl($params['assoc_class']);
@@ -368,7 +370,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         }
 
         if ($params['assoc']) {
-            if ($params['assoc'] == QDB::has_one || $params['assoc'] == QDB::belongs_to) {
+            if ($params['assoc'] == QDB::HAS_ONE || $params['assoc'] == QDB::BELONGS_TO) {
                 if (!is_object($value) || !($value instanceof $params['assoc_class'])) {
                     // LC_MSG: 对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型的对象.
                     throw new QDB_ActiveRecord_Exception(__('对象 "%s" 的属性 "%s" 只能设置为 "%s" 类型的对象.',
@@ -495,7 +497,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
             {
                 // 如果没有提供数据，聚合的对象将在第一次访问时设置
                 if (empty($row[$field_name])) { continue; }
-                if ($params['assoc'] == QDB::has_one || $params['assoc'] == QDB::belongs_to) {
+                if ($params['assoc'] == QDB::HAS_ONE || $params['assoc'] == QDB::BELONGS_TO) {
                     $this->{$prop_name} = new $params['assoc_class']($row[$field_name]);
                 } else {
                     $this->{$prop_name} = new QColl($params['assoc_class']);

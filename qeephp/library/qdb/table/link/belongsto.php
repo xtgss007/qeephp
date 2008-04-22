@@ -32,7 +32,7 @@ class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {
-        parent::__construct(QDB::belongs_to, $params, $source_table);
+        parent::__construct(QDB::BELONGS_TO, $params, $source_table);
         $this->one_to_one = true;
     }
 

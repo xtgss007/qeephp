@@ -196,16 +196,16 @@ class QDB_Table
     {
         $this->removeAllLinks();
         if (is_array($this->has_one)) {
-            $this->createLinks($this->has_one, QDB::has_one);
+            $this->createLinks($this->has_one, QDB::HAS_ONE);
         }
         if (is_array($this->belongs_to)) {
-            $this->createLinks($this->belongs_to, QDB::belongs_to);
+            $this->createLinks($this->belongs_to, QDB::BELONGS_TO);
         }
         if (is_array($this->has_many)) {
-            $this->createLinks($this->has_many, QDB::has_many);
+            $this->createLinks($this->has_many, QDB::HAS_MANY);
         }
         if (is_array($this->many_to_many)) {
-            $this->createLinks($this->many_to_many, QDB::many_to_many);
+            $this->createLinks($this->many_to_many, QDB::MANY_TO_MANY);
         }
     }
 
@@ -371,8 +371,19 @@ class QDB_Table
      */
     function find()
     {
-        $where = func_get_args();
-        return QDB_Table_Select::beginQueryForTable($this, $this->links, $where);
+        $select = new QDB_Select($this->conn);
+        $select->fromTableDataGateway($this);
+
+        $args = func_get_args();
+        if (!empty($args)) {
+            call_user_func_array(array($select, 'where'), $args);
+        }
+
+        foreach ($this->links as $link) {
+            $select->addLink($link);
+        }
+
+        return $select;
     }
 
     /**
@@ -1154,11 +1165,11 @@ class QDB_Table
 
         if (strpos($where, '?') !== false) {
             // 使用 ? 作为占位符的情况
-            $ret = $this->conn->qinto($where, $args, QDB::param_qm, true);
+            $ret = $this->conn->qinto($where, $args, QDB::PARAM_QM, true);
         } elseif (strpos($where, ':') !== false) {
             // 使用 : 开头的命名参数占位符
             if (!empty($args)) { $args = reset($args); }
-            $ret = $this->conn->qinto($where, $args, QDB::param_cl_named, true);
+            $ret = $this->conn->qinto($where, $args, QDB::PARAM_CL_NAMED, true);
         } else {
             $ret = $where;
         }

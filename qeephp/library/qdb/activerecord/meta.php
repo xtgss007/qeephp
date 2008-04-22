@@ -167,7 +167,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      *
      * @var array
      */
-    static private $assoc_types = array(QDB::has_one, QDB::has_many, QDB::belongs_to, QDB::many_to_many);
+    static private $assoc_types = array(QDB::HAS_ONE, QDB::HAS_MANY, QDB::BELONGS_TO, QDB::MANY_TO_MANY);
 
     /**
      * 所有 ActiveRecord 继承类的 Meta 对象
@@ -275,6 +275,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     function assembleAssocObjects($id, $prop_name)
     {
+        QDebug::dump($this->refs_to_objects);
         $query_id = $this->objects_refs[$id];
         if (isset($this->refs_to_objects[$query_id][$prop_name])) {
 
@@ -295,17 +296,21 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
 
             $target_values = array_keys($refs);
             switch ($link->type) {
-            case QDB::has_one:
-            case QDB::has_many:
-            case QDB::belongs_to:
+            case QDB::HAS_ONE:
+            case QDB::HAS_MANY:
+            case QDB::BELONGS_TO:
                 $where = array(array($link->target_key => $target_values));
                 $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
                                            ->all()
                                            ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
                 break;
-            case QDB::many_to_many:
+            case QDB::MANY_TO_MANY:
+                $where = array(array($link->mid_table->qfields($link->mid_source_key) => $target_values));
+                $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
+                                           ->where(array($link->mid_target_key => $link->target_key))
+                                           ->all()
+                                           ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
                 break;
-
             }
 
             // 将这些查询出来的对象指定给已有的各个对象
@@ -363,54 +368,6 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             $settings = (!empty($config[$name])) ? $config[$name] : array();
             $this->behaviors[$name] = new $class($this, $settings);
         }
-    }
-
-    /**
-     * 为一个 ActiveRecord 类定义一个关联
-     *
-     * @param string $class
-     * @param string $mapping_name
-     * @param array $options
-     */
-    function bindAssoc($class, $mapping_name, array $options)
-    {
-        self::reflection($class);
-
-        $define = array('public' => false);
-        $define['readonly'] = isset($options['readonly']) ? $options['readonly'] : false;
-        $define['alias']    = isset($options['alias'])    ? $options['alias']    : $mapping_name;
-        $define['getter']   = isset($options['getter'])   ? $options['getter']   : null;
-        $define['setter']   = isset($options['setter'])   ? $options['setter']   : null;
-        $define['default']  = null;
-
-        if (!empty($options['has_one'])) {
-            $define['assoc'] = 'has_one';
-            $define['class'] = $options['has_one'];
-        }
-        if (!empty($options['has_many'])) {
-            $define['assoc'] = 'has_many';
-            $define['class'] = $options['has_many'];
-        }
-        if (!empty($options['belongs_to'])) {
-            $define['assoc'] = 'belongs_to';
-            $define['class'] = $options['belongs_to'];
-        }
-        if (!empty($options['many_to_many'])) {
-            $define['assoc'] = 'many_to_many';
-            $define['class'] = $options['many_to_many'];
-        }
-
-        unset($options['readonly']);
-        unset($options['alias']);
-        unset($options['setter']);
-        unset($options['getter']);
-        $define['assoc_options'] = $options;
-        $define['virtual'] = true;
-
-        self::$__ref[$class]['attribs'][$mapping_name] = $define;
-        self::$__ref[$class]['alias'][$mapping_name] = $define['alias'];
-        self::$__ref[$class]['ralias'][$mapping_name['alias']] = $mapping_name;
-        self::$__ref[$class]['links'][$mapping_name] = $define;
     }
 
     /**
@@ -550,25 +507,26 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      * 添加一个对象聚合关联
      *
      * @param string $prop_name
+     * @param int $assoc_type
      * @param array $params
      */
-    function addAssoc($prop_name, array $params)
+    function addAssoc($prop_name, $assoc_type, array $params)
     {
         $target_meta = QDB_ActiveRecord_Meta::getInstance($params['assoc_class']);
 
-        switch ($params['assoc']) {
-        case QDB::has_one:
-        case QDB::has_many:
+        switch ($assoc_type) {
+        case QDB::HAS_ONE:
+        case QDB::HAS_MANY:
             if (empty($params['target_key'])) {
                 $params['target_key'] = strtolower($this->class_name) . '_id';
             }
             break;
-        case QDB::belongs_to:
+        case QDB::BELONGS_TO:
             if (empty($params['source_key'])) {
                 $params['source_key'] = strtolower($target_meta->class_name) . '_id';
             }
             break;
-        case QDB::many_to_many:
+        case QDB::MANY_TO_MANY:
             if (empty($params['mid_source_key'])) {
                 $params['mid_source_key'] = strtolower($this->class_name) . '_id';
             }
@@ -582,7 +540,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         $link['mapping_name'] = $prop_name;
         $link['table_obj'] = $target_meta->table;
 
-        $this->table->createLinks($link, $params['assoc']);
+        $this->table->createLinks($link, $assoc_type);
     }
 
     /**
@@ -692,7 +650,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      *
      * @return array
      */
-    protected static function __validate($class, array $data, $props = null)
+    function validate($class, array $data, $props = null)
     {
         self::reflection($class);
         if (!is_null($props)) {
@@ -739,7 +697,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         foreach ($this->props as $prop_name => $params) {
             if (!$params['assoc']) { continue; }
 
-            $this->addAssoc($prop_name, $params);
+            $this->addAssoc($prop_name, $params['assoc'], $params);
         }
     }
 }
