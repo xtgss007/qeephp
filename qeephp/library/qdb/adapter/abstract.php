@@ -48,7 +48,7 @@ abstract class QDB_Adapter_Abstract
      *
      * @var const
      */
-    protected $fetch_mode = QDB::fetch_mode_assoc;
+    protected $fetch_mode = QDB::FETCH_MODE_ASSOC;
 
     /**
      * 数据库连接句柄
@@ -122,7 +122,7 @@ abstract class QDB_Adapter_Abstract
      *
      * @var string
      */
-    protected $param_style  = QDB::param_qm;
+    protected $param_style  = QDB::PARAM_QM;
 
     /**
      * 指示数据库是否有自增字段功能
@@ -329,6 +329,52 @@ abstract class QDB_Adapter_Abstract
     abstract function qstr($value);
 
     /**
+     * 将 SQL 中用“[]”指示的字段名进行转义
+     *
+     * @param string $sql
+     * @param string $table_name
+     *
+     * @return string
+     */
+    function qfieldsInto($sql, $table_name)
+    {
+        $matches = null;
+        preg_match_all('/\[[a-z][a-z0-9_\.]*\]/i', $sql, $matches, PREG_OFFSET_CAPTURE);
+        $matches = reset($matches);
+
+        $out = '';
+        $offset = 0;
+        foreach ($matches as $m) {
+            $len = strlen($m[0]);
+            $field = substr($m[0], 1, $len - 2);
+            $arr = explode('.', $field);
+            switch(count($arr)) {
+            case 3:
+                $schema = $arr[0];
+                $table = $arr[1];
+                $field = $arr[2];
+                break;
+            case 2:
+                $schema = null;
+                $table = $arr[0];
+                $field = $arr[1];
+                break;
+            default:
+                $schema = null;
+                $table = $table_name;
+                $field = $arr[0];
+            }
+
+            $field = $this->qfield($field, $table, $schema);
+            $out .= substr($sql, $offset, $m[1] - $offset) . $field;
+            $offset = $m[1] + $len;
+        }
+        $out .= substr($sql, $offset);
+
+        return $out;
+    }
+
+    /**
      * 将 SQL 语句中的参数占位符替换为相应的参数值
      *
      * @param string $sql
@@ -346,9 +392,9 @@ abstract class QDB_Adapter_Abstract
 
         $callback = array($this, 'qstr');
         switch ($param_style) {
-        case QDB::param_qm:
-        case QDB::param_dl_sequence:
-            if ($param_style == QDB::param_qm) {
+        case QDB::PARAM_QM:
+        case QDB::PARAM_DL_SEQUENCE:
+            if ($param_style == QDB::PARAM_QM) {
                 $parts = explode('?', $sql);
             } else {
                 $parts = preg_split('/\$[0-9]+/', $sql);
@@ -372,9 +418,9 @@ abstract class QDB_Adapter_Abstract
                 return $str;
             }
 
-        case QDB::param_cl_named:
-        case QDB::param_at_named:
-            $split = ($param_style == QDB::param_cl_named) ? ':' : '@';
+        case QDB::PARAM_CL_NAMED:
+        case QDB::PARAM_AT_NAMED:
+            $split = ($param_style == QDB::PARAM_CL_NAMED) ? ':' : '@';
             $parts = preg_split('/(' . $split . '[a-z0-9_\-]+)/i', $sql, -1, PREG_SPLIT_DELIM_CAPTURE);
             $max = count($parts);
             $str = $parts[0];
@@ -599,6 +645,21 @@ abstract class QDB_Adapter_Abstract
      * @return QDB_Result_Abstract
      */
     abstract function execute($sql, $inputarr = null);
+
+    /**
+     * 发起一个查询，获得一个 QDB_Select 查询对象
+     *
+     * @return QDB_Select
+     */
+    function select()
+    {
+        $select = new QDB_Select($this);
+        $args = func_get_args();
+        if (!empty($args)) {
+            call_user_func_array(array($select, 'where'), $args);
+        }
+        return $select;
+    }
 
     /*
      * 进行限定范围的查询，并且返回 QDB_Result_Abstract 对象，出错时抛出异常
@@ -962,10 +1023,10 @@ abstract class QDB_Adapter_Abstract
         foreach (array_keys($inputarr) as $offset => $key) {
             if (!isset($fields[strtolower($key)])) { continue; }
             switch($this->param_style) {
-            case QDB::param_qm:
+            case QDB::PARAM_QM:
                 $holders[] = '?';
                 break;
-            case QDB::param_dl_sequence:
+            case QDB::PARAM_DL_SEQUENCE:
                 $holders[] = '$' . ($offset + 1);
                 break;
             default:
@@ -996,10 +1057,10 @@ abstract class QDB_Adapter_Abstract
             if (!isset($fields[strtolower($key)])) { continue; }
             $qkey = $this->qfield($key);
             switch($this->param_style) {
-            case QDB::param_qm:
+            case QDB::PARAM_QM:
                 $pairs[] = "{$qkey}={$this->param_style}";
                 break;
-            case QDB::param_dl_sequence:
+            case QDB::PARAM_DL_SEQUENCE:
                 $pairs[] = "{$qkey}=\$" . ($offset + 1);
                 break;
             default:

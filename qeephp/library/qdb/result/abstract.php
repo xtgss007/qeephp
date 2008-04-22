@@ -125,7 +125,7 @@ abstract class QDB_Result_Abstract
     function fetchCol($col = 0)
     {
         $mode = $this->fetch_mode;
-        $this->fetch_mode = QDB::fetch_mode_array;
+        $this->fetch_mode = QDB::FETCH_MODE_ARRAY;
         $cols = array();
         while (($row = $this->fetchRow())) {
             $cols[] = $row[$col];

@@ -30,7 +30,7 @@ class QDB_Result_Pgsql extends QDB_Result_Abstract
 
     function fetchRow()
     {
-        if ($this->fetch_mode == QDB::fetch_mode_assoc) {
+        if ($this->fetch_mode == QDB::FETCH_MODE_ASSOC) {
             return pg_fetch_assoc($this->handle);
         } else {
             return pg_fetch_array($this->handle);

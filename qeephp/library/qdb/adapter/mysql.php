@@ -315,7 +315,7 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
         if (!$rs) { return false; }
         /* @var $rs QDB_Result_Abstract */
         $retarr = array();
-        $rs->fetchMode = QDB::fetch_mode_array;
+        $rs->fetchMode = QDB::FETCH_MODE_ARRAY;
         while (($row = $rs->fetchRow())) {
             $field = array();
             $field['name'] = $row['Field'];
