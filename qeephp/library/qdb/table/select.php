@@ -9,16 +9,16 @@
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 QDB_Table_Select 类
+ * 定义 QDB_Select 类
  *
  * @package database
  * @version $Id$
  */
 
 /**
- * QDB_Table_Select 类封装了表数据入口的查询操作
+ * QDB_Select 类封装了表数据入口的查询操作
  *
- * 开发者无需直接构造 QDB_Table_Select 查询对象，而是通过某个表数据入口对象的 find() 方法或
+ * 开发者无需直接构造 QDB_Select 查询对象，而是通过某个表数据入口对象的 find() 方法或
  * ActiveRecord 继承类的 find() 方法发起查询来获得一个查询对象。
  *
  * 可以通过连贯方法改变查询对象的行为， 但要特别注意的是一旦使用了任何统计方法，
@@ -28,7 +28,7 @@
  *
  * @package database
  */
-class QDB_Table_Select
+class QDB_Select
 {
     /**
      * 查询使用的表数据入口对象
@@ -243,11 +243,11 @@ class QDB_Table_Select
      * @param array $links 查询中要使用的关联
      * @param array $where 指定查询条件
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     static function beginQueryForTable(QDB_Table $table, array $links, array $where)
     {
-        return new QDB_Table_Select($table, $links, $where);
+        return new QDB_Select($table, $links, $where);
     }
 
     /**
@@ -256,11 +256,11 @@ class QDB_Table_Select
      * @param QDB_ActiveRecord_Meta $meta 查询哪一个 ActiveRecord 继承类
      * @param array $where 指定查询条件
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     static function beginQueryForActiveRecord(QDB_ActiveRecord_Meta $meta, array $where)
     {
-        $select = new QDB_Table_Select($meta->table, $meta->table->links);
+        $select = new QDB_Select($meta->table, $meta->table->links);
         $select->meta = $meta;
         $select->return_as_array = false;
         if (!empty($where)) {
@@ -274,7 +274,7 @@ class QDB_Table_Select
      *
      * @param array|string|QDB_Expr $expr 要查询的字段或表达式
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function select($expr = '*')
     {
@@ -287,7 +287,7 @@ class QDB_Table_Select
      *
      * @param string $expr 排序字段或表达式
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function order($expr)
     {
@@ -298,7 +298,7 @@ class QDB_Table_Select
     /**
      * 指示查询所有符合条件的记录
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function all()
     {
@@ -312,7 +312,7 @@ class QDB_Table_Select
      * @param int $count 只查询多少条数据
      * @param int $offset 从结果集的哪个位置开始查询（0 为第一条）
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function limit($count, $offset = 0)
     {
@@ -335,7 +335,7 @@ class QDB_Table_Select
      * @param int $page_size 页的大小
      * @param int $base 页码基数
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function limitPage($page, $page_size = 20, $base = 1)
     {
@@ -385,7 +385,7 @@ class QDB_Table_Select
      *
      * @param string $expr
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function group($expr)
     {
@@ -401,7 +401,7 @@ class QDB_Table_Select
      *
      * @param boolean $flag
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function forUpdate($flag = true)
     {
@@ -414,7 +414,7 @@ class QDB_Table_Select
      *
      * @param boolean $flag
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function distinct($flag = true)
     {
@@ -429,7 +429,7 @@ class QDB_Table_Select
      * @param string $expr 用于统计的字段名或表达式
      * @param string $alias 用什么别名在返回记录中保存统计结果
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function count($expr = '*', $alias = 'row_count')
     {
@@ -444,7 +444,7 @@ class QDB_Table_Select
      * @param string $expr 用于统计的字段名或表达式
      * @param string $alias 用什么别名在返回记录中保存统计结果
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function avg($expr, $alias = 'avg_value')
     {
@@ -459,7 +459,7 @@ class QDB_Table_Select
      * @param string $expr 用于统计的字段名或表达式
      * @param string $alias 用什么别名在返回记录中保存统计结果
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function max($expr, $alias = 'max_value')
     {
@@ -474,7 +474,7 @@ class QDB_Table_Select
      * @param string $expr 用于统计的字段名或表达式
      * @param string $alias 用什么别名在返回记录中保存统计结果
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function min($expr, $alias = 'min_value')
     {
@@ -489,7 +489,7 @@ class QDB_Table_Select
      * @param string $expr 用于统计的字段名或表达式
      * @param string $alias 用什么别名在返回记录中保存统计结果
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function sum($expr, $alias = 'sum_value')
     {
@@ -508,7 +508,7 @@ class QDB_Table_Select
      *
      * @param string $class_name
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function asObject($class_name)
     {
@@ -522,7 +522,7 @@ class QDB_Table_Select
      *
      * 指示不管查询是由什么来源发起的，都将查询结果以数组方式返回。
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function asArray()
     {
@@ -544,7 +544,7 @@ class QDB_Table_Select
      *
      * @param int $recursion
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function recursion($recursion)
     {
@@ -561,7 +561,7 @@ class QDB_Table_Select
      *
      * @param array|string $where
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function where($where)
     {
@@ -576,7 +576,7 @@ class QDB_Table_Select
      * @param array|string $where
      * @param array $args
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function having($where)
     {
@@ -591,7 +591,7 @@ class QDB_Table_Select
      * @param array|string $where
      * @param array $args
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function whereArgs($where, array $args)
     {
@@ -608,7 +608,7 @@ class QDB_Table_Select
      * @param array|string $where
      * @param array $args
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function havingArgs($where, array $args)
     {
@@ -626,7 +626,7 @@ class QDB_Table_Select
      *
      * @param array|string $links
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function links($links)
     {
@@ -650,7 +650,7 @@ class QDB_Table_Select
      *
      * @param QDB_Table_Link_Abstract $link
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function recursionForTarget(QDB_Table_Link_Abstract $link)
     {

@@ -367,20 +367,16 @@ class QDB_Table
     /**
      * 创建一个查询对象
      *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
     function find()
     {
         $select = new QDB_Select($this->conn);
-        $select->fromTableDataGateway($this);
-
+        $select->link($this->links);
+        
         $args = func_get_args();
         if (!empty($args)) {
             call_user_func_array(array($select, 'where'), $args);
-        }
-
-        foreach ($this->links as $link) {
-            $select->addLink($link);
         }
 
         return $select;

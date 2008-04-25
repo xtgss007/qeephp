@@ -101,7 +101,7 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
         return "'" . mysql_real_escape_string($value, $this->conn) . "'";
     }
 
-    function qtable($table_name, $schema = null)
+    function qtable($table_name, $schema = null, $alias = null)
     {
         if (strpos($table_name, '.') !== false) {
             $parts = explode('.', $table_name);
@@ -110,7 +110,8 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
         }
         $table_name = trim($table_name, '`');
         $schema = trim($schema, '`');
-        return $schema != '' ? "`{$schema}`.`{$table_name}`" : "`{$table_name}`";
+        $i = $schema != '' ? "`{$schema}`.`{$table_name}`" : "`{$table_name}`";
+        return empty($alias) ? $i : $i . " `{$alias}`";
     }
 
     function qfield($field_name, $table_name = null, $schema = null, $alias = null)

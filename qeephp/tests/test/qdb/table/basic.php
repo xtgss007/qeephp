@@ -42,7 +42,7 @@ class Test_QDB_Table_Basic extends PHPUnit_Framework_TestCase
     function testFind()
     {
         $select = $this->table->find();
-        $this->assertType('QDB_Table_Select', $select);
+        $this->assertType('QDB_Select', $select);
     }
 
     function testFind2()

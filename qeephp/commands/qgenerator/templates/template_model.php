@@ -161,7 +161,7 @@ if (empty($rules)) { continue; }
     static function find()
     {
         $args = func_get_args();
-        return QDB_ActiveRecord_Meta::getInstance(__CLASS__)->find($args);
+        return QDB_ActiveRecord_Meta::getInstance(__CLASS__)->findArgs($args);
     }
 
     /**

@@ -110,7 +110,7 @@ class QDB_Adapter_Pgsql extends QDB_Adapter_Abstract
         return "'" . pg_escape_string($value) . "'";
     }
 
-    function qtable($table_name, $schema = null)
+    function qtable($table_name, $schema = null, $alias = null)
     {
         if (strpos($table_name, '.') !== false) {
             $parts = explode('.', $table_name);
@@ -121,7 +121,8 @@ class QDB_Adapter_Pgsql extends QDB_Adapter_Abstract
         $schema = trim($schema, '"');
         //public 是默认的schema
         if(strtoupper($schema)=='PUBLIC')$schema='';
-        return $schema != '' ? "\"{$schema}\".\"{$table_name}\"" : "\"{$table_name}\"";
+        $i = $schema != '' ? "\"{$schema}\".\"{$table_name}\"" : "\"{$table_name}\"";
+        return empty($alias) ? $i : $i . " \"{$alias}\"";
     }
 
     function qfield($field_name, $table_name = null, $schema = null, $alias = null)

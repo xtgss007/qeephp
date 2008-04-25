@@ -23,14 +23,17 @@
 class QDB_Cond
 {
     /**
+     * 定义组
+     */
+    const BEGIN_GROUP = '(';
+    const END_GROUP = ')';
+
+    /**
      * 构成查询条件的各个部分
      *
      * @var array
      */
     protected $_parts = array();
-
-    const BEGIN_GROUP = '(';
-    const END_GROUP = ')';
 
     /**
      * 构造函数
@@ -53,6 +56,9 @@ class QDB_Cond
      */
     static function createCronDirect($cond, array $cond_args = null)
     {
+        if (!is_array($cond_args)) {
+            $cond_args = array();
+        }
         $c = new QDB_Cond();
         array_unshift($cond_args, $cond);
         return $c->appendDirect($cond_args);
@@ -134,9 +140,12 @@ class QDB_Cond
      *
      * @param QDB_Adapter_Abstract $conn
      * @param string $table_name
+     *
+     * @return string
      */
     function formatToString($conn, $table_name = null)
     {
+        if (empty($this->_parts)) { return ''; }
         $sql = '';
 
         $skip = true;
@@ -175,7 +184,13 @@ class QDB_Cond
             } elseif (is_array($cond)) {
                 $part = array();
                 foreach ($cond as $field => $value) {
-                    $part[] = $conn->qfield($field, $table_name) . '=' . $conn->qstr($value);
+                    if (!is_string($field)) {
+                        if (empty($value)) { continue; }
+                        // 假定 $value 是一个字符串条件
+                        $part[] = $conn->qfieldsInto($value, $table_name);
+                    } else {
+                        $part[] = $conn->qfield($field, $table_name) . '=' . $conn->qstr($value);
+                    }
                 }
                 $part = implode(' AND ', $part);
             } else {
@@ -183,9 +198,12 @@ class QDB_Cond
                 $part = $conn->qinto($conn->qfieldsInto($cond, $table_name), $args, $style);
             }
 
+            if (empty($part) || $part == '()') { continue; }
+
             $sql .= $part;
         }
 
+        if (empty($sql)) { return ''; }
         return '(' . $sql . ')';
     }
 }

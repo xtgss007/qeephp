@@ -204,16 +204,31 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     /**
      * 开启一个查询
      *
-     * @param arary $where
-     *
-     * @return QDB_Table_Select
+     * @return QDB_Select
      */
-    function find(array $where)
+    function find()
+    {
+        return $this->findArgs(func_get_args());
+    }
+
+    /**
+     * 开启一个查询
+     *
+     * @param array $args
+     *
+     * @return QDB_Select
+     */
+    function findArgs(array $args)
     {
         if (!$this->links_inited) {
             $this->initLinks();
         }
-        return QDB_Table_Select::beginQueryForActiveRecord($this, $where);
+        $select = new QDB_Select($this->table->conn);
+        $select->from($this->table)->link($this->table->links);
+        if (!empty($args)) {
+            call_user_func_array(array($select, 'where'), $args);
+        }
+        return $select;
     }
 
     /**
@@ -300,13 +315,13 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             case QDB::HAS_MANY:
             case QDB::BELONGS_TO:
                 $where = array(array($link->target_key => $target_values));
-                $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
+                $objects = QDB_Select::beginQueryForActiveRecord($target_meta, $where)
                                            ->all()
                                            ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
                 break;
             case QDB::MANY_TO_MANY:
                 $where = array(array($link->mid_table->qfields($link->mid_source_key) => $target_values));
-                $objects = QDB_Table_Select::beginQueryForActiveRecord($target_meta, $where)
+                $objects = QDB_Select::beginQueryForActiveRecord($target_meta, $where)
                                            ->where(array($link->mid_target_key => $link->target_key))
                                            ->all()
                                            ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);

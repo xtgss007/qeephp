@@ -339,7 +339,7 @@ abstract class QDB_Adapter_Abstract
     function qfieldsInto($sql, $table_name)
     {
         $matches = null;
-        preg_match_all('/\[[a-z][a-z0-9_\.]*\]/i', $sql, $matches, PREG_OFFSET_CAPTURE);
+        preg_match_all('/\[[a-z][a-z0-9_\.]*\]|\[\*\]/i', $sql, $matches, PREG_OFFSET_CAPTURE);
         $matches = reset($matches);
 
         $out = '';
@@ -467,10 +467,11 @@ abstract class QDB_Adapter_Abstract
      *
      * @param string $table_name
      * @param string $schema
+     * @param string $alias
      *
      * @return string
      */
-    abstract function qtable($table_name, $schema = null);
+    abstract function qtable($table_name, $schema = null, $alias = null);
 
     /**
      * 返回字段名称的完全限定名
