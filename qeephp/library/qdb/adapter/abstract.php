@@ -333,14 +333,16 @@ abstract class QDB_Adapter_Abstract
      *
      * @param string $sql
      * @param string $table_name
+     * @param array $mapping
      *
      * @return string
      */
-    function qfieldsInto($sql, $table_name)
+    function qfieldsInto($sql, $table_name, array $mapping = null)
     {
         $matches = null;
         preg_match_all('/\[[a-z][a-z0-9_\.]*\]|\[\*\]/i', $sql, $matches, PREG_OFFSET_CAPTURE);
         $matches = reset($matches);
+        if (!is_array($mapping)) { $mapping = array(); }
 
         $out = '';
         $offset = 0;
@@ -365,6 +367,9 @@ abstract class QDB_Adapter_Abstract
                 $field = $arr[0];
             }
 
+            if (isset($field)) {
+                $field = $mapping[$field];
+            }
             $field = $this->qfield($field, $table, $schema);
             $out .= substr($sql, $offset, $m[1] - $offset) . $field;
             $offset = $m[1] + $len;

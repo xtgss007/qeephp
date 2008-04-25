@@ -140,12 +140,16 @@ class QDB_Cond
      *
      * @param QDB_Adapter_Abstract $conn
      * @param string $table_name
+     * @param array $mapping
      *
      * @return string
      */
-    function formatToString($conn, $table_name = null)
+    function formatToString($conn, $table_name = null, array $mapping = null)
     {
         if (empty($this->_parts)) { return ''; }
+        if (is_null($mapping)) {
+            $mapping = array();
+        }
         $sql = '';
 
         $skip = true;
@@ -180,22 +184,25 @@ class QDB_Cond
             $cond = reset($args);
             array_shift($args);
             if ($cond instanceof QDB_Cond || $cond instanceof QDB_Expr) {
-                $part = $cond->formatToString($conn, $table_name);
+                $part = $cond->formatToString($conn, $table_name, $mapping);
             } elseif (is_array($cond)) {
                 $part = array();
                 foreach ($cond as $field => $value) {
                     if (!is_string($field)) {
                         if (empty($value)) { continue; }
                         // 假定 $value 是一个字符串条件
-                        $part[] = $conn->qfieldsInto($value, $table_name);
+                        $part[] = $conn->qfieldsInto($value, $table_name, $mapping);
                     } else {
+                        if (isset($mapping[$field])) {
+                            $field = $mapping[$field];
+                        }
                         $part[] = $conn->qfield($field, $table_name) . '=' . $conn->qstr($value);
                     }
                 }
                 $part = implode(' AND ', $part);
             } else {
                 $style = (strpos($cond, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
-                $part = $conn->qinto($conn->qfieldsInto($cond, $table_name), $args, $style);
+                $part = $conn->qinto($conn->qfieldsInto($cond, $table_name, $mapping), $args, $style);
             }
 
             if (empty($part) || $part == '()') { continue; }

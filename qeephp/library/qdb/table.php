@@ -373,7 +373,7 @@ class QDB_Table
     {
         $select = new QDB_Select($this->conn);
         $select->link($this->links);
-        
+
         $args = func_get_args();
         if (!empty($args)) {
             call_user_func_array(array($select, 'where'), $args);

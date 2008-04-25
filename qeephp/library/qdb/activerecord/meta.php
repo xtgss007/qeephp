@@ -220,14 +220,15 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     function findArgs(array $args)
     {
-        if (!$this->links_inited) {
-            $this->initLinks();
-        }
+        if (!$this->links_inited) { $this->initLinks(); }
         $select = new QDB_Select($this->table->conn);
+        $select->asObject($this->class_name);
+        $select->link($this->table->links);
         $select->from($this->table)->link($this->table->links);
         if (!empty($args)) {
             call_user_func_array(array($select, 'where'), $args);
         }
+
         return $select;
     }
 

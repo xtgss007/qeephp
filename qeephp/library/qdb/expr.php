@@ -27,7 +27,7 @@ class QDB_Expr
      *
      * @var string
      */
-    protected $expr;
+    protected $_expr;
 
     /**
      * 构造函数
@@ -36,7 +36,7 @@ class QDB_Expr
      */
     function __construct($expr)
     {
-        $this->expr = $expr;
+        $this->_expr = $expr;
     }
 
     /**
@@ -46,7 +46,7 @@ class QDB_Expr
      */
     function __toString()
     {
-        return $this->expr;
+        return $this->_expr;
     }
 
     /**
@@ -54,9 +54,13 @@ class QDB_Expr
      *
      * @param QDB_Adapter_Abstract $conn
      * @param string $table_name
+     * @param array $mapping
      */
-    function formatToString($conn, $table_name = null)
+    function formatToString($conn, $table_name = null, array $mapping = null)
     {
-        return $conn->qfieldsInto($this->expr, $table_name);
+        if (!is_array($mapping)) {
+            $mapping = array();
+        }
+        return $conn->qfieldsInto($this->_expr, $table_name, $mapping);
     }
 }

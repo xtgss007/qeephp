@@ -190,6 +190,13 @@ class QDB_Select
     protected $_current_table;
 
     /**
+     * 字段名映射
+     *
+     * @var array
+     */
+    protected $_columns_mapping = array();
+
+    /**
      * 当前查询所服务的 ActiveRecord 继承类的元信息对象
      *
      * @var QDB_ActiveRecord_Meta
@@ -614,9 +621,9 @@ class QDB_Select
         foreach ($expr as $val) {
             if ($val instanceof QDB_Expr) {
                 /* @var $val QDB_Expr */
-                $val = $val->formatToString($this->_conn, $this->_current_table);
+                $val = $val->formatToString($this->_conn, $this->_current_table, $this->_columns_mapping);
             } else {
-                $val = $this->_conn->qfieldsInto($val, $this->_current_table);
+                $val = $this->_conn->qfieldsInto($val, $this->_current_table, $this->_columns_mapping);
             }
             $this->_parts[self::GROUP][] = $val;
         }
@@ -681,7 +688,7 @@ class QDB_Select
         foreach ($expr as $val) {
             if ($val instanceof QDB_Expr) {
                 /* @var $val QDB_Expr */
-                $val = $val->formatToString($this->_conn, $this->_current_table);
+                $val = $val->formatToString($this->_conn, $this->_current_table, $this->_columns_mapping);
                 if (preg_match('/(.*\W)(' . self::SQL_ASC . '|' . self::SQL_DESC . ')\b/si', $val, $m)) {
                     $val = trim($m[1]);
                     $dir = $m[2];
@@ -701,12 +708,14 @@ class QDB_Select
                         $val = trim($m[1]);
                         $dir = $m[2];
                     }
-                    if (preg_match('/\(.*\)/', $val)) {
-                    } elseif (preg_match('/(.+)\.(.+)/', $val, $m)) {
-                        $current_table_name = $m[1];
-                        $val = $m[2];
-                        $val = $this->_conn->qfield($val, $current_table_name);
-                    } else {
+                    if (!preg_match('/\(.*\)/', $val)) {
+                        if (preg_match('/(.+)\.(.+)/', $val, $m)) {
+                            $current_table_name = $m[1];
+                            $val = $m[2];
+                        }
+                        if (isset($this->_columns_mapping[$val])) {
+                            $val = $this->_columns_mapping[$val];
+                        }
                         $val = $this->_conn->qfield($val, $current_table_name);
                     }
                     $this->_parts[self::ORDER][] = $val . ' ' . $dir;
@@ -923,6 +932,39 @@ class QDB_Select
     }
 
     /**
+     * 设置一个或多个字段的映射名，如果 $mapping_to 为 NULL，则取消对指定字段的映射
+     *
+     * 映射名是指可以在查询参数中使用映射名作为字段名。
+     * QDB_Select 会负责在生成查询时将映射名转换为实际的字段名。
+     *
+     * 例如：
+     *
+     * <code>
+     * $select->columnMapping('title', 'post_title')
+     *        ->where(array('post_title' => $title));
+     * // 生成的查询条件是 `title` = {$title} 而不是 `post_title` = {$title}
+     * </code>
+     *
+     * @param array|string $name
+     * @param string $mapping_to
+     *
+     * @return QDB_Select
+     */
+    function columnMapping($name, $mapping_to = null)
+    {
+        if (is_array($name)) {
+            $this->_columns_mapping = array_merge($this->_columns_mapping, $name);
+        } else {
+            if (empty($mapping_to)) {
+                unset($this->_columns_mapping[$name]);
+            } else {
+                $this->_columns_mapping[$name] = $mapping_to;
+            }
+        }
+        return $this;
+    }
+
+    /**
      * 设置递归关联查询的层数（默认为1层）
      *
      * 假设 A 关联到 B，B 关联到 C，而 C 关联到 D。则通过 recursion 参数，
@@ -985,6 +1027,7 @@ class QDB_Select
     {
         if ($part == null) {
             $this->_parts = self::$_parts_init;
+            $this->_query_params = self::$_query_params_init;
         } else if (array_key_exists($part, self::$_parts_init)) {
             $this->_parts[$part] = self::$_parts_init[$part];
         }
@@ -1008,6 +1051,7 @@ class QDB_Select
      */
     function query($included_links = null)
     {
+        $this->_query_params[self::NON_LAZY_QUERY] = Q::normalize($included_links);
         if ($this->_query_params[self::AS_ARRAY]) {
             return $this->_queryArray(true);
         } else {
@@ -1051,456 +1095,6 @@ class QDB_Select
         }
 
         return $sql;
-    }
-
-    /**
-     * 构造 DISTINCT 子句
-     *
-     * @param string $sql
-     *
-     * @return string
-     */
-    protected function _renderDistinct($sql)
-    {
-        if ($this->_parts[self::DISTINCT]) {
-            $sql .= ' ' . self::SQL_DISTINCT;
-        }
-
-        return $sql;
-    }
-
-    /**
-     * 构造查询字段子句
-     *
-     * @param string $sql
-     *
-     * @return string
-     */
-    protected function _renderColumns($sql)
-    {
-        if (empty($this->_parts[self::COLUMNS])) {
-            return '*';
-        }
-
-        // $this->_parts[self::COLUMNS] 每个元素的格式
-        $columns = array();
-        foreach ($this->_parts[self::COLUMNS] as $entry) {
-            // array($current_table_name, $col, $alias | null)
-            list($table_name, $col, $alias) = $entry;
-            // $col 是一个字段名或者一个 QDB_Expr 对象
-            if ($col instanceof QDB_Expr) {
-                /* @var $col QDB_Expr */
-                $col = $col->formatToString($this->_conn, $table_name);
-            } else {
-                $col = $this->_conn->qfield($col, $table_name);
-                if ($col != self::SQL_WILDCARD && $alias) {
-                    $columns[]  = $col . ' AS ' . $this->_conn->qfield($alias);
-                } else {
-                    $columns[]  = $col;
-                }
-            }
-        }
-
-        return $sql .= ' ' . implode(', ', $columns);
-    }
-
-    /**
-     * 构造集合查询字段
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderAggregate($sql)
-    {
-        $columns = array();
-        foreach ($this->_parts[self::AGGREGATE] as $aggregate) {
-            list(, $field, $alias) = $aggregate;
-            if ($alias) {
-                $columns[] = $field . ' AS ' . $alias;
-            } else {
-                $columns[] = $field;
-            }
-        }
-
-        if (empty($columns)) { return $sql; }
-        return $sql .= ' ' . implode(', ', $columns);
-    }
-
-    /**
-     * 构造 FROM 子句
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderFrom($sql)
-    {
-        $from = array();
-
-        foreach ($this->_parts[self::FROM] as $alias => $table) {
-            $tmp = '';
-
-            // $this->_parts[self::FROM][$alias] = array(
-            //     'join_type'      => $join_type,
-            //     'schema'         => $schema,
-            //     'table_name'     => $table_name,
-            //     'join_cond'      => $where_sql, // 字符串
-            // );
-
-            // 如果不是第一个 FROM，则添加 JOIN
-            if (!empty($from)) {
-                $tmp .= ' ' . strtoupper($table['join_type']) . ' ';
-            }
-
-            if ($alias == $table['table_name']) {
-                $tmp .= $this->_conn->qtable($table['table_name'], $table['schema']);
-            } else {
-                $tmp .= $this->_conn->qtable($table['table_name'], $table['schema'], $alias);
-            }
-
-            // 添加 JOIN 查询条件
-            if (!empty($from) && !empty($table['join_cond'])) {
-                $tmp .= "\n  " .self::SQL_ON . ' ' . $table['join_cond'];
-            }
-
-            $from[] = $tmp;
-        }
-
-        // Add the list of all joins
-        if (!empty($from)) {
-            $sql .= ' ' . self::SQL_FROM . ' ' . implode("\n", $from);
-        }
-
-        return $sql;
-    }
-
-    /**
-     * 构造 UNION 查询
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderUnion($sql)
-    {
-        if ($this->_parts[self::UNION]) {
-            $parts = count($this->_parts[self::UNION]);
-            foreach ($this->_parts[self::UNION] as $cnt => $union) {
-                list($target, $type) = $union;
-                if ($target instanceof QDB_Select) {
-                    $target = $target->__toString();
-                }
-                $sql .= $target;
-                if ($cnt < $parts - 1) {
-                    $sql .= ' ' . $type . ' ';
-                }
-            }
-        }
-
-        return $sql;
-    }
-
-    /**
-     * 构造 WHERE 子句
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderWhere($sql)
-    {
-        if (!empty($this->_parts[self::FROM]) && !is_null($this->_parts[self::WHERE])) {
-            $where = $this->_parts[self::WHERE]->formatToString($this->_conn);
-            if (!empty($where)) {
-                $sql .= "\n" . self::SQL_WHERE . ' ' . $where;
-            }
-        }
-
-        return $sql;
-    }
-
-    /**
-     * 构造 GROUP 子句
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderGroup($sql)
-    {
-        if (!empty($this->_parts[self::FROM]) && !empty($this->_parts[self::GROUP])) {
-            $sql .= "\n " . self::SQL_GROUP_BY . ' ' . implode(",\n\t", $this->_parts[self::GROUP]);
-        }
-        return $sql;
-    }
-
-    /**
-     * 构造 HAVING 子句
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderHaving($sql)
-    {
-        if (!empty($this->_parts[self::FROM]) && !empty($this->_parts[self::HAVING])) {
-            $sql .= "\n " . self::SQL_HAVING . ' ' . implode(",\n\t", $this->_parts[self::HAVING]);
-        }
-        return $sql;
-    }
-
-    /**
-     * 构造 ORDER 子句
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderOrder($sql)
-    {
-        if (!empty($this->_parts[self::ORDER])) {
-            $sql .= "\n " . self::SQL_ORDER_BY . ' ' . implode(', ', $this->_parts[self::ORDER]);
-        }
-        return $sql;
-    }
-
-    /**
-     * 构造 FOR UPDATE 子句
-     *
-     * @param string
-     *
-     * @return string
-     */
-    protected function _renderForupdate($sql)
-    {
-        if ($this->_parts[self::FOR_UPDATE]) {
-            $sql .= "\n " . self::SQL_FOR_UPDATE;
-        }
-        return $sql;
-    }
-
-    /**
-     * 添加一个 JOIN
-     *
-     * @param int $join_type
-     * @param array|string|QDB_Table $name
-     * @param array|string|QDB_Expr $cols
-     * @param array|string|QDB_Expr|QDB_Cond $cond
-     * @param array $cond_args
-     *
-     * @return QDB_Select
-     */
-    protected function _join($join_type, $name, $cols, $cond = null, $cond_args = null)
-    {
-        if (!isset(self::$_join_types[$join_type])) {
-            // LC_MSG: 无效的 JOIN 类型 "%s".
-            throw new QDB_Select_Exception(__('无效的 JOIN 类型 "%s".', $join_type));
-        }
-
-        if (count($this->_parts[self::UNION])) {
-            // LC_MSG: 不能在使用 UNION 查询的同时使用 JOIN 查询.
-            throw new QDB_Select_Exception(__('不能在使用 UNION 查询的同时使用 JOIN 查询.'));
-        }
-
-        // 根据 $name 的不同类型确定数据表名称、别名
-        $m = array();
-        if (empty($name)) {
-            $table = $this->_current_table;
-            $alias = '';
-        } elseif (is_array($name)) {
-            foreach ($name as $alias => $table) {
-                if (!is_string($alias)) {
-                    $alias = '';
-                }
-                break;
-            }
-        } elseif ($name instanceof QDB_Table) {
-            $table = $name;
-            $alias = '';
-        } elseif (preg_match('/^(.+)\s+AS\s+(.+)$/i', $name, $m)) {
-            $table = $m[1];
-            $alias = $m[2];
-        } else {
-            $table = $name;
-            $alias = '';
-        }
-
-        // 确定 table_name 和 schema
-        if ($table instanceof QDB_Table) {
-            /* @var $table QDB_Table */
-            $table_name = $table->full_table_name;
-            $schema = $table->schema;
-        } else {
-            $m = explode('.', $table);
-            if (isset($m[1])) {
-                $table_name = $m[1];
-                $schema = $m[0];
-            } else {
-                $table_name = $table;
-                $schema = null;
-            }
-        }
-
-        // 获得一个唯一的别名
-        $alias = $this->_uniqueAlias(empty($alias) ? $table_name : $alias);
-
-        // 处理查询条件
-        if (!($cond instanceof QDB_Cond)) {
-            $cond = QDB_Cond::createCronDirect($cond, $cond_args);
-        }
-        /* @var $cond QDB_Cond */
-        $where_sql = $cond->formatToString($this->_conn, $alias);
-
-        // 添加一个要查询的数据表
-        $this->_parts[self::FROM][$alias] = array(
-            'join_type'      => $join_type,
-            'schema'         => $schema,
-            'table_name'     => $table_name,
-            'join_cond'      => $where_sql,
-        );
-
-        // 添加查询字段
-        $this->_addCols($alias, $cols);
-
-        return $this;
-    }
-
-    /**
-     * 添加到内部的数据表->字段名映射数组
-     *
-     * @param string $table_name
-     * @param array|string|QDB_Expr $cols
-     */
-    protected function _addCols($table_name, $cols)
-    {
-        if (!is_array($cols)) {
-            $cols = array($cols);
-        }
-
-        if ($table_name == null) {
-            $table_name = '';
-        }
-
-        $m = null;
-        foreach (array_filter($cols) as $alias => $col) {
-            if (is_string($col)) {
-                // 将包含多个字段的字符串打散
-                $_cols = explode(',', $col);
-                foreach ($_cols as $col) {
-                    $current_table_name = $table_name;
-                    $col = trim($col);
-                    if (empty($col)) { continue; }
-                    // 检查是不是 "字段名 AS 别名"这样的形式
-                    if (preg_match('/^(.+)\s+' . self::SQL_AS . '\s+(.+)$/i', $col, $m)) {
-                        $col = $m[1];
-                        $alias = $m[2];
-                    }
-                    // 检查字段名是否包含表名称
-                    if (preg_match('/(.+)\.(.+)/', $col, $m)) {
-                        $current_table_name = $m[1];
-                        $col = $m[2];
-                    }
-                    $this->_parts[self::COLUMNS][] = array($current_table_name, $col, is_string($alias) ? $alias : null);
-                }
-            } else {
-                $this->_parts[self::COLUMNS][] = array($table_name, $col, is_string($alias) ? $alias : null);
-            }
-        }
-    }
-
-    /**
-     * 添加查询条件的内容方法
-     *
-     * @param string|array|QDB_Expr|QDB_Cond $cond
-     * @param array $args
-     * @param int $part_type
-     * @param bool $bool true = AND, false = OR
-     *
-     * @return QDB_Select
-     */
-    protected function _addConditions($cond, array $args, $part_type, $bool)
-    {
-        if (!($cond instanceof QDB_Cond)) {
-            if (empty($cond)) { return $this; }
-            $cond = QDB_Cond::createCronDirect($cond, $args);
-        }
-
-        $sql = $cond->formatToString($this->_conn, $this->_current_table);
-        if (empty($sql)) { return $this; }
-
-        if (is_null($this->_parts[$part_type])) {
-            $this->_parts[$part_type] = new QDB_Cond();
-        }
-        if ($bool) {
-            $this->_parts[$part_type]->andCond($sql);
-        } else {
-            $this->_parts[$part_type]->orCond($sql);
-        }
-        return $this;
-    }
-
-    /**
-     * 添加一个集合查询
-     *
-     * @param int $type
-     * @param string|QDB_Expr $field
-     * @param string $alias
-     *
-     * @return QDB_Select
-     */
-    protected function _addAggregate($type, $field, $alias)
-    {
-        if ($field instanceof QDB_Expr) {
-            $field = $field->formatToString($this->_conn, $this->_current_table);
-        } else {
-            $field = $this->_conn->qfieldsInto($field, $this->_current_table);
-            $field = "{$type}($field)";
-        }
-        $this->_parts[self::AGGREGATE][] = array($type, $field, $alias);
-        return $this;
-    }
-
-    /**
-     * 为准备分页查询获得分页数据
-     */
-    protected function _preparePagedQuery()
-    {
-        return;
-        if (empty($this->page_query_sql)) {
-            $this->toStringInternal();
-        }
-        $count = (int)$this->table->conn->getOne($this->page_query_sql);
-
-        $pager = array();
-        $pager['record_count'] = $count;
-        $pager['page_count'] = ceil($count / $this->page_size);
-        $pager['first'] = $this->page_base;
-        $pager['last'] = $pager['page_count'] + $this->page_base - 1;
-        if ($pager['last'] < $pager['first']) { $pager['last'] = $pager['first']; }
-
-        if ($this->page >= $pager['page_count'] + $this->page_base) {
-            $this->page = $pager['last'];
-        }
-        if ($this->page < $this->page_base) {
-            $this->page = $pager['first'];
-        }
-        if ($this->page < $pager['last'] - 1) {
-            $pager['next'] = $this->page + 1;
-        } else {
-            $pager['next'] = $pager['last'];
-        }
-        if ($this->page > $this->page_base) {
-            $pager['prev'] = $this->page - 1;
-        } else {
-            $pager['prev'] = $pager['first'];
-        }
-        $pager['current'] = $this->page;
-        $pager['page_size'] = $this->page_size;
-        $pager['page_base'] = $this->page_base;
-
-        $this->pager = $pager;
-        $this->limit = array($this->page_size, ($this->page - 1) * $this->page_size);
     }
 
 
@@ -1624,8 +1218,7 @@ class QDB_Select
          *
          * $find_links 是查询涉及到的关联（关联别名 => 关联对象）
          */
-
-        list($handle, $find_links) = $this->getQueryHandle(Q::normalize($this->table->pk));
+        $handle = $this->getQueryHandle();
         /* @var $handle QDB_Result_Abstract */
 
         /**
@@ -1643,10 +1236,11 @@ class QDB_Select
         $batch_refs_value = null;
         $class_name = $this->_meta->class_name;
         $rowset = array();
+        $used_links = $this->_query_params[self::USED_LINKS];
         while (($row = $handle->fetchRow())) {
             $obj = new $class_name($row);
             $id = $obj->id();
-            foreach ($find_links as $alias_name => $link) {
+            foreach ($used_links as $alias_name => $link) {
                 $batch_refs_value[$link->mapping_name][$row[$alias_name]] = $id;
             }
             $rowset[] = $obj;
@@ -1654,20 +1248,20 @@ class QDB_Select
 
         if (empty($rowset)) {
             // 没有查询到数据时，返回 Null 对象或空集合
-            if ($this->limit == 1) {
+            if ($this->_parts[self::LIMIT_COUNT] == 1) {
                 return $this->_meta->newNullObject();
             } else {
                 return new QColl($this->_meta->class_name);
             }
         }
 
-        if ($this->limit == 1) {
+        if ($this->_parts[self::LIMIT_COUNT] == 1) {
             // 创建一个单独的对象
-            $this->_meta->register($rowset[0], $batch_refs_value, self::$query_id);
+            $this->_meta->register($rowset[0], $batch_refs_value, self::$_query_id);
             return $rowset[0];
         } else{
             foreach ($rowset as $obj) {
-                $this->_meta->register($obj, $batch_refs_value, self::$query_id);
+                $this->_meta->register($obj, $batch_refs_value, self::$_query_id);
             }
 
             if ($coll_as_array) {
@@ -1677,6 +1271,487 @@ class QDB_Select
             }
         }
     }
+
+    /**
+     * 构造 DISTINCT 子句
+     *
+     * @param string $sql
+     *
+     * @return string
+     */
+    protected function _renderDistinct($sql)
+    {
+        if ($this->_parts[self::DISTINCT]) {
+            $sql .= ' ' . self::SQL_DISTINCT;
+        }
+
+        return $sql;
+    }
+
+    /**
+     * 构造查询字段子句
+     *
+     * @param string $sql
+     *
+     * @return string
+     */
+    protected function _renderColumns($sql)
+    {
+        if (empty($this->_parts[self::COLUMNS])) {
+            return '*';
+        }
+
+        // $this->_parts[self::COLUMNS] 每个元素的格式
+        $columns = array();
+        foreach ($this->_parts[self::COLUMNS] as $entry) {
+            // array($current_table_name, $col, $alias | null)
+            list($table_name, $col, $alias) = $entry;
+            // $col 是一个字段名或者一个 QDB_Expr 对象
+            if ($col instanceof QDB_Expr) {
+                /* @var $col QDB_Expr */
+                $col = $col->formatToString($this->_conn, $table_name, $this->_columns_mapping);
+            } else {
+                if (isset($this->_columns_mapping[$col])) {
+                    $col = $this->_columns_mapping[$col];
+                }
+                $col = $this->_conn->qfield($col, $table_name);
+                if ($col != self::SQL_WILDCARD && $alias) {
+                    $columns[]  = $col . ' AS ' . $this->_conn->qfield($alias);
+                } else {
+                    $columns[]  = $col;
+                }
+            }
+        }
+
+        // 确定要查询的关联，从而确保查询主表时能够得到相关的关联字段
+        if ($this->_query_params[self::RECURSION] > 0) {
+            foreach ($this->_links as $link) {
+                /* @var $link QDB_Table_Link_Abstract */
+                $link->init();
+                if (!$link->enabled || $link->on_find === false || $link->on_find == 'skip') { continue; }
+                $link->init();
+                $columns[] = $link->source_table->qfields($link->source_key) .
+                             ' AS ' .
+                             $link->source_table->conn->qfield($link->source_key_alias);
+                $this->_query_params[self::USED_LINKS][$link->source_key_alias] = $link;
+            }
+        }
+
+        // 如果指定了来源关联，则需要查询组装数据所需的关联字段
+//        if ($this->link_of_recursion) {
+//            $link = $this->link_of_recursion;
+//            $strings['select'][] = $link->target_table->qfields($link->target_key) .
+//                                   ' AS ' .
+//                                   $link->target_table->conn->qfield($link->target_key_alias);
+//        }
+
+        return $sql .= ' ' . implode(', ', $columns);
+    }
+
+    /**
+     * 构造集合查询字段
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderAggregate($sql)
+    {
+        $columns = array();
+        foreach ($this->_parts[self::AGGREGATE] as $aggregate) {
+            list(, $field, $alias) = $aggregate;
+            if ($alias) {
+                $columns[] = $field . ' AS ' . $alias;
+            } else {
+                $columns[] = $field;
+            }
+        }
+
+        if (empty($columns)) { return $sql; }
+        return $sql .= ' ' . implode(', ', $columns);
+    }
+
+    /**
+     * 构造 FROM 子句
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderFrom($sql)
+    {
+        $from = array();
+
+        foreach ($this->_parts[self::FROM] as $alias => $table) {
+            $tmp = '';
+
+            // $this->_parts[self::FROM][$alias] = array(
+            //     'join_type'      => $join_type,
+            //     'schema'         => $schema,
+            //     'table_name'     => $table_name,
+            //     'join_cond'      => $where_sql, // 字符串
+            // );
+
+            // 如果不是第一个 FROM，则添加 JOIN
+            if (!empty($from)) {
+                $tmp .= ' ' . strtoupper($table['join_type']) . ' ';
+            }
+
+            if ($alias == $table['table_name']) {
+                $tmp .= $this->_conn->qtable($table['table_name'], $table['schema']);
+            } else {
+                $tmp .= $this->_conn->qtable($table['table_name'], $table['schema'], $alias);
+            }
+
+            // 添加 JOIN 查询条件
+            if (!empty($from) && !empty($table['join_cond'])) {
+                $tmp .= "\n  " .self::SQL_ON . ' ' . $table['join_cond'];
+            }
+
+            $from[] = $tmp;
+        }
+
+        // Add the list of all joins
+        if (!empty($from)) {
+            $sql .= "\n" . self::SQL_FROM . ' ' . implode("\n", $from);
+        }
+
+        return $sql;
+    }
+
+    /**
+     * 构造 UNION 查询
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderUnion($sql)
+    {
+        if ($this->_parts[self::UNION]) {
+            $parts = count($this->_parts[self::UNION]);
+            foreach ($this->_parts[self::UNION] as $cnt => $union) {
+                list($target, $type) = $union;
+                if ($target instanceof QDB_Select) {
+                    $target = $target->__toString();
+                }
+                $sql .= $target;
+                if ($cnt < $parts - 1) {
+                    $sql .= ' ' . $type . ' ';
+                }
+            }
+        }
+
+        return $sql;
+    }
+
+    /**
+     * 构造 WHERE 子句
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderWhere($sql)
+    {
+        if (!empty($this->_parts[self::FROM]) && !is_null($this->_parts[self::WHERE])) {
+            $where = $this->_parts[self::WHERE]->formatToString($this->_conn);
+            if (!empty($where)) {
+                $sql .= "\n" . self::SQL_WHERE . ' ' . $where;
+            }
+        }
+
+        return $sql;
+    }
+
+    /**
+     * 构造 GROUP 子句
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderGroup($sql)
+    {
+        if (!empty($this->_parts[self::FROM]) && !empty($this->_parts[self::GROUP])) {
+            $sql .= "\n " . self::SQL_GROUP_BY . ' ' . implode(",\n\t", $this->_parts[self::GROUP]);
+        }
+        return $sql;
+    }
+
+    /**
+     * 构造 HAVING 子句
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderHaving($sql)
+    {
+        if (!empty($this->_parts[self::FROM]) && !empty($this->_parts[self::HAVING])) {
+            $sql .= "\n " . self::SQL_HAVING . ' ' . implode(",\n\t", $this->_parts[self::HAVING]);
+        }
+        return $sql;
+    }
+
+    /**
+     * 构造 ORDER 子句
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderOrder($sql)
+    {
+        if (!empty($this->_parts[self::ORDER])) {
+            $sql .= "\n " . self::SQL_ORDER_BY . ' ' . implode(', ', $this->_parts[self::ORDER]);
+        }
+        return $sql;
+    }
+
+    /**
+     * 构造 FOR UPDATE 子句
+     *
+     * @param string
+     *
+     * @return string
+     */
+    protected function _renderForUpdate($sql)
+    {
+        if ($this->_parts[self::FOR_UPDATE]) {
+            $sql .= "\n " . self::SQL_FOR_UPDATE;
+        }
+        return $sql;
+    }
+
+    /**
+     * 添加一个 JOIN
+     *
+     * @param int $join_type
+     * @param array|string|QDB_Table $name
+     * @param array|string|QDB_Expr $cols
+     * @param array|string|QDB_Expr|QDB_Cond $cond
+     * @param array $cond_args
+     *
+     * @return QDB_Select
+     */
+    protected function _join($join_type, $name, $cols, $cond = null, $cond_args = null)
+    {
+        if (!isset(self::$_join_types[$join_type])) {
+            // LC_MSG: 无效的 JOIN 类型 "%s".
+            throw new QDB_Select_Exception(__('无效的 JOIN 类型 "%s".', $join_type));
+        }
+
+        if (count($this->_parts[self::UNION])) {
+            // LC_MSG: 不能在使用 UNION 查询的同时使用 JOIN 查询.
+            throw new QDB_Select_Exception(__('不能在使用 UNION 查询的同时使用 JOIN 查询.'));
+        }
+
+        // 根据 $name 的不同类型确定数据表名称、别名
+        $m = array();
+        if (empty($name)) {
+            $table = $this->_current_table;
+            $alias = '';
+        } elseif (is_array($name)) {
+            foreach ($name as $alias => $table) {
+                if (!is_string($alias)) { $alias = ''; }
+                break;
+            }
+        } elseif ($name instanceof QDB_Table) {
+            $table = $name;
+            $alias = '';
+        } elseif (preg_match('/^(.+)\s+AS\s+(.+)$/i', $name, $m)) {
+            $table = $m[1];
+            $alias = $m[2];
+        } else {
+            $table = $name;
+            $alias = '';
+        }
+
+        // 确定 table_name 和 schema
+        if ($table instanceof QDB_Table) {
+            /* @var $table QDB_Table */
+            $table_name = $table->full_table_name;
+            $schema = $table->schema;
+        } else {
+            $m = explode('.', $table);
+            if (isset($m[1])) {
+                $table_name = $m[1];
+                $schema = $m[0];
+            } else {
+                $table_name = $table;
+                $schema = null;
+            }
+        }
+
+        // 获得一个唯一的别名
+        $alias = $this->_uniqueAlias(empty($alias) ? $table_name : $alias);
+
+        // 处理查询条件
+        if (!($cond instanceof QDB_Cond)) {
+            $cond = QDB_Cond::createCronDirect($cond, $cond_args);
+        }
+        /* @var $cond QDB_Cond */
+        $where_sql = $cond->formatToString($this->_conn, $alias, $this->_columns_mapping);
+
+        // 添加一个要查询的数据表
+        $this->_parts[self::FROM][$alias] = array(
+            'join_type'      => $join_type,
+            'schema'         => $schema,
+            'table_name'     => $table_name,
+            'join_cond'      => $where_sql,
+        );
+
+        // 添加查询字段
+        $this->_addCols($alias, $cols);
+
+        return $this;
+    }
+
+    /**
+     * 添加到内部的数据表->字段名映射数组
+     *
+     * @param string $table_name
+     * @param array|string|QDB_Expr $cols
+     */
+    protected function _addCols($table_name, $cols)
+    {
+        if (!is_array($cols)) {
+            $cols = array($cols);
+        }
+
+        if ($table_name == null) {
+            $table_name = '';
+        }
+
+        $m = null;
+        foreach (array_filter($cols) as $alias => $col) {
+            if (is_string($col)) {
+                // 将包含多个字段的字符串打散
+                $_cols = explode(',', $col);
+                foreach ($_cols as $col) {
+                    $current_table_name = $table_name;
+                    $col = trim($col);
+                    if (empty($col)) { continue; }
+                    // 检查是不是 "字段名 AS 别名"这样的形式
+                    if (preg_match('/^(.+)\s+' . self::SQL_AS . '\s+(.+)$/i', $col, $m)) {
+                        $col = $m[1];
+                        $alias = $m[2];
+                    }
+                    // 检查字段名是否包含表名称
+                    if (preg_match('/(.+)\.(.+)/', $col, $m)) {
+                        $current_table_name = $m[1];
+                        $col = $m[2];
+                    }
+                    if (isset($this->_columns_mapping[$col])) {
+                        $col = $this->_columns_mapping[$col];
+                    }
+
+                    $this->_parts[self::COLUMNS][] = array($current_table_name, $col, is_string($alias) ? $alias : null);
+                }
+            } else {
+                $this->_parts[self::COLUMNS][] = array($table_name, $col, is_string($alias) ? $alias : null);
+            }
+        }
+    }
+
+    /**
+     * 添加查询条件的内容方法
+     *
+     * @param string|array|QDB_Expr|QDB_Cond $cond
+     * @param array $args
+     * @param int $part_type
+     * @param bool $bool true = AND, false = OR
+     *
+     * @return QDB_Select
+     */
+    protected function _addConditions($cond, array $args, $part_type, $bool)
+    {
+        if (!($cond instanceof QDB_Cond)) {
+            if (empty($cond)) { return $this; }
+            $cond = QDB_Cond::createCronDirect($cond, $args);
+        }
+
+        $sql = $cond->formatToString($this->_conn, $this->_current_table, $this->_columns_mapping);
+        if (empty($sql)) { return $this; }
+
+        if (is_null($this->_parts[$part_type])) {
+            $this->_parts[$part_type] = new QDB_Cond();
+        }
+        if ($bool) {
+            $this->_parts[$part_type]->andCond($sql);
+        } else {
+            $this->_parts[$part_type]->orCond($sql);
+        }
+        return $this;
+    }
+
+    /**
+     * 添加一个集合查询
+     *
+     * @param int $type
+     * @param string|QDB_Expr $field
+     * @param string $alias
+     *
+     * @return QDB_Select
+     */
+    protected function _addAggregate($type, $field, $alias)
+    {
+        if ($field instanceof QDB_Expr) {
+            $field = $field->formatToString($this->_conn, $this->_current_table, $this->_columns_mapping);
+        } else {
+            if (isset($this->_columns_mapping[$field])) {
+                $field = $this->_columns_mapping[$field];
+            }
+            $field = $this->_conn->qfieldsInto($field, $this->_current_table, $this->_columns_mapping);
+            $field = "{$type}($field)";
+        }
+        $this->_parts[self::AGGREGATE][] = array($type, $field, $alias);
+        return $this;
+    }
+
+    /**
+     * 为准备分页查询获得分页数据
+     */
+    protected function _preparePagedQuery()
+    {
+        return;
+        if (empty($this->page_query_sql)) {
+            $this->toStringInternal();
+        }
+        $count = (int)$this->table->conn->getOne($this->page_query_sql);
+
+        $pager = array();
+        $pager['record_count'] = $count;
+        $pager['page_count'] = ceil($count / $this->page_size);
+        $pager['first'] = $this->page_base;
+        $pager['last'] = $pager['page_count'] + $this->page_base - 1;
+        if ($pager['last'] < $pager['first']) { $pager['last'] = $pager['first']; }
+
+        if ($this->page >= $pager['page_count'] + $this->page_base) {
+            $this->page = $pager['last'];
+        }
+        if ($this->page < $this->page_base) {
+            $this->page = $pager['first'];
+        }
+        if ($this->page < $pager['last'] - 1) {
+            $pager['next'] = $this->page + 1;
+        } else {
+            $pager['next'] = $pager['last'];
+        }
+        if ($this->page > $this->page_base) {
+            $pager['prev'] = $this->page - 1;
+        } else {
+            $pager['prev'] = $pager['first'];
+        }
+        $pager['current'] = $this->page;
+        $pager['page_size'] = $this->page_size;
+        $pager['page_base'] = $this->page_base;
+
+        $this->pager = $pager;
+        $this->limit = array($this->page_size, ($this->page - 1) * $this->page_size);
+    }
+
 
     /**
      * 获得一个唯一的别名

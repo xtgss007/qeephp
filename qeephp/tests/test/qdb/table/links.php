@@ -82,7 +82,7 @@ class Test_QDB_Table_Links extends PHPUnit_Framework_TestCase
         );
         $id = $tableContents->create($content);
 
-        $find = $tableContents->find('%PK% = ?', $id)->query();
+        $find = $tableContents->find(array($tableContents->pk => $id))->query();
         $tableContents->enableAllLinks();
         $tableContents->getConn()->completeTrans(false);
 
