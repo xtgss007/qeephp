@@ -155,8 +155,10 @@ class QLog
             throw new QLog_Exception(__('无效的日志类型 "%s".', $type));
         }
 
+        $msg = str_replace(array("\n", "\r"), '', $msg);
         $this->log[] = array(time(), $msg, $type, $type_name);
         $this->cached_size += strlen($msg);
+        unset($msg);
 
         if ($this->cached_size >= $this->cache_chunk_size) {
             $this->flush();

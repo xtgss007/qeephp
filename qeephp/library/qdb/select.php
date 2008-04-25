@@ -60,6 +60,7 @@ class QDB_Select
     const USED_LINKS     = 'used_links';
     const NON_LAZY_QUERY = 'non_lazy_query';
     const AS_ARRAY       = 'as_array';
+    const LINK_FOR_RECURSION = 'link_for_recursion';
 
     const INNER_JOIN     = 'inner join';
     const LEFT_JOIN      = 'left join';
@@ -159,6 +160,7 @@ class QDB_Select
         self::NON_LAZY_QUERY    => array(),
         self::AS_ARRAY          => true,
         self::RECURSION         => 1,
+        self::LINK_FOR_RECURSION => null,
     );
 
     /**
@@ -993,9 +995,9 @@ class QDB_Select
      *
      * @return QDB_Select
      */
-    function recursionForTarget(QDB_Table_Link_Abstract $link)
+    function linkForRecursion(QDB_Table_Link_Abstract $link)
     {
-        $this->link_of_recursion = $link;
+        $this->_query_params[self::LINK_FOR_RECURSION] = $link;
         return $this;
     }
 
@@ -1114,12 +1116,12 @@ class QDB_Select
             // 对关联表进行查询，并组装数据
             $refs_value = null;
             $refs = null;
-            $used_alias = array_keys($find_links);
+            $used_alias = array_keys($this->_query_params[self::USED_LINKS]);
             $rowset = $handle->fetchAllRefby($used_alias, $refs_value, $refs, $clean_up);
             $keys = array_keys($rowset);
 
             // 进行关联查询，并组装数据集
-            foreach ($find_links as $link) {
+            foreach ($this->_query_params[self::USED_LINKS] as $link) {
                 /* @var $link QDB_Table_Link_Abstract */
                 foreach ($keys as $key) {
                     $rowset[$key][$link->mapping_name] = $link->one_to_one ? null : array();
@@ -1131,7 +1133,7 @@ class QDB_Select
 
                 $select = $link->target_table->find("[{$link->target_key}] IN (?)", $refs_value[$ska])
                                              ->recursion($this->_query_params[self::RECURSION] - 1)
-                                             ->recursionForTarget($link)
+                                             ->linkForRecursion($link)
                                              ->order($link->on_find_order)
                                              ->select($link->on_find_keys)
                                              ->where($link->on_find_where);
@@ -1216,7 +1218,7 @@ class QDB_Select
         /**
          * 执行查询，获得一个查询句柄
          *
-         * $find_links 是查询涉及到的关联（关联别名 => 关联对象）
+         * $this->_query_params[self::USED_LINKS] 是查询涉及到的关联（关联别名 => 关联对象）
          */
         $handle = $this->getQueryHandle();
         /* @var $handle QDB_Result_Abstract */
@@ -1236,11 +1238,11 @@ class QDB_Select
         $batch_refs_value = null;
         $class_name = $this->_meta->class_name;
         $rowset = array();
-        $used_links = $this->_query_params[self::USED_LINKS];
+        $this->_query_params[self::USED_LINKS] = $this->_query_params[self::USED_LINKS];
         while (($row = $handle->fetchRow())) {
             $obj = new $class_name($row);
             $id = $obj->id();
-            foreach ($used_links as $alias_name => $link) {
+            foreach ($this->_query_params[self::USED_LINKS] as $alias_name => $link) {
                 $batch_refs_value[$link->mapping_name][$row[$alias_name]] = $id;
             }
             $rowset[] = $obj;
@@ -1338,12 +1340,12 @@ class QDB_Select
         }
 
         // 如果指定了来源关联，则需要查询组装数据所需的关联字段
-//        if ($this->link_of_recursion) {
-//            $link = $this->link_of_recursion;
-//            $strings['select'][] = $link->target_table->qfields($link->target_key) .
-//                                   ' AS ' .
-//                                   $link->target_table->conn->qfield($link->target_key_alias);
-//        }
+        if ($this->_query_params[self::LINK_FOR_RECURSION]) {
+            $link = $this->_query_params[self::LINK_FOR_RECURSION];
+            $columns[] = $link->target_table->qfields($link->target_key) .
+                         ' AS ' .
+                         $link->target_table->conn->qfield($link->target_key_alias);
+        }
 
         return $sql .= ' ' . implode(', ', $columns);
     }
