@@ -4,49 +4,23 @@
 //
 // Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
 //
-// 许可协议，请查看源代码中附带的 LICENSE.txt 文件，
+// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
 // 或者访问 http://www.qeephp.org/ 获得详细信息。
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 Uploader 和 Uploader_File 对象
+ * 定义 Helper_Uploader 和 Helper_Uploader_file 对象
  *
- * @copyright Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
- * @author 起源科技 (www.qeeyuan.com)
  * @package helper
  * @version $Id$
  */
 
 /**
- * Uploader 实现了一个简单的、可扩展的文件上传助手
- *
- * 使用方法：
- *
- * <code>
- * $allowExts = 'jpg,png,gif';
- * $maxSize = 150 * 1024; // 150KB
- * $uploadDir = dirname(__FILE__) . '/upload';
- *
- * Q::loadClass('Uploader');
- * $uploader =& new Uploader();
- * $files =& $uploader->getFiles();
- * foreach ($files as $file) {
- *     if (!$file->check($allowExts, $maxSize)) {
- *         // 上传的文件类型不符或者超过了大小限制。
- *         return false;
- *     }
- *     // 生成唯一的文件名（重复的可能性极小）
- *     $id = md5(time() . $file->getFilename() . $file->getSize() . $file->getTmpName());
- *     $filename = $id . '.' . strtolower($file->getExt());
- *     $file->move($uploadDir . '/' . $filename);
- * }
- * </code>
+ * Helper_Uploader 实现了一个简单的、可扩展的文件上传助手
  *
  * @package helper
- * @author 起源科技 (www.qeeyuan.com)
- * @version 1.0
  */
-class Uploader
+class Helper_Uploader
 {
     /**
      * 所有的 UploadFile 对象实例
@@ -66,10 +40,8 @@ class Uploader
      * 构造函数
      *
      * @param boolean $cascade
-     *
-     * @return Uploader
      */
-    function Uploader($cascade = false)
+    function __construct($cascade = false)
     {
         if (is_array($_FILES)) {
             foreach ($_FILES as $field => $struct) {
@@ -79,7 +51,7 @@ class Uploader
                     for ($i = 0; $i < count($struct['error']); $i++) {
 
                         if ($struct['error'][$i] != UPLOAD_ERR_NO_FILE) {
-                            $arr[] = new Uploader_File($struct, $field, $i);
+                            $arr[] = new Helper_Uploader_file($struct, $field, $i);
                             if (!$cascade) {
                                 $this->files["{$field}{$i}"] =& $arr[count($arr) - 1];
                             }
@@ -90,7 +62,7 @@ class Uploader
                     }
                 } else {
                     if ($struct['error'] != UPLOAD_ERR_NO_FILE) {
-                        $this->files[$field] = new Uploader_File($struct, $field);
+                        $this->files[$field] = new Helper_Uploader_file($struct, $field);
                     }
                 }
             }
@@ -113,7 +85,7 @@ class Uploader
      *
      * @return array
      */
-    function & getFiles()
+    function getFiles()
     {
         return $this->files;
     }
@@ -135,9 +107,9 @@ class Uploader
      *
      * @param string $name
      *
-     * @return Uploader_File
+     * @return Helper_Uploader_file
      */
-    function & getFile($name)
+    function getFile($name)
     {
         if (!isset($this->files[$name])) {
             return __THROW(new Exception_ExpectedFile('$_FILES[' . $name . ']'));
@@ -165,7 +137,7 @@ class Uploader
     function batchMove($destDir)
     {
         foreach ($this->files as $file) {
-            /* @var $file Uploader_File */
+            /* @var $file Helper_Uploader_file */
             $file->move($destDir . '/' . $file->getFilename());
         }
     }
@@ -175,10 +147,8 @@ class Uploader
  * 封装一个上传的文件
  *
  * @package helper
- * @author 起源科技 (www.qeeyuan.com)
- * @version 1.0
  */
-class Uploader_File
+class Helper_Uploader_file
 {
     /**
      * 上传文件信息
@@ -201,9 +171,9 @@ class Uploader_File
      * @param string $name
      * @param int $ix
      *
-     * @return Uploader_File
+     * @return Helper_Uploader_file
      */
-    function Uploader_File($struct, $name, $ix = false)
+    function __construct($struct, $name, $ix = false)
     {
         if ($ix !== false) {
             $s = array(
