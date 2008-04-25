@@ -291,10 +291,8 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     function assembleAssocObjects($id, $prop_name)
     {
-        QDebug::dump($this->refs_to_objects);
         $query_id = $this->objects_refs[$id];
         if (isset($this->refs_to_objects[$query_id][$prop_name])) {
-
             /**
              * refs_to_objects 是一个二维数组
              *
@@ -309,6 +307,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             $link = $this->table->links[$prop_name];
             /* @var $link QDB_Table_Link_Abstract */
             $target_meta = self::getInstance($this->props[$prop_name]['assoc_class']);
+            /* @var $target_meta QDB_ActiveRecord_Meta */
 
             $target_values = array_keys($refs);
             switch ($link->type) {
@@ -316,16 +315,16 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             case QDB::HAS_MANY:
             case QDB::BELONGS_TO:
                 $where = array(array($link->target_key => $target_values));
-                $objects = QDB_Select::beginQueryForActiveRecord($target_meta, $where)
-                                           ->all()
-                                           ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
+                $objects = $target_meta->findArgs($where)
+                                       ->all()
+                                       ->queryObjectsForAssemble($this->table, $link, $target_meta);
                 break;
             case QDB::MANY_TO_MANY:
-                $where = array(array($link->mid_table->qfields($link->mid_source_key) => $target_values));
-                $objects = QDB_Select::beginQueryForActiveRecord($target_meta, $where)
-                                           ->where(array($link->mid_target_key => $link->target_key))
-                                           ->all()
-                                           ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
+//                $where = array(array($link->mid_table->qfields($link->mid_source_key) => $target_values));
+//                $objects = QDB_Select::beginQueryForActiveRecord($target_meta, $where)
+//                                           ->where(array($link->mid_target_key => $link->target_key))
+//                                           ->all()
+//                                           ->queryObjectsForAssemble($link->target_key, $link->target_key_alias, $target_meta);
                 break;
             }
 
@@ -345,9 +344,9 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
                 }
             }
         } else {
-            // LC_MSG: 不能通过未登记的对象 ID: "%s" 查找属性 "%s" 关联的聚合对象.
-            throw new QDB_ActiveRecord_Exception(__('不能通过未登记的对象 ID: "%s" 查找属性 "%s" 关联的聚合对象.',
-                                                    $id, $prop_name));
+            // LC_MSG: 查找 %s 类 "%s" 属性关联的对象时，使用了未登记的对象 ID: "%s".
+            throw new QDB_ActiveRecord_Exception(__('查找 %s 类 "%s" 属性关联的对象时，使用了未登记的对象 ID: "%s".',
+                                                    $this->class_name, $prop_name, $id));
         }
     }
 

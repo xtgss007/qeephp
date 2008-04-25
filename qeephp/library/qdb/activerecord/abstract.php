@@ -310,6 +310,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
     function __get($varname)
     {
         $meta = self::$_metas[$this->_class];
+        /* @var $meta QDB_ActiveRecord_Meta */
         if (!isset($meta->props[$varname])) {
             // LC_MSG: 对象 "%s" 的属性 "%s" 没有定义.
             throw new QDB_ActiveRecord_Exception(__('对象 "%s" 的属性 "%s" 没有定义.', $this->_class, $varname));
@@ -325,8 +326,6 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
 
         if (!isset($this->_props[$varname]) && $params['assoc']) {
             // assembleAssocObjects() 会完成对象聚合的组装，因此下一步可以直接返回属性
-
-            QDebug::dump($varname, __METHOD__);
             $meta->assembleAssocObjects($this->_props[$this->_idname], $varname);
 
             // 没有查询到对象

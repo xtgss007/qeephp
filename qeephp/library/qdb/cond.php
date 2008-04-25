@@ -196,7 +196,16 @@ class QDB_Cond
                         if (isset($mapping[$field])) {
                             $field = $mapping[$field];
                         }
-                        $part[] = $conn->qfield($field, $table_name) . '=' . $conn->qstr($value);
+                        if (!is_array($value)) {
+                            $part[] = $conn->qfield($field, $table_name) . '=' . $conn->qstr($value);
+                        } else {
+                            $values = array();
+                            foreach ($value as $_v) {
+                                $values[] = $conn->qstr($_v);
+                            }
+                            unset($value);
+                            $part[] = $conn->qfield($field, $table_name) . ' IN(' . implode(',', $values) . ')';
+                        }
                     }
                 }
                 $part = implode(' AND ', $part);

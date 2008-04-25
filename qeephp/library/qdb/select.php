@@ -1099,6 +1099,50 @@ class QDB_Select
         return $sql;
     }
 
+    /**
+     * 查询，并返回对象或对象集合
+     *
+     * @param QDB_Table $source_table
+     * @param QDB_Table_Link_Abstract $target_link
+     * @param QDB_ActiveRecord_Meta $target_meta
+     *
+     * @return array
+     */
+    function queryObjectsForAssemble(QDB_Table $source_table, QDB_Table_Link_Abstract $target_link, QDB_ActiveRecord_Meta $target_meta)
+    {
+        /**
+         * 与 query() 的区别在于，queryObjectsForAssemble() 会查询出关联的 target_key_value
+         * 并且返回结果按照 taget_key_value 进行了分组
+         *
+         *   target_key_value => array(
+         *     array(
+         *         object,
+         *         ....
+         *     )
+         *   ),
+         */
+        $target_key_alias = $target_link->target_key_alias;
+        $target_key = $target_link->target_key;
+        $this->columns(array($target_key_alias => $target_key, $source_table->pk)/*, $target_meta->table*/);
+
+        $handle = $this->getQueryHandle();
+        /* @var $handle QDB_Result_Abstract */
+
+        $batch_refs_value = null;
+        $rowset = array();
+        $class_name = $target_meta->class_name;
+
+        while (($row = $handle->fetchRow())) {
+            $obj = new $class_name($row);
+            $id = $obj->id();
+            foreach ($this->_query_params[self::USED_LINKS] as $alias_name => $link) {
+                $batch_refs_value[$link->mapping_name][$row[$alias_name]] = $id;
+            }
+            $rowset[$row[$target_key_alias]][] = $obj;
+        }
+
+        return $rowset;
+    }
 
     /**
      * 查询，并返回数组结果
@@ -1206,6 +1250,8 @@ class QDB_Select
         }
     }
 
+
+
     /**
      * 查询，并返回对象或对象集合
      *
@@ -1305,6 +1351,7 @@ class QDB_Select
 
         // $this->_parts[self::COLUMNS] 每个元素的格式
         $columns = array();
+
         foreach ($this->_parts[self::COLUMNS] as $entry) {
             // array($current_table_name, $col, $alias | null)
             list($table_name, $col, $alias) = $entry;
@@ -1415,7 +1462,7 @@ class QDB_Select
 
         // Add the list of all joins
         if (!empty($from)) {
-            $sql .= "\n" . self::SQL_FROM . ' ' . implode("\n", $from);
+            $sql .= "\n " . self::SQL_FROM . ' ' . implode("\n", $from);
         }
 
         return $sql;
