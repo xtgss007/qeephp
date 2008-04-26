@@ -49,18 +49,18 @@ class Helper_Form
      */
     function prepare($model_class, QRequest $request = null)
     {
-        $ref = QDB_ActiveRecord_Abstract::reflection($model_class);
+        $meta = QDB_ActiveRecord_Meta::getInstance($model_class);
         $form = array();
-        $pk = Q::normalize($ref['pk']);
+        $pk = $meta->fields2prop[$meta->table->pk];
         if ($request) {
-            foreach ($ref['alias'] as $a) {
-                if (in_array($a, $pk)) { continue; }
-                $form[$a] = $request->getPost($a);
+            foreach ($meta->fields2prop as $prop_name) {
+                if ($prop_name == $pk) { continue; }
+                $form[$prop_name] = $request->getPost($prop_name);
             }
         } else {
-            foreach ($ref['alias'] as $a) {
-                if (in_array($a, $pk)) { continue; }
-                $form[$a] = null;
+            foreach ($meta->fields2prop as $prop_name) {
+                if ($prop_name == $pk) { continue; }
+                $form[$prop_name] = null;
             }
         }
         $form['_pk'] = $pk;
