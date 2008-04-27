@@ -165,7 +165,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
             }
 
             // 进行验证
-            $error = self::$_metas[$this->_class]->validate($this->_props);
+            $error = self::$_metas[$this->_class]->validate($this->_class, $this->_props);
             if (!empty($error)) {
                 throw new QDB_ActiveRecord_Validate_Exception($this, $error);
             }

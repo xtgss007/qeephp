@@ -187,7 +187,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     }
 
     /**
-     * 获得指定 class 对应的唯一实例
+     * 获得指定指定 ActiveRecord 继承类的元对象唯一实例
      *
      * @param string $class
      *
@@ -667,18 +667,18 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     function validate($class, array $data, $props = null)
     {
-        self::reflection($class);
+        $meta = self::getInstance($class);
         if (!is_null($props)) {
             $props = Q::normalize($props);
             $props = array_flip($props);
         } else {
-            $props = self::$__ref[$class]['ralias'];
+            $props = $meta->prop2fields;
         }
 
         $error = array();
         $v = new QValidate_Validator(null);
 
-        foreach (self::$__ref[$class]['validation'] as $prop => $rules) {
+        foreach ($meta->validation as $prop => $rules) {
             if (!isset($props[$prop])) { continue; }
             if (is_object($data[$prop]) && ($data[$prop] instanceof QDB_ActiveRecord_RemovedProp)) { continue; }
 
