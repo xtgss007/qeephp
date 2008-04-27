@@ -29,9 +29,9 @@ class Behavior_Fastuuid extends QDB_ActiveRecord_Behavior_Abstract
      *
      * @var array
      */
-    protected $settings = array(
-        'being_timestamp' => 1206576000, // 2008-03-27
-        'suffix_len' => 3,
+    protected $_settings = array(
+        'being_timestamp'   => 1206576000, // 2008-03-27
+        'suffix_len'        => 3,
     );
 
     /**
@@ -39,7 +39,7 @@ class Behavior_Fastuuid extends QDB_ActiveRecord_Behavior_Abstract
      */
     function bind()
     {
-        $this->meta->addEventHandler(self::before_create, array($this, 'beforeCreate'));
+        $this->meta->addEventHandler(self::before_create, array($this, '_before_create'));
     }
 
     /**
@@ -48,9 +48,9 @@ class Behavior_Fastuuid extends QDB_ActiveRecord_Behavior_Abstract
      * @param QDB_ActiveRecord_Abstract $obj
      * @param array $props
      */
-    function beforeCreate(QDB_ActiveRecord_Abstract $obj, array & $props)
+    function _before_create(QDB_ActiveRecord_Abstract $obj, array & $props)
     {
-        $props[$obj->idname()] = self::newID($this->settings['being_timestamp'], $this->settings['suffix_len']);
+        $props[$obj->idname()] = self::newID($this->_settings['being_timestamp'], $this->_settings['suffix_len']);
     }
 
     /**
@@ -71,3 +71,4 @@ class Behavior_Fastuuid extends QDB_ActiveRecord_Behavior_Abstract
         return $id;
     }
 }
+

@@ -27,7 +27,7 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      *
      * @var array
      */
-    protected $settings = array(
+    protected $_settings = array(
         // 密码加密方式
         'encode_type'       => 'crypt',
         // 用户名属性名
@@ -66,14 +66,14 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      */
     function bind()
     {
-        $this->meta->addEventHandler(self::before_create, array($this, 'beforeCreate'));
+        $this->meta->addEventHandler(self::before_create, array($this, '_before_create'));
         $this->meta->addDynamicMethod('encodePassword',   array($this, 'encodePassword'));
         $this->meta->addDynamicMethod('checkPassword',    array($this, 'checkPassword'));
         $this->meta->addDynamicMethod('changePassword',   array($this, 'changePassword'));
         $this->meta->addDynamicMethod('updateLogin',      array($this, 'updateLogin'));
         $this->meta->addDynamicMethod('getAclData',       array($this, 'getAclData'));
         $this->meta->addDynamicMethod('getAclRoles',      array($this, 'getAclRoles'));
-        $this->meta->update_reject[$this->settings['password_prop']] = true;
+        $this->meta->update_reject[$this->_settings['password_prop']] = true;
     }
 
     /**
@@ -82,10 +82,10 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      * @param QDB_ActiveRecord_Abstract $obj
      * @param array $props
      */
-    function beforeCreate(QDB_ActiveRecord_Abstract $obj)
+    function _before_create(QDB_ActiveRecord_Abstract $obj, array & $props)
     {
-        if ($this->settings['unique_username']) {
-            $pn = $this->settings['username_prop'];
+        if ($this->_settings['unique_username']) {
+            $pn = $this->_settings['username_prop'];
             $username = $obj->{$pn};
             $row = $obj->getMeta()->table
                        ->find(array($pn => $username))
@@ -94,24 +94,24 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
                        ->query();
             if (!empty($row) && $row['row_count'] > 0) {
                 // 找到同名用户
-                throw new QACL_User_Exception(sprintf($this->settings['err_duplicate_username'], $username));
+                throw new QACL_User_Exception(sprintf($this->_settings['err_duplicate_username'], $username));
             }
         }
 
-        if ($this->settings['unique_email']) {
-            $pn = $this->settings['email_prop'];
+        if ($this->_settings['unique_email']) {
+            $pn = $this->_settings['email_prop'];
             $email = $obj->{$pn};
             $row = $obj->getMeta()->table->find(array($pn => $email))->count()->query();
             if (!empty($row) && $row['row_count'] > 0) {
                 // 找到相同的 EMAIL
-                throw new QACL_User_Exception(sprintf($this->settings['err_duplicate_email'], $email));
+                throw new QACL_User_Exception(sprintf($this->_settings['err_duplicate_email'], $email));
             }
         }
 
-        $pn = $this->settings['password_prop'];
+        $pn = $this->_settings['password_prop'];
         $obj->{$pn} = $this->encodePassword($obj->{$pn});
 
-        $pn = $this->settings['register_ip_prop'];
+        $pn = $this->_settings['register_ip_prop'];
         if (isset($obj->{$pn})) {
             $obj->{$pn} = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'none';
         }
@@ -126,7 +126,7 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      */
     function encodePassword($password)
     {
-        switch ($this->settings['encode_type']) {
+        switch ($this->_settings['encode_type']) {
         case 'md5':
             return md5($password);
         case 'crypt':
@@ -146,8 +146,8 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
      */
     function checkPassword(QDB_ActiveRecord_Abstract $obj, array $props, $password)
     {
-        $p = $this->settings['password_prop'];
-        switch ($this->settings['encode_type']) {
+        $p = $this->_settings['password_prop'];
+        switch ($this->_settings['encode_type']) {
         case 'md5':
             return md5($password) == $props[$p];
         case 'crypt':
@@ -167,7 +167,7 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
     function changePassword(QDB_ActiveRecord_Abstract $obj, $old_password, $new_password)
     {
         if ($obj->checkPassword($old_password)) {
-            $p = $this->settings['password_prop'];
+            $p = $this->_settings['password_prop'];
             $new_password = $this->encodePassword($new_password);
             $row = array($obj->idname() => $obj->id(), $this->field_name($p) => $new_password);
             $obj->getMeta()->table->update($row, 0);
@@ -187,13 +187,13 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
     function updateLogin(QDB_ActiveRecord_Abstract $obj)
     {
         $row = array();
-        $p = $this->settings['login_count_prop'];
+        $p = $this->_settings['login_count_prop'];
         if (!empty($p)) {
             $obj->{$p}++;
             $row[$this->meta->prop2fields[$p]] = $obj->{$p};
         }
 
-        $p = $this->settings['login_at_prop'];
+        $p = $this->_settings['login_at_prop'];
         if (!empty($p)) {
             $f = $this->meta->prop2fields[$p];
             if (!empty($this->ref['meta'][$f])) {
@@ -207,7 +207,7 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
             }
         }
 
-        $p = $this->settings['login_ip_prop'];
+        $p = $this->_settings['login_ip_prop'];
         if (!empty($p)) {
             $ip = !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
             $props[$p] = $ip;
@@ -231,7 +231,7 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
     function getAclData(QDB_ActiveRecord_Abstract $obj, array $props, $acldata_props = null)
     {
         if (is_null($acldata_props)) {
-            $acldata_props = $this->settings['acldata_props'];
+            $acldata_props = $this->_settings['acldata_props'];
         }
         $acldata_props = Q::normalize($acldata_props);
         $data = array();
@@ -257,10 +257,10 @@ class Behavior_Acluser extends QDB_ActiveRecord_Behavior_Abstract
     function getAclRoles(QDB_ActiveRecord_Abstract $obj, array $props, $roles_prop = null, $rolename_prop = null)
     {
         if (is_null($roles_prop)) {
-            $roles_prop = $this->settings['roles_prop'];
+            $roles_prop = $this->_settings['roles_prop'];
         }
         if (is_null($rolename_prop)){
-            $rolename_prop = $this->settings['rolename_prop'];
+            $rolename_prop = $this->_settings['rolename_prop'];
         }
         $roles = array();
         if (empty($props[$roles_prop])) {

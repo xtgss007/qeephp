@@ -27,21 +27,23 @@ class Behavior_Fakeuuid extends QDB_ActiveRecord_Behavior_Abstract
      *
      * @var array
      */
-    protected $seed = 't1MlGzPOy2WpUjTEBwN4aFR3mKdLs6gVcux89qSkCXh7iY5QbAJoeHIrDnfv0Z';
+    protected $_settings = array(
+        'seed' => 't1MlGzPOy2WpUjTEBwN4aFR3mKdLs6gVcux89qSkCXh7iY5QbAJoeHIrDnfv0Z',
+    );
 
     /**
      * 种子长度
      *
      * @var int
      */
-    protected $base;
+    protected $_base;
 
     /**
      * 编码后的种子
      *
      * @var array
      */
-    protected $code = array();
+    protected $_code = array();
 
     /**
      * 该方法返回行为插件定义的回调事件以及扩展的方法
@@ -51,7 +53,7 @@ class Behavior_Fakeuuid extends QDB_ActiveRecord_Behavior_Abstract
     function __callbacks()
     {
         return array(
-            array(self::before_create, 'beforeCreate'),
+            array(self::before_create, '_before_create'),
         );
     }
 
@@ -64,9 +66,9 @@ class Behavior_Fakeuuid extends QDB_ActiveRecord_Behavior_Abstract
     function __construct($class, array $settings)
     {
         parent::__construct($class, $settings);
-        $this->base = strlen($this->seed);
-        for ($i = 0; $i < $this->base; $i++) {
-            $this->code[$i] = substr($this->seed, $i, 1);
+        $this->_base = strlen($this->_settings['seed']);
+        for ($i = 0; $i < $this->_base; $i++) {
+            $this->_code[$i] = substr($this->_seed, $i, 1);
         }
     }
 
@@ -76,10 +78,10 @@ class Behavior_Fakeuuid extends QDB_ActiveRecord_Behavior_Abstract
      * @param QDB_ActiveRecord_Abstract $obj
      * @param array $props
      */
-    function beforeCreate(QDB_ActiveRecord_Abstract $obj, array & $props)
+    function _before_create(QDB_ActiveRecord_Abstract $obj, array & $props)
     {
         $idname = $obj->idname();
-        $props[$idname] = $this->encodeID($obj->getMeta()->table->nextID($idname));
+        $props[$idname] = $this->_encodeID($obj->getMeta()->table->nextID($idname));
     }
 
     /**
@@ -90,21 +92,22 @@ class Behavior_Fakeuuid extends QDB_ActiveRecord_Behavior_Abstract
      *
      * @return string
      */
-    protected function encodeID($number, $len = 6)
+    protected function _encodeID($number, $len = 6)
     {
         $number = intval($number);
         $offset = 0;
         $encode = '';
-        $first = $number % $this->base;
+        $first = $number % $this->_base;
         while ($len) {
-            $pos = $number % $this->base;
-            $pos = ($pos + $first + $offset) % $this->base;
-            $encode .= $this->code[$pos];
-            $number = intval($number / $this->base);
+            $pos = $number % $this->_base;
+            $pos = ($pos + $first + $offset) % $this->_base;
+            $encode .= $this->_code[$pos];
+            $number = intval($number / $this->_base);
             $offset++;
             $len--;
         }
-        $encode .= $this->code[$first];
+        $encode .= $this->_code[$first];
         return $encode;
     }
 }
+

@@ -23,7 +23,7 @@
 abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, QDB_ActiveRecord_Interface, ArrayAccess
 {
     /**
-     * 对象所有属性的引用
+     * 对象的所有属性
      *
      * @var array
      */
@@ -213,7 +213,6 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         $this->_event(self::after_destroy);
         $this->_after_destroy();
     }
-
 
     /**
      * 批量设置对象的属性值（忽略只读的属性和关联对象）
@@ -536,7 +535,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
     {
         if (empty(self::$_metas[$this->_class]->callbacks[$event])) { return; }
         foreach (self::$_metas[$this->_class]->callbacks[$event] as $callback) {
-            call_user_func($callback, $this);
+            call_user_func($callback, $this, $this->_props);
         }
     }
 
