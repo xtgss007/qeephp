@@ -27,14 +27,14 @@ abstract class QDB_ActiveRecord_Behavior_Abstract implements QDB_ActiveRecord_Ca
      *
      * @var QDB_ActiveRecord_Meta
      */
-    protected $meta;
+    protected $_meta;
 
     /**
      * 插件的设置信息
      *
      * @var array
      */
-    protected $settings = array();
+    protected $_settings = array();
 
     /**
      * 构造函数
@@ -44,10 +44,10 @@ abstract class QDB_ActiveRecord_Behavior_Abstract implements QDB_ActiveRecord_Ca
      */
     function __construct(QDB_ActiveRecord_Meta $meta, array $settings)
     {
-        $this->meta = $meta;
-        foreach ($this->settings as $key => $value) {
-            if (!empty($settings[$key])) {
-                $this->settings[$key] = $settings[$key];
+        $this->_meta = $meta;
+        foreach ($settings as $key => $value) {
+            if (array_key_exists($key, $this->_settings)) {
+                $this->_settings[$key] = $value;
             }
         }
         $this->bind();

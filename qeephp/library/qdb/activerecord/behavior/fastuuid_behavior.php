@@ -39,7 +39,7 @@ class Behavior_Fastuuid extends QDB_ActiveRecord_Behavior_Abstract
      */
     function bind()
     {
-        $this->meta->addEventHandler(self::before_create, array($this, '_before_create'));
+        $this->_meta->addEventHandler(self::before_create, array($this, '_before_create'));
     }
 
     /**

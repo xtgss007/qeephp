@@ -843,7 +843,7 @@ class QDB_Select
      *
      * @return QDB_Select
      */
-    function count($field, $alias = 'row_count')
+    function count($field = '*', $alias = 'row_count')
     {
         return $this->_addAggregate(self::SQL_COUNT, $field, $alias);
     }
@@ -1228,10 +1228,12 @@ class QDB_Select
             unset($row);
             if ($this->limit == 1) {
                 $row = reset($rowset);
+                unset($rowset);
             }
         } else {
             // 非关联查询
             unset($row);
+            unset($rowset);
             if ($this->_parts[self::LIMIT_COUNT] == 1) {
                 $row = $handle->fetchRow();
             } else {
@@ -1239,7 +1241,7 @@ class QDB_Select
             }
         }
 
-        if (count($this->_parts[self::AGGREGATE])) {
+        if (count($this->_parts[self::AGGREGATE]) && isset($rowset)) {
             $row = reset($rowset);
         }
 
@@ -1346,7 +1348,7 @@ class QDB_Select
     protected function _renderColumns($sql)
     {
         if (empty($this->_parts[self::COLUMNS])) {
-            return '*';
+            return $sql;
         }
 
         // $this->_parts[self::COLUMNS] 每个元素的格式
@@ -1746,6 +1748,8 @@ class QDB_Select
      */
     protected function _addAggregate($type, $field, $alias)
     {
+        $this->_parts[self::COLUMNS] = array();
+        $this->_query_params[self::RECURSION] = 0;
         if ($field instanceof QDB_Expr) {
             $field = $field->formatToString($this->_conn, $this->_current_table, $this->_columns_mapping);
         } else {

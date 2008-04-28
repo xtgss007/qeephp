@@ -139,42 +139,42 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      *
      * @var array of QDB_ActiveRecord_Behavior_Abstract objects
      */
-    private $behaviors = array();
+    private $_behaviors = array();
 
     /**
      * 托管对象的关联参考
      *
      * @var array
      */
-    private $objects_refs = array();
+    private $_objects_refs = array();
 
     /**
      * 关联参考到对象
      *
      * @var array
      */
-    private $refs_to_objects = array();
+    private $_refs_to_objects = array();
 
     /**
      * 指示是否已经初始化了对象的关联
      *
      * @var boolean
      */
-    private $links_inited = false;
+    private $_links_inited = false;
 
     /**
      * 可用的对象聚合类型
      *
      * @var array
      */
-    static private $assoc_types = array(QDB::HAS_ONE, QDB::HAS_MANY, QDB::BELONGS_TO, QDB::MANY_TO_MANY);
+    static private $_assoc_types = array(QDB::HAS_ONE, QDB::HAS_MANY, QDB::BELONGS_TO, QDB::MANY_TO_MANY);
 
     /**
      * 所有 ActiveRecord 继承类的 Meta 对象
      *
      * @var array of QDB_ActiveRecord_Meta
      */
-    static private $metas = array();
+    static private $_metas = array();
 
     /**
      * 构造函数
@@ -195,10 +195,10 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     static function getInstance($class)
     {
-        if (!isset(self::$metas[$class])) {
-            self::$metas[$class] = new QDB_ActiveRecord_Meta($class);
+        if (!isset(self::$_metas[$class])) {
+            self::$_metas[$class] = new QDB_ActiveRecord_Meta($class);
         }
-        return self::$metas[$class];
+        return self::$_metas[$class];
     }
 
     /**
@@ -220,7 +220,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     function findArgs(array $args)
     {
-        if (!$this->links_inited) { $this->initLinks(); }
+        $this->initLinks();
         $select = new QDB_Select($this->table->conn);
         $select->asObject($this->class_name);
         $select->link($this->table->links);
@@ -255,8 +255,8 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         $id = $object->id();
         $this->objects[$id] = $object;
         if (!is_null($batch_refs)) {
-            $this->refs_to_objects[$query_id] = $batch_refs;
-            $this->objects_refs[$id] = $query_id;
+            $this->_refs_to_objects[$query_id] = $batch_refs;
+            $this->_objects_refs[$id] = $query_id;
         }
     }
 
@@ -280,7 +280,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     function unregister($id)
     {
         unset($this->objects[$id]);
-        unset($this->objects_refs[$id]);
+        unset($this->_objects_refs[$id]);
     }
 
     /**
@@ -291,8 +291,8 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     function assembleAssocObjects($id, $prop_name)
     {
-        $query_id = $this->objects_refs[$id];
-        if (isset($this->refs_to_objects[$query_id][$prop_name])) {
+        $query_id = $this->_objects_refs[$id];
+        if (isset($this->_refs_to_objects[$query_id][$prop_name])) {
             /**
              * refs_to_objects 是一个二维数组
              *
@@ -303,7 +303,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
              *      ....
              *    ),
              */
-            $refs = $this->refs_to_objects[$query_id][$prop_name];
+            $refs = $this->_refs_to_objects[$query_id][$prop_name];
             $link = $this->table->links[$prop_name];
             /* @var $link QDB_Table_Link_Abstract */
             $target_meta = self::getInstance($this->props[$prop_name]['assoc_class']);
@@ -370,7 +370,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         foreach ($behaviors as $name) {
             $name = strtolower($name);
             // 已经绑定过的插件不再绑定
-            if (isset($this->behaviors[$name])) { continue; }
+            if (isset($this->_behaviors[$name])) { continue; }
 
             // 载入插件
             $class = 'Behavior_' . ucfirst($name);
@@ -381,7 +381,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
 
             // 构造行为插件
             $settings = (!empty($config[$name])) ? $config[$name] : array();
-            $this->behaviors[$name] = new $class($this, $settings);
+            $this->_behaviors[$name] = new $class($this, $settings);
         }
     }
 
@@ -499,7 +499,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         }
 
         // 处理对象聚合
-        foreach (self::$assoc_types as $type) {
+        foreach (self::$_assoc_types as $type) {
             if (empty($config[$type])) { continue; }
             $params['assoc'] = $type;
             $params['assoc_class'] = $config[$type];
@@ -707,8 +707,10 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     /**
      * 初始化对象间的关联
      */
-    private function initLinks()
+    function initLinks()
     {
+        if ($this->_links_inited) { return; }
+        $this->_links_inited = true;
         foreach ($this->props as $prop_name => $params) {
             if (!$params['assoc']) { continue; }
 

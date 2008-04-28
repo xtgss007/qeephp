@@ -372,7 +372,7 @@ class QDB_Table
     function find()
     {
         $select = new QDB_Select($this->conn);
-        $select->link($this->links);
+        $select->link($this->links)->from($this);
 
         $args = func_get_args();
         if (!empty($args)) {
