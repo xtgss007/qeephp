@@ -535,7 +535,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
     {
         if (empty(self::$_metas[$this->_class]->callbacks[$event])) { return; }
         foreach (self::$_metas[$this->_class]->callbacks[$event] as $callback) {
-            call_user_func($callback, $this, $this->_props);
+            call_user_func_array($callback, array($this, & $this->_props));
         }
     }
 
@@ -546,18 +546,23 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
      */
     protected function create($recursion = 99)
     {
-        $table = self::$_metas[$this->_class]->table;
+        $meta = self::$_metas[$this->_class];
+        /* @var $meta QDB_ActiveRecord_Meta */
+        $meta->initLinks();
+        $table = $meta->table;
+        $transaction = $table->conn->beginTrans();
+
         $null = QDB_ActiveRecord_RemovedProp::instance();
 
         // 根据 create_reject 数组，将属性设置为 QDB_ActiveRecord_RemovedProp 对象
-//        foreach ($ref['create_reject'] as $prop) {
-//            $this->_props[$prop] = $null;
-//        }
-//
-//        // 根据 create_autofill 设置对属性进行填充
-//        foreach ($ref['create_autofill'] as $prop => $fill) {
-//            $this->_props[$prop] = $fill;
-//        }
+        foreach ($meta->create_reject as $prop) {
+            $this->_props[$prop] = $null;
+        }
+
+        // 根据 create_autofill 设置对属性进行填充
+        foreach ($meta->create_autofill as $prop => $fill) {
+            $this->_props[$prop] = $fill;
+        }
 
         // 进行 create 验证
         $this->validate('create', true);
@@ -570,49 +575,72 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         $row = $this->toDbArray(0);
 
         // 过滤掉值为 QDB_ActiveRecord_RemovedProp 的键
-//        foreach ($row as $key => $value) {
-//            if (is_object($value) && ($value instanceof QDB_ActiveRecord_RemovedProp)) {
-//                unset($row[$key]);
-//            }
-//        }
+        foreach ($row as $key => $value) {
+            if (is_object($value) && ($value instanceof QDB_ActiveRecord_RemovedProp)) {
+                unset($row[$key]);
+            }
+        }
 
         // 将名值对保存到数据库
         $id = $table->create($row, 0);
         $this->_props[$this->idname()] = $id;
 
         // 遍历关联的对象，并调用对象的save()方法
-        foreach ($ref['links'] as $prop => $null) {
-            if (!isset($this->_props[$prop])) { continue; }
+        foreach ($meta->table->links as $prop => $link) {
+            if (!isset($meta->props[$prop])) { continue; }
+            /* @var $link QDB_Table_Link_Abstract */
 
-            $link = $table->getLink($prop);
-            /* @var $link QDB_Table_Link */
-            $mk = $this->alias_name($link->source_key);
+            /**
+             * save|true    - 根据目标数据是否有 ID 或主键值来决定是创建新的目标数据还是更新已有的目标数据
+             * create       - 强制创建新的目标数据
+             * update       - 强制更新已有的目标数据
+             * replace      - 尝试替换已有的目标数据
+             * skip|false   - 保存来源数据时，不保存目标数据
+             * only_create  - 仅仅保存需要新建的目标数据
+             * only_update  - 仅仅保存需要更新的目标数据
+             */
+            if ($link->on_save == 'skip' || $link->on_save === false) {
+                continue;
+            }
 
-            if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
-                if (!isset($this->_props[$prop]) || !is_object($this->_props[$prop])) {
-                    continue;
-                }
-                // 务必为关联对象设置 target_key 字段值
-                $obj = $this->_props[$prop];
-                $ak = $obj->alias_name($link->target_key);
-                $obj->{$ak} = $this->{$mk};
-                $obj->save(false, $recursion - 1);
+            $source_key_prop = $meta->fields2prop[$link->source_key];
+            $source_key_value = $this->{$source_key_prop};
+            $target_meta = QDB_ActiveRecord_Meta::getInstance($meta->props[$prop]['assoc_class']);
+            $target_key_prop = $target_meta->fields2prop[$link->target_key];
+
+            if ($link->one_to_one) {
+                $objs = array($this->{$prop});
             } else {
-                $ak = null;
-                $mkv = $this->{$mk};
-                foreach ($this->_props[$prop] as $obj) {
-                    if (is_null($ak)) { $ak = $obj->alias_name($link->target_key); }
-                    $obj->{$ak} = $mkv;
-                    $obj->save(false, $recursion - 1);
+                $objs = $this->{$prop};
+            }
+
+            foreach ($objs as $obj) {
+                /* @var $obj QDB_ActiveRecord_Abstract */
+
+                if ($link->type == QDB::BELONGS_TO) {
+
+                } else {
+                    $obj->{$target_key_prop} = $source_key_value;
+                    if ($link->on_save == 'save' || $link->on_save === true) {
+                        $obj->save();
+                    } elseif ($link->on_save == 'create') {
+                        $obj->create($recursion - 1);
+                    } elseif ($link->on_save == 'update') {
+                        $obj->update($recursion - 1);
+                    } elseif ($link->on_save == 'only_create') {
+                        if (!$obj->id()) { $obj->create($recursion - 1); }
+                    } elseif ($link->on_save == 'only_update') {
+                        if ($obj->id()) { $obj->update($recursion - 1); }
+                    }
                 }
             }
         }
 
         // 引发after_create事件
-        $this->_event(self::after_create, $recursion);
-        $this->_afterCreate($recursion);
+        $this->_event(self::after_create);
+        $this->_after_create();
 
-        // 将所有为QDB_ActiveRecord_RemovedProp的属性设置为null
+        // 将所有为 QDB_ActiveRecord_RemovedProp 的属性设置为null
         foreach ($this->_props as $prop => $value) {
             if (is_object($value) && ($value instanceof QDB_ActiveRecord_RemovedProp)) {
                 $this->_props[$prop] = null;

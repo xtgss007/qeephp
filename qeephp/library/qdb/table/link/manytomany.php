@@ -41,7 +41,7 @@ class QDB_Table_Link_ManyToMany extends QDB_Table_Link_Abstract
      */
     function init()
     {
-        if ($this->is_init) { return $this; }
+        if ($this->_is_init) { return $this; }
         parent::init();
         $params = $this->init_params;
 

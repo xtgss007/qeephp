@@ -184,7 +184,7 @@ abstract class QDB_Table_Link_Abstract
      *
      * @var array
      */
-    static private $init_params_keys = array(
+    static private $_init_params_keys = array(
         'source_key',
         'target_key',
         'on_find',
@@ -241,7 +241,7 @@ abstract class QDB_Table_Link_Abstract
      *
      * @var boolean
      */
-    protected $is_init = false;
+    protected $_is_init = false;
 
     /**
      * 初始化参数
@@ -269,7 +269,7 @@ abstract class QDB_Table_Link_Abstract
             $this->mapping_name = strtolower($params['mapping_name']);
         }
 
-        foreach (self::$init_params_keys as $key) {
+        foreach (self::$_init_params_keys as $key) {
             if (!empty($params[$key])) {
                 $this->{$key} = $params[$key];
             }
@@ -286,7 +286,7 @@ abstract class QDB_Table_Link_Abstract
      */
     function init()
     {
-        if ($this->is_init) { return $this; }
+        if ($this->_is_init) { return $this; }
 
         $this->source_table->connect();
         $params = $this->init_params;
@@ -323,7 +323,7 @@ abstract class QDB_Table_Link_Abstract
         $this->on_find_order       = !empty($params['on_find_order'])       ? $params['on_find_order']       : null;
         $this->on_delete_set_value = !empty($params['on_delete_set_value']) ? $params['on_delete_set_value'] : null;
 
-        $this->is_init = true;
+        $this->_is_init = true;
         return $this;
     }
 

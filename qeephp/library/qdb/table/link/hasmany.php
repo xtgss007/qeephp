@@ -41,7 +41,7 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
      */
     function init()
     {
-        if ($this->is_init) { return $this; }
+        if ($this->_is_init) { return $this; }
         parent::init();
         $params = $this->init_params;
         $this->source_key   = !empty($params['source_key']) ? $params['source_key'] : $this->source_table->pk;
