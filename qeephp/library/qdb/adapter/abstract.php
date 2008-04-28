@@ -367,7 +367,7 @@ abstract class QDB_Adapter_Abstract
                 $field = $arr[0];
             }
 
-            if (isset($field)) {
+            if (isset($mapping[$field])) {
                 $field = $mapping[$field];
             }
             $field = $this->qfield($field, $table, $schema);

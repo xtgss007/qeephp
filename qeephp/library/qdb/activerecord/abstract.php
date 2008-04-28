@@ -121,9 +121,9 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         $this->_event(self::before_save);
         $id = $this->id();
         if (empty($id) || $force_create) {
-            $this->create($recursion);
+            $this->_create($recursion);
         } else {
-            $this->update($recursion);
+            $this->_update($recursion);
         }
         $this->_event(self::after_save);
         $this->_after_save();
@@ -324,8 +324,10 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         }
 
         if (!isset($this->_props[$varname]) && $params['assoc']) {
-            // assembleAssocObjects() 会完成对象聚合的组装，因此下一步可以直接返回属性
-            $meta->assembleAssocObjects($this->_props[$this->_idname], $varname);
+            if ($this->id()) {
+                // assembleAssocObjects() 会完成对象聚合的组装，因此下一步可以直接返回属性
+                $meta->assembleAssocObjects($this->_props[$this->_idname], $varname);
+            }
 
             // 没有查询到对象
             if (!isset($this->_props[$varname])) {
@@ -544,7 +546,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
      *
      * @param int $recursion
      */
-    protected function create($recursion = 99)
+    protected function _create($recursion = 99)
     {
         $meta = self::$_metas[$this->_class];
         /* @var $meta QDB_ActiveRecord_Meta */
@@ -589,51 +591,16 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         foreach ($meta->table->links as $prop => $link) {
             if (!isset($meta->props[$prop])) { continue; }
             /* @var $link QDB_Table_Link_Abstract */
-
-            /**
-             * save|true    - 根据目标数据是否有 ID 或主键值来决定是创建新的目标数据还是更新已有的目标数据
-             * create       - 强制创建新的目标数据
-             * update       - 强制更新已有的目标数据
-             * replace      - 尝试替换已有的目标数据
-             * skip|false   - 保存来源数据时，不保存目标数据
-             * only_create  - 仅仅保存需要新建的目标数据
-             * only_update  - 仅仅保存需要更新的目标数据
-             */
-            if ($link->on_save == 'skip' || $link->on_save === false) {
-                continue;
-            }
+            $link->init();
 
             $source_key_prop = $meta->fields2prop[$link->source_key];
-            $source_key_value = $this->{$source_key_prop};
-            $target_meta = QDB_ActiveRecord_Meta::getInstance($meta->props[$prop]['assoc_class']);
-            $target_key_prop = $target_meta->fields2prop[$link->target_key];
-
-            if ($link->one_to_one) {
-                $objs = array($this->{$prop});
-            } else {
-                $objs = $this->{$prop};
+            if (empty($this->{$source_key_prop})) {
+                // LC_MSG: 保存关联对象 "%s" 要求对象 "%s" 属性必须有值.
+                throw new QDB_Table_Link_Exception(__('保存关联对象 "%s" 要求对象 "%s" 属性必须有值.',
+                                                      $prop, $source_key_prop));
             }
 
-            foreach ($objs as $obj) {
-                /* @var $obj QDB_ActiveRecord_Abstract */
-
-                if ($link->type == QDB::BELONGS_TO) {
-
-                } else {
-                    $obj->{$target_key_prop} = $source_key_value;
-                    if ($link->on_save == 'save' || $link->on_save === true) {
-                        $obj->save();
-                    } elseif ($link->on_save == 'create') {
-                        $obj->create($recursion - 1);
-                    } elseif ($link->on_save == 'update') {
-                        $obj->update($recursion - 1);
-                    } elseif ($link->on_save == 'only_create') {
-                        if (!$obj->id()) { $obj->create($recursion - 1); }
-                    } elseif ($link->on_save == 'only_update') {
-                        if ($obj->id()) { $obj->update($recursion - 1); }
-                    }
-                }
-            }
+            // $link->saveTargetObjects($this->{$prop}, $this->{$source_key_prop}, $recursion - 1);
         }
 
         // 引发after_create事件
@@ -653,7 +620,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
      *
      * @param int $recursion
      */
-    protected function update($recursion = 99)
+    protected function _update($recursion = 99)
     {
         $ref = self::$__ref[$this->_class];
         $table = $this->table;
