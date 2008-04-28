@@ -9,18 +9,18 @@
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 QDB_Table_Link_HasMany 类
+ * 定义 QDB_ActiveRecord_Association_HasMany 类
  *
  * @package database
  * @version $Id$
  */
 
 /**
- * QDB_Table_Link_HasMany 类封装数据表之间的 has many 关联
+ * QDB_ActiveRecord_Association_HasMany 类封装数据表之间的 has many 关联
  *
  * @package database
  */
-class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
+class QDB_ActiveRecord_Association_HasMany extends QDB_ActiveRecord_Association_Abstract
 {
     /**
      * 构造函数
@@ -28,7 +28,7 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
      * @param array $params
      * @param QDB_Table $source_table
      *
-     * @return QDB_Table_Link
+     * @return QDB_ActiveRecord_Association
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {
@@ -86,7 +86,7 @@ class QDB_Table_Link_HasMany extends QDB_Table_Link_Abstract
             $row = $this->target_table->find(array($this->target_key => $source_key_value))->count()->query();
             if (intval($row['row_count']) > 0) {
                 // LC_MSG: 关联 "%s" 拒绝删除来源 "%s" 的数据.
-                throw new QDB_Table_Link_Remove_Exception(__('关联 "%s" 拒绝删除来源 "%s" 的数据.',
+                throw new QDB_ActiveRecord_Association_Remove_Exception(__('关联 "%s" 拒绝删除来源 "%s" 的数据.',
                                                              $this->name, $this->source_table->table_name));
             }
         } else {

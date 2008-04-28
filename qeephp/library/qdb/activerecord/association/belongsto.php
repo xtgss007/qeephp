@@ -9,18 +9,18 @@
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 QDB_Table_Link_BelongsTo 类
+ * 定义 QDB_ActiveRecord_Association_BelongsTo 类
  *
  * @package database
  * @version $Id$
  */
 
 /**
- * QDB_Table_Link_BelongsTo 类封装数据表之间的 belongs to 关联
+ * QDB_ActiveRecord_Association_BelongsTo 类封装数据表之间的 belongs to 关联
  *
  * @package database
  */
-class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
+class QDB_ActiveRecord_Association_BelongsTo extends QDB_ActiveRecord_Association_Abstract
 {
     /**
      * 构造函数
@@ -28,7 +28,7 @@ class QDB_Table_Link_BelongsTo extends QDB_Table_Link_Abstract
      * @param array $params
      * @param QDB_Table $source_table
      *
-     * @return QDB_Table_Link
+     * @return QDB_ActiveRecord_Association
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {

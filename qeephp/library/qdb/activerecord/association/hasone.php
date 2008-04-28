@@ -9,18 +9,18 @@
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 QDB_Table_Link_HasOne 类
+ * 定义 QDB_ActiveRecord_Association_HasOne 类
  *
  * @package database
  * @version $Id$
  */
 
 /**
- * QDB_Table_Link_HasOne 类封装数据表之间的 has one 关联
+ * QDB_ActiveRecord_Association_HasOne 类封装数据表之间的 has one 关联
  *
  * @package database
  */
-class QDB_Table_Link_HasOne extends QDB_Table_Link_HasMany
+class QDB_ActiveRecord_Association_HasOne extends QDB_ActiveRecord_Association_HasMany
 {
     /**
      * 构造函数
@@ -28,7 +28,7 @@ class QDB_Table_Link_HasOne extends QDB_Table_Link_HasMany
      * @param array $params
      * @param QDB_Table $source_table
      *
-     * @return QDB_Table_Link
+     * @return QDB_ActiveRecord_Association
      */
     protected function __construct(array $params, QDB_Table $source_table)
     {

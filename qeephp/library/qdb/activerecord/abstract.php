@@ -552,7 +552,6 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         /* @var $meta QDB_ActiveRecord_Meta */
         $meta->initLinks();
         $table = $meta->table;
-        $transaction = $table->conn->beginTrans();
 
         $null = QDB_ActiveRecord_RemovedProp::instance();
 
@@ -600,7 +599,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
                                                       $prop, $source_key_prop));
             }
 
-            // $link->saveTargetObjects($this->{$prop}, $this->{$source_key_prop}, $recursion - 1);
+            $link->saveTargetObjects($this->{$prop}, $this->{$source_key_prop}, $recursion - 1);
         }
 
         // 引发after_create事件

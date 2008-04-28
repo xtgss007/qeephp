@@ -465,7 +465,7 @@ class QDB_Table
                                                           $link->source_key));
                 }
 
-                $link->saveTargetData($row[$link->mapping_name], $row[$link->source_key], $recursion - 1);
+                $link->saveTarget($row[$link->mapping_name], $row[$link->source_key], $recursion - 1);
             }
         }
 
@@ -527,7 +527,7 @@ class QDB_Table
                                                           $link->source_key));
                 }
 
-                $link->saveTargetData($row[$link->mapping_name], $row[$link->source_key], $recursion - 1);
+                $link->saveTarget($row[$link->mapping_name], $row[$link->source_key], $recursion - 1);
             }
         }
 

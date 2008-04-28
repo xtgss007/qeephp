@@ -9,60 +9,53 @@
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * 定义 QDB_Table_Link_Abstract 类
+ * 定义 QDB_ActiveRecord_Association_Abstract 类
  *
  * @package database
  * @version $Id$
  */
 
 /**
- * QDB_Table_Link_Abstract 封装数据表之间的关联关系
+ * QDB_ActiveRecord_Association_Abstract 封 ActiveRecord 之间的关联关系
  *
  * @package database
  */
 /**
- * QDB_Table_Link_Abstract 封装了一个关联
+ * QDB_ActiveRecord_Association_Abstract 封装了一个关联
  *
  * @package database
  */
-abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
+abstract class QDB_ActiveRecord_Association_Abstract extends QDB_Link_Abstract
 {
     /**
-     * 关联中的主表
+     * 关联中的来源对象
      *
-     * @var QDB_Table
+     * @var QDB_ActiveRecord_Meta
      */
-    public $source_table;
+    public $source_meta;
 
     /**
-     * 关联到哪一个表数据入口对象
+     * 关联到哪一个 ActiveRecord 类
      *
-     * @var QDB_Table
+     * @var QDB_ActiveRecord_Meta
      */
-    public $target_table;
-
-    /**
-     * many to many 关联中处理中间表的表数据入口对象
-     *
-     * @var QDB_Table
-     */
-    public $mid_table;
+    public $target_meta;
 
     /**
      * 构造函数
      *
      * @param int $type
      * @param array $params
-     * @param QDB_Table $source_table
+     * @param QDB_ActiveRecord_Meta $source_meta
      *
-     * @return QDB_Table_Link_Abstract
+     * @return QDB_ActiveRecord_Association_Abstract
      */
-    protected function __construct($type, array $params, QDB_Table $source_table)
+    protected function __construct($type, array $params, QDB_ActiveRecord_Meta $source_meta)
     {
         parent::__construct($type, $params);
         if (empty($params['mapping_name'])) {
             // LC_MSG: 创建关联必须指定关联的 mapping_name 属性.
-            throw new QDB_Table_Link_Exception(__('创建关联必须指定关联的 mapping_name 属性.'));
+            throw new QDB_ActiveRecord_Association_Exception(__('创建关联必须指定关联的 mapping_name 属性.'));
         } else {
             $this->mapping_name = strtolower($params['mapping_name']);
         }
@@ -73,7 +66,7 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
             }
         }
 
-        $this->source_table = $source_table;
+        $this->source_meta = $source_meta;
         $this->_init_params = $params;
     }
 
@@ -82,37 +75,37 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
      *
      * @param int $type
      * @param array $params
-     * @param QDB_Table $source_table
+     * @param QDB_Table $source_meta
      *
-     * @return QDB_Table_Link_Abstract
+     * @return QDB_ActiveRecord_Association_Abstract
      */
-    static function createLink($type, array $params, QDB_Table $source_table)
+    static function createLink($type, array $params, QDB_Table $source_meta)
     {
         switch ($type) {
         case QDB::HAS_ONE:
-            return new QDB_Table_Link_HasOne($params, $source_table);
+            return new QDB_ActiveRecord_Association_HasOne($params, $source_meta);
         case QDB::HAS_MANY:
-            return new QDB_Table_Link_HasMany($params, $source_table);
+            return new QDB_ActiveRecord_Association_HasMany($params, $source_meta);
         case QDB::BELONGS_TO:
-            return new QDB_Table_Link_BelongsTo($params, $source_table);
+            return new QDB_ActiveRecord_Association_BelongsTo($params, $source_meta);
         case QDB::MANY_TO_MANY:
-            return new QDB_Table_Link_ManyToMany($params, $source_table);
+            return new QDB_ActiveRecord_Association_ManyToMany($params, $source_meta);
         default:
             // LC_MSG: 无效的关联类型 "%s".
-            throw new QDB_Table_Link_Exception(__('无效的关联类型 "%s".', $type));
+            throw new QDB_ActiveRecord_Association_Exception(__('无效的关联类型 "%s".', $type));
         }
     }
 
     /**
      * 初始化关联
      *
-     * @return QDB_Table_Link_Abstract
+     * @return QDB_ActiveRecord_Association_Abstract
      */
     function init()
     {
         if ($this->_is_init) { return $this; }
 
-        $this->source_table->connect();
+        $this->source_meta->connect();
         $params = $this->_init_params;
 
         /**
@@ -137,7 +130,7 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
         } else {
             // LC_MSG: Expected parameter "%s".
             $err = 'target_table_obj or target_table_class or target_table_name';
-            throw new QDB_Table_Link_Exception(__('Expected parameter "%s" for link "%s".', $err, $this->mapping_name));
+            throw new QDB_ActiveRecord_Association_Exception(__('Expected parameter "%s" for link "%s".', $err, $this->mapping_name));
         }
         $this->target_table->connect();
 
