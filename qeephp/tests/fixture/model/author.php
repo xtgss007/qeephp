@@ -22,7 +22,7 @@ class Author extends QDB_ActiveRecord_Abstract
             // 没有在此处指定的字段，QeePHP 会自动设置将字段映射为对象的可读写属性
             'props' => array(
                 // 主键应该是只读，确保领域对象的“不变量”
-                'content_id' => array('readonly' => true),
+                'author_id' => array('readonly' => true),
                 'created' => array('readonly' => true),
                 'updated' => array('readonly' => true),
                 'contents_count' => array('readonly' => true),
