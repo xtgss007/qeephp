@@ -232,7 +232,9 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         $select->asObject($this->class_name);
         $select->link($this->table->links);
         $select->from($this->table)->link($this->table->links);
+
         if (!empty($args)) {
+
             call_user_func_array(array($select, 'where'), $args);
         }
 
@@ -371,7 +373,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         // TODO: 载入行为插件时应该考虑到当前访问的 module
         $dirs = array(
             Q_DIR . '/qdb/activerecord/behavior',
-            ROOT_DIR . '/app/model/behavior',
+            // ROOT_DIR . '/app/model/behavior',
         );
 
         foreach ($behaviors as $name) {

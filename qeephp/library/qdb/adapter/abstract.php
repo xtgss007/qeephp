@@ -387,7 +387,7 @@ abstract class QDB_Adapter_Abstract
      * @param enum $param_style
      * @param boolean $return_args_count
      *
-     * @return string
+     * @return string|array
      */
     function qinto($sql, array $params = null, $param_style = null, $return_args_count = false)
     {
@@ -425,6 +425,7 @@ abstract class QDB_Adapter_Abstract
 
         case QDB::PARAM_CL_NAMED:
         case QDB::PARAM_AT_NAMED:
+            $params = reset($params);
             $split = ($param_style == QDB::PARAM_CL_NAMED) ? ':' : '@';
             $parts = preg_split('/(' . $split . '[a-z0-9_\-]+)/i', $sql, -1, PREG_SPLIT_DELIM_CAPTURE);
             $max = count($parts);

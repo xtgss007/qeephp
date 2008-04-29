@@ -191,7 +191,13 @@ class QDB_Cond
                     if (!is_string($field)) {
                         if (empty($value)) { continue; }
                         // 假定 $value 是一个字符串条件
-                        $part[] = $conn->qfieldsInto($value, $table_name, $mapping);
+                        $value = $conn->qfieldsInto($value, $table_name, $mapping);
+                        if (!empty($args)) {
+                            $style = (strpos($value, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
+                            $part[] = $conn->qinto($conn->qfieldsInto($value, $table_name, $mapping), $args, $style);
+                        } else {
+                            $part[] = $value;
+                        }
                     } else {
                         if (isset($mapping[$field])) {
                             $field = $mapping[$field];
@@ -210,8 +216,11 @@ class QDB_Cond
                 }
                 $part = implode(' AND ', $part);
             } else {
-                $style = (strpos($cond, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
-                $part = $conn->qinto($conn->qfieldsInto($cond, $table_name, $mapping), $args, $style);
+                $part = $conn->qfieldsInto($cond, $table_name, $mapping);
+                if (!empty($args)) {
+                    $style = (strpos($part, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
+                    $part = $conn->qinto($part, $args, $style);
+                }
             }
 
             if (empty($part) || $part == '()') { continue; }
