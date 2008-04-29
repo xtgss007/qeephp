@@ -126,39 +126,38 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
 
         // 以字符串形式查找（? 作为参数占位符）
         $id = $this->_getRandID($id_list);
-        $row = $this->_queryAuthor($id);
         $author = Author::find('author_id = ?', $id)->query();
-        $this->_checkAuthor($row, $author);
+        $this->_checkAuthor($this->_queryAuthor($id), $author);
 
         // 以字符串形式查找（:id 作为参数占位符）
         $id = $this->_getRandID($id_list);
         $author = Author::find('author_id = :id', array('id' => $id))->query();
-        $this->_checkAuthor($row, $author);
+        $this->_checkAuthor($this->_queryAuthor($id), $author);
 
         // 以数组形式查找
         $id = $this->_getRandID($id_list);
         $author = Author::find(array('author_id' => $id))->query();
-        $this->_checkAuthor($row, $author);
+        $this->_checkAuthor($this->_queryAuthor($id), $author);
 
         // 以 QDB_Expr 作为查询条件
         $id = $this->_getRandID($id_list);
         $author = Author::find(new QDB_Expr('author_id = ' . $id))->query();
-        $this->_checkAuthor($row, $author);
+        $this->_checkAuthor($this->_queryAuthor($id), $author);
 
         // 以 qdb_cond 作为查询条件（? 作为参数占位符）
         $id = $this->_getRandID($id_list);
         $author = Author::find(new QDB_Cond('author_id = ?', $id))->query();
-        $this->_checkAuthor($row, $author);
+        $this->_checkAuthor($this->_queryAuthor($id), $author);
 
         // 以 qdb_cond 作为查询条件（:id 作为参数占位符）
         $id = $this->_getRandID($id_list);
         $author = Author::find(new QDB_Cond('author_id = :id', array('id' => $id)))->query();
-        $this->_checkAuthor($row, $author);
+        $this->_checkAuthor($this->_queryAuthor($id), $author);
 
         // 以 qdb_cond 作为查询条件（数组条件）
         $id = $this->_getRandID($id_list);
         $author = Author::find(new QDB_Cond(array('author_id' => $id)))->query();
-        $this->_checkAuthor($row, $author);
+        $this->_checkAuthor($this->_queryAuthor($id), $author);
     }
 
     /**
@@ -213,7 +212,7 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     protected function _getRandID(array $id_list)
     {
         $count = count($id_list);
-        $pos = mt_rand(0, $count);
+        $pos = mt_rand(0, $count - 1);
         return $id_list[$pos];
     }
 
@@ -232,7 +231,7 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
         }
         return $return;
     }
-    
+
     /**
      * 查询 Author 对象总数
      */
