@@ -599,7 +599,7 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
                                                       $prop, $source_key_prop));
             }
 
-            $link->saveTargetObjects($this->{$prop}, $this->{$source_key_prop}, $recursion - 1);
+            $link->saveTarget($this->{$prop}, $this->{$source_key_prop}, $recursion - 1);
         }
 
         // 引发after_create事件
@@ -621,26 +621,29 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
      */
     protected function _update($recursion = 99)
     {
-        $ref = self::$__ref[$this->_class];
-        $table = $this->table;
+        $meta = self::$_metas[$this->_class];
+        /* @var $meta QDB_ActiveRecord_Meta */
+        $meta->initLinks();
+        $table = $meta->table;
+
         $null = QDB_ActiveRecord_RemovedProp::instance();
 
-        // 根据 update_reject 设置，将属性设置为 QDB_ActiveRecord_RemovedProp 对象
-        foreach ($ref['update_reject'] as $prop) {
+        // 根据 update_reject 数组，将属性设置为 QDB_ActiveRecord_RemovedProp 对象
+        foreach ($meta->update_reject as $prop) {
             $this->_props[$prop] = $null;
         }
 
         // 根据 update_autofill 设置对属性进行填充
-        foreach ($ref['update_autofill'] as $prop => $fill) {
+        foreach ($meta->update_autofill as $prop => $fill) {
             $this->_props[$prop] = $fill;
         }
 
         // 进行 update 验证
-        $this->doValidate('update');
+        $this->validate('update', true);
 
-        // 引发before_update事件
-        $this->_beforeUpdate($recursion);
-        $this->_event(self::before_update, $recursion);
+        // 引发 before_update 事件
+        $this->_before_update();
+        $this->_event(self::before_update);
 
         // 将对象属性转换为名值对数组
         $row = $this->toDbArray(0);
@@ -655,39 +658,27 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         // 将名值对保存到数据库
         $table->update($row, 0);
 
-        // 遍历关联的对象，并调用对象的save()方法
-        foreach ($ref['links'] as $prop => $null) {
-            if (!isset($this->_props[$prop])) { continue; }
+        // 遍历关联的对象，并调用对象的 save() 方法
+        foreach ($meta->table->links as $prop => $link) {
+            if (!isset($meta->props[$prop])) { continue; }
+            /* @var $link QDB_Table_Link_Abstract */
+            $link->init();
 
-            $link = $table->getLink($prop);
-            /* @var $link QDB_Table_Link */
-            $mk = $this->alias_name($link->source_key);
-
-            if ($link->type == QDB_Table::has_one || $link->type == QDB_Table::belongs_to) {
-                if (!isset($this->_props[$prop]) || !is_object($this->_props[$prop])) {
-                    continue;
-                }
-                // 务必为关联对象设置 target_key 字段值
-                $obj = $this->_props[$prop];
-                $ak = $obj->alias_name($link->target_key);
-                $obj->{$ak} = $this->{$mk};
-                $obj->save(false, $recursion - 1);
-            } else {
-                $ak = null;
-                $mkv = $this->{$mk};
-                foreach ($this->_props[$prop] as $obj) {
-                    if (is_null($ak)) { $ak = $obj->alias_name($link->target_key); }
-                    $obj->{$ak} = $mkv;
-                    $obj->save(false, $recursion - 1);
-                }
+            $source_key_prop = $meta->fields2prop[$link->source_key];
+            if (empty($this->{$source_key_prop})) {
+                // LC_MSG: 保存关联对象 "%s" 要求对象 "%s" 属性必须有值.
+                throw new QDB_Table_Link_Exception(__('保存关联对象 "%s" 要求对象 "%s" 属性必须有值.',
+                                                      $prop, $source_key_prop));
             }
+
+            $link->saveTarget($this->{$prop}, $this->{$source_key_prop}, $recursion - 1);
         }
 
-        // 引发after_create事件
-        $this->_event(self::after_update, $recursion);
-        $this->_afterUpdate($recursion);
+        // 引发 after_update 事件
+        $this->_event(self::after_update);
+        $this->_after_update();
 
-        // 将所有为QDB_ActiveRecord_RemovedProp的属性设置为null
+        // 将所有为 QDB_ActiveRecord_RemovedProp 的属性设置为null
         foreach ($this->_props as $prop => $value) {
             if (is_object($value) && ($value instanceof QDB_ActiveRecord_RemovedProp)) {
                 $this->_props[$prop] = null;

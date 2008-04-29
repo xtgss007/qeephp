@@ -60,21 +60,7 @@ abstract class QDB_Table_Link_Abstract extends QDB_Link_Abstract
     protected function __construct($type, array $params, QDB_Table $source_table)
     {
         parent::__construct($type, $params);
-        if (empty($params['mapping_name'])) {
-            // LC_MSG: 创建关联必须指定关联的 mapping_name 属性.
-            throw new QDB_Table_Link_Exception(__('创建关联必须指定关联的 mapping_name 属性.'));
-        } else {
-            $this->mapping_name = strtolower($params['mapping_name']);
-        }
-
-        foreach (self::$_init_params_keys as $key) {
-            if (!empty($params[$key])) {
-                $this->{$key} = $params[$key];
-            }
-        }
-
         $this->source_table = $source_table;
-        $this->_init_params = $params;
     }
 
     /**

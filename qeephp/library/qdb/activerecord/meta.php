@@ -93,6 +93,13 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
     public $props = array();
 
     /**
+     * ActiveRecord 继承类之间的关联
+     *
+     * @var array of QDB_ActiveRecord_Association_Abstract
+     */
+    public $associations = array();
+
+    /**
      * 事件钩子
      *
      * @var array of callbacks
@@ -548,14 +555,12 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
             if (empty($params['mid_target_key'])) {
                 $params['mid_target_key'] = strtolower($target_meta->class_name) . '_id';
             }
-            break;
         }
 
-        $link = $params['assoc_params'];
-        $link['mapping_name'] = $prop_name;
-        $link['table_obj'] = $target_meta->table;
+        $assoc = $params['assoc_params'];
+        $assoc['mapping_name'] = $prop_name;
 
-        $this->table->createLinks($link, $assoc_type);
+        $this->associations[$prop_name] = QDB_ActiveRecord_Association_Abstract::createLink($assoc_type, $assoc, $this);
     }
 
     /**

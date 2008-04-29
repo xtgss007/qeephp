@@ -26,13 +26,13 @@ class QDB_ActiveRecord_Association_HasMany extends QDB_ActiveRecord_Association_
      * 构造函数
      *
      * @param array $params
-     * @param QDB_Table $source_table
+     * @param QDB_ActiveRecord_Meta $source_meta
      *
      * @return QDB_ActiveRecord_Association
      */
-    protected function __construct(array $params, QDB_Table $source_table)
+    protected function __construct(array $params, QDB_ActiveRecord_Meta $source_meta)
     {
-        parent::__construct(QDB::HAS_MANY, $params, $source_table);
+        parent::__construct(QDB::HAS_MANY, $params, $source_meta);
         $this->one_to_one = false;
     }
 
@@ -44,8 +44,8 @@ class QDB_ActiveRecord_Association_HasMany extends QDB_ActiveRecord_Association_
         if ($this->_is_init) { return $this; }
         parent::init();
         $params = $this->_init_params;
-        $this->source_key   = !empty($params['source_key']) ? $params['source_key'] : $this->source_table->pk;
-        $this->target_key   = !empty($params['target_key']) ? $params['target_key'] : $this->source_table->pk;
+        $this->source_key   = !empty($params['source_key']) ? $params['source_key'] : $this->source_meta->pk;
+        $this->target_key   = !empty($params['target_key']) ? $params['target_key'] : $this->source_meta->pk;
         $this->on_delete    = !empty($params['on_delete'])  ? $params['on_delete']  : 'cascade';
         $this->on_save      = !empty($params['on_save'])    ? $params['on_save']    : 'save';
         $this->source_key_alias = $this->mapping_name . '_source_key';
@@ -67,7 +67,7 @@ class QDB_ActiveRecord_Association_HasMany extends QDB_ActiveRecord_Association_
         foreach (array_keys($target_data) as $offset) {
             $target_data[$offset][$this->target_key] = $source_key_value;
         }
-        $this->target_table->saveRowset($target_data, $recursion, $this->on_save);
+        $this->target_meta->saveRowset($target_data, $recursion, $this->on_save);
     }
 
     /**
@@ -81,17 +81,17 @@ class QDB_ActiveRecord_Association_HasMany extends QDB_ActiveRecord_Association_
         $this->init();
         if ($this->on_delete === false || $this->on_delete == 'skip') { return; }
         if ($this->on_delete === true || $this->on_delete == 'cascade') {
-            $this->target_table->removeByField($this->target_key, $source_key_value, $recursion);
+            $this->target_meta->removeByField($this->target_key, $source_key_value, $recursion);
         } elseif ($this->on_delete == 'reject') {
-            $row = $this->target_table->find(array($this->target_key => $source_key_value))->count()->query();
+            $row = $this->target_meta->find(array($this->target_key => $source_key_value))->count()->query();
             if (intval($row['row_count']) > 0) {
                 // LC_MSG: 关联 "%s" 拒绝删除来源 "%s" 的数据.
                 throw new QDB_ActiveRecord_Association_Remove_Exception(__('关联 "%s" 拒绝删除来源 "%s" 的数据.',
-                                                             $this->name, $this->source_table->table_name));
+                                                             $this->name, $this->source_meta->table_name));
             }
         } else {
             $fill = ($this->on_delete == 'set_null') ? null : $this->on_delete_set_value;
-            $this->target_table->updateWhere(array($this->target_key => $fill), array($this->target_key => $source_key_value));
+            $this->target_meta->updateWhere(array($this->target_key => $fill), array($this->target_key => $source_key_value));
         }
     }
 
@@ -103,9 +103,9 @@ class QDB_ActiveRecord_Association_HasMany extends QDB_ActiveRecord_Association_
     function getJoinSQL()
     {
         $this->init();
-        $sk = $this->source_table->qfields($this->source_key);
-        $tk = $this->target_table->qfields($this->target_key);
+        $sk = $this->source_meta->qfields($this->source_key);
+        $tk = $this->target_meta->qfields($this->target_key);
 
-        return " LEFT JOIN {$this->target_table->qtable_name} ON {$sk} = {$tk} ";
+        return " LEFT JOIN {$this->target_meta->qtable_name} ON {$sk} = {$tk} ";
     }
 }
