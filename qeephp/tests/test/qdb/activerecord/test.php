@@ -167,7 +167,6 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     function testFindMore()
     {
         $id_list = $this->_createAuthors(15);
-        $id_list = sort($id_list, SORT_ASC);
 
         // 查找全部
         $authors = Author::find()->all()->query();
@@ -176,7 +175,7 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
         unset($authors);
 
         // 查找ID 大于等于特定值的
-        $authors = Author::find('author_id >= ', $id_list[5])->all()->query();
+        $authors = Author::find('author_id >= ?', $id_list[5])->all()->query();
         $this->assertEquals(10, count($authors));
         $this->_checkAuthors($authors);
         unset($authors);
@@ -201,7 +200,7 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     /**
      * 检查对象是否和数据库记录相等
      */
-    protected function _checkAuthor(array $row, Author $author)
+    protected function _checkAuthor(array $row, $author)
     {
         $this->assertType('Author', $author);
         $this->assertEquals($row['author_id'], $author->id());
@@ -271,3 +270,4 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     }
 
 }
+
