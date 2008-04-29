@@ -23,7 +23,9 @@ class Tag extends QDB_ActiveRecord_Abstract
             'props' => array(
                 // 主键应该是只读，确保领域对象的“不变量”
                 'tag_id' => array('readonly' => true),
-                'tags' => array('many_to_many' => 'Tag', 'mid_table_name' => 'contents_has_tags'),
+                'contents' => array('many_to_many'   => 'Tag',
+                                    'mid_table_name' => 'contents_has_tags',
+                                    'count_set_to'   => 'tags_count'),
             ),
 
             // 在保存对象时，会按照下面指定的验证规则进行验证。验证失败会抛出异常。

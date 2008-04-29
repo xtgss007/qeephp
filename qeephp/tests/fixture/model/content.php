@@ -27,13 +27,16 @@ class Content extends QDB_ActiveRecord_Abstract
                 'updated' => array('readonly' => true),
                 'comments_count' => array('readonly' => true),
                 'marks_avg' => array('readonly' => true),
+                'tags_count' => array('readonly' => true),
 
                 // Content 属于一个作者
                 'author' => array('belongs_to' => 'Author'),
                 // Content 有多个 Comment
-                'comments' => array('has_many' => 'Comment', 'count_cache' => 'comments_count'),
+                'comments' => array('has_many' => 'Comment', 'count_set_to' => 'comments_count'),
                 // Content 关联到多个 Tag
-                'tags' => array('many_to_many' => 'Tag', 'mid_table_name' => 'contents_has_tags'),
+                'tags' => array('many_to_many'   => 'Tag',
+                                'mid_table_name' => 'contents_has_tags',
+                                'count_set_to'   => 'tags_count'),
             ),
 
             // 在保存对象时，会按照下面指定的验证规则进行验证。验证失败会抛出异常。
@@ -80,7 +83,7 @@ class Content extends QDB_ActiveRecord_Abstract
 
 }
 
-class Post_Null extends Post
+class Content_Null extends Post
 {
     function id() { return null; }
     function setProps(array $props) {}
@@ -92,7 +95,7 @@ class Post_Null extends Post
     protected function update($recursion = 99) {}
 }
 
-class Post_Exception extends QException
+class Content_Exception extends QException
 {
 }
 

@@ -24,8 +24,8 @@ class Comment extends QDB_ActiveRecord_Abstract
                 'comment_id' => array('readonly' => true),
                 'created' => array('readonly' => true),
 
-                'author' => array('belongs_to' => 'Author', 'count_cache' => 'comments_count'),
-                'content' => array('belongs_to' => 'Content', 'count_cache' => 'comments_count'),
+                'author' => array('belongs_to' => 'Author', 'count_set_to' => 'comments_count'),
+                'content' => array('belongs_to' => 'Content', 'count_set_to' => 'comments_count'),
             ),
 
             // 在保存对象时，会按照下面指定的验证规则进行验证。验证失败会抛出异常。

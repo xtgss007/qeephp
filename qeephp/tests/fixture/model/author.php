@@ -1,6 +1,6 @@
 <?php
 
-class Content extends QDB_ActiveRecord_Abstract
+class Author extends QDB_ActiveRecord_Abstract
 {
     /**
      * 返回对象的定义
@@ -16,7 +16,7 @@ class Content extends QDB_ActiveRecord_Abstract
             'behaviors' => '',
 
             // 用什么数据表保存对象
-            'table_name' => 'contents',
+            'table_name' => 'authors',
 
             // 指定数据表记录字段与对象属性之间的映射关系
             // 没有在此处指定的字段，QeePHP 会自动设置将字段映射为对象的可读写属性
@@ -25,15 +25,11 @@ class Content extends QDB_ActiveRecord_Abstract
                 'content_id' => array('readonly' => true),
                 'created' => array('readonly' => true),
                 'updated' => array('readonly' => true),
+                'contents_count' => array('readonly' => true),
                 'comments_count' => array('readonly' => true),
-                'marks_avg' => array('readonly' => true),
 
-                // Content 属于一个作者
-                'author' => array('belongs_to' => 'Author'),
-                // Content 有多个 Comment
-                'comments' => array('has_many' => 'Comment', 'count_cache' => 'comments_count'),
-                // Content 关联到多个 Tag
-                'tags' => array('many_to_many' => 'Tag', 'mid_table_name' => 'contents_has_tags'),
+                'contents' => array('has_many' => 'Content', 'count_set_to' => 'contents_count'),
+                'comments' => array('has_many' => 'Comment', 'count_set_to' => 'comments_count'),
             ),
 
             // 在保存对象时，会按照下面指定的验证规则进行验证。验证失败会抛出异常。
@@ -80,7 +76,7 @@ class Content extends QDB_ActiveRecord_Abstract
 
 }
 
-class Post_Null extends Post
+class Author_Null extends Post
 {
     function id() { return null; }
     function setProps(array $props) {}
@@ -92,7 +88,7 @@ class Post_Null extends Post
     protected function update($recursion = 99) {}
 }
 
-class Post_Exception extends QException
+class Author_Exception extends QException
 {
 }
 
