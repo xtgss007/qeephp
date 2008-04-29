@@ -76,7 +76,7 @@ class Author extends QDB_ActiveRecord_Abstract
 
 }
 
-class Author_Null extends Post
+class Author_Null extends Author
 {
     function id() { return null; }
     function setProps(array $props) {}

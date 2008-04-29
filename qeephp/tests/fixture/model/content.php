@@ -83,7 +83,7 @@ class Content extends QDB_ActiveRecord_Abstract
 
 }
 
-class Content_Null extends Post
+class Content_Null extends Content
 {
     function id() { return null; }
     function setProps(array $props) {}
