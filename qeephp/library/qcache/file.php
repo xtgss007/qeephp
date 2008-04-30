@@ -295,7 +295,7 @@ class QCache_File
             mkdir($root_dir, $policy['cache_dir_umask']);
         }
 
-        QLog::append(__METHOD__ . ' - ' . $root_dir . $filename, QLog::DEBUG);
+        QLog::log(__METHOD__ . ' - ' . $root_dir . $filename, QLog::DEBUG);
 
         return $root_dir . $filename;
     }
