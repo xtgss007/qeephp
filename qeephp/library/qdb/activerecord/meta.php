@@ -300,6 +300,10 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
      */
     function assembleAssocObjects($id, $prop_name)
     {
+        if (!isset($this->_objects_refs[$id])) {
+            // 未注册的对象
+            return;
+        }
         $query_id = $this->_objects_refs[$id];
         if (isset($this->_refs_to_objects[$query_id][$prop_name])) {
             /**

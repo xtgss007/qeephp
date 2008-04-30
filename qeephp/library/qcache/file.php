@@ -121,7 +121,6 @@ class QCache_File
         if (empty($this->_default_policy['cache_dir'])) {
             $this->_default_policy['cache_dir'] = Q::getIni('runtime_cache_dir');
         }
-        //$this->_enabled = !empty($this->_default_policy['cache_dir']);
     }
 
     /**
@@ -295,6 +294,8 @@ class QCache_File
             if (is_dir($root_dir)) { continue; }
             mkdir($root_dir, $policy['cache_dir_umask']);
         }
+
+        QLog::append(__METHOD__ . ' - ' . $root_dir . $filename, QLog::DEBUG);
 
         return $root_dir . $filename;
     }

@@ -58,7 +58,7 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
 
         $time = time();
         $author = new Author();
-        $author->name = 'liaoyulei - ' . mt_rand();
+        $author->name = 'name - ' . mt_rand();
         $author->save();
 
         // 通过比较记录数，确定新的记录已经创建
@@ -79,14 +79,14 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
      */
     function testUpdate()
     {
-        $name = 'dualface - ' . mt_rand();
+        $name = 'name - ' . mt_rand();
         $author = new Author(array('name' => $name));
         $author->save();
         $id = $author->id();
         $row = $this->_queryAuthor($id);
         $count = $this->_queryAuthorsCount();
 
-        $new_name = 'dualface - new - ' . mt_rand();
+        $new_name = 'name - new - ' . mt_rand();
         $author->name = $new_name;
         $author->save();
         $this->assertEquals($id, $author->id());
@@ -181,6 +181,41 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * 测试关联对象访问
+     */
+    function testAssociationAccessWithNewObject()
+    {
+        $author = new Author(); 
+        $this->assertType('QColl', $author->contents);
+        $this->assertEquals(0, count($author->contents));
+        $this->assertType('QColl', $author->comments);
+        $this->assertEquals(0, count($author->comments));
+        
+        $content = new Content();
+        $this->assertType('Author_Null', $content->author);
+        $this->assertType('QColl', $content->tags);
+        $this->assertEquals(0, count($content->tags));
+    }
+    
+    /**
+     * 创建对象时，保存 has_many 关联的对象
+     */
+    function testCreateWithHasMany()
+    {
+        $author = new Author(array('name' => 'name - ' . mt_rand()));
+        for ($i = 0; $i < 5; $i++) {
+	        $author->contents[] = new Content(array(
+	            'title' => 'title - ' . mt_rand(),
+	        ));
+        }
+        $author->save();
+        
+        $this->assertNotNull($author->id());
+        $this->_checkAuthor($this->_queryAuthor($author->id()), $author);
+        $this->_checkContents($author->contents);
+    }
+
+    /**
      * 检查一组 Author 对象
      */
     protected function _checkAuthors($authors)
@@ -197,7 +232,23 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * 检查对象是否和数据库记录相等
+     * 检查一组 Content 对象
+     */
+    protected function _checkContents($contents)
+    {
+        if (!is_array($contents) && !($contents instanceof Iterator)) {
+            $this->fail('$contents must be Array or Iterator.');
+        }
+
+        foreach ($contents as $content) {
+            $this->assertType('Content', $content);
+            $this->assertNotNull($content->id());
+            $this->_checkContent($this->_queryContent($content->id()), $content);
+        }
+    }
+    
+    /**
+     * 检查 Author 对象是否和数据库记录相等
      */
     protected function _checkAuthor(array $row, $author)
     {
@@ -206,6 +257,17 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
         $this->assertEquals($row['name'], $author->name);
     }
 
+
+    /**
+     * 检查 Content 对象是否和数据库记录相等
+     */
+    protected function _checkContent(array $row, $content)
+    {
+        $this->assertType('Content', $content);
+        $this->assertEquals($row['content_id'], $content->id());
+        $this->assertEquals($row['title'], $content->title);
+    }
+    
     /**
      * 从包含值的数组中随机返回其中一个
      */
@@ -233,11 +295,19 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * 查询 Author 对象总数
+     * 查询 Author 对象记录总数
      */
     protected function _queryAuthorsCount()
     {
         return $this->_queryCount('authors');
+    }
+    
+    /**
+     * 查询 Content 对象记录总数
+     */
+    protected function _queryContentsCount()
+    {
+        return $this->_queryCount('contents');
     }
 
     /**
@@ -256,6 +326,14 @@ class QDB_ActiveRecord_Test extends PHPUnit_Framework_TestCase
     protected function _queryAuthor($id)
     {
         return $this->_queryRow('authors', 'author_id', $id);
+    }
+    
+    /**
+     * 查询指定 id 的 Content 对象记录
+     */
+    protected function _queryContent($id)
+    {
+        return $this->_queryRow('contents', 'content_id', $id);
     }
 
     /**
