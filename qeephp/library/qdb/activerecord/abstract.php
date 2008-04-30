@@ -196,19 +196,26 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
      */
     function destroy($recursion = 99)
     {
+        if (!$this->id()) {
+            // LC_MSG: 不能删除没有 ID 值的对象.
+            throw new QDB_ActiveRecord_Exception(__('不能删除没有 ID 值的对象.'));
+        }
+
         $this->_before_destroy();
         $this->_event(self::before_destroy);
+        self::$_metas[$this->_class]->table->remove($this->id());
 
-        foreach (self::$_metas[$this->_class]->props as $prop_name => $params) {
-            if ($params['assoc']) {
-                $assoc_params = $params['assoc_params'];
-                if ($params['assoc'] == 'has_one' || $params['assoc'] == 'belongs_to') {
 
-                } else {
-
-                }
-            }
-        }
+//        foreach (self::$_metas[$this->_class]->props as $prop_name => $params) {
+//            if ($params['assoc']) {
+//                $assoc_params = $params['assoc_params'];
+//                if ($params['assoc'] == 'has_one' || $params['assoc'] == 'belongs_to') {
+//
+//                } else {
+//
+//                }
+//            }
+//        }
 
         $this->_event(self::after_destroy);
         $this->_after_destroy();
