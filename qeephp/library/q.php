@@ -327,28 +327,34 @@ abstract class Q
      * @addtogroup loader 类和文件的载入
      * @ingroup core
      * 
-     * QeePHP 为方便的管理大量类提供了便捷手段。
+     * QeePHP 为管理大量类提供了便捷手段，帮助开发者更好得组织应用程序的目录结构。
      * 
+     * 当 QeePHP 运行过程中需要构造某个尚未载入定义的对象时，会尝试自动加载类的定义文件。
+     * 这种能力既可以简化开发，又可以实现“按需加载”，从而避免无谓的性能影响。
+     *
      * 要充分利用 QeePHP 提供的类载入机制，需要按照特定的规则对类以及类定义文件进行命名：
      * 
-     * - 类名称以单词分隔，单词之间使用“_”符号，例如 QDB_Table、Controller_Posts；
+     * - 组成类名称的多个单词之间以“_”符号分隔，例如 QDB_Table、Controller_Posts；
      * - 将类名称中的“_”符号替换为目录分隔符，再加上“.php”就是类定义文件的存储结构；
      * - 类定义文件的文件名及其目录名全部为小写。
      * 
      * 例如 QDB_Table 这个类的定义文件存储结构是 qdb/table.php，
-     * 而 Controller_Posts 类的定义文件存储结构是 controller/posts.php。
+     * 而 Controller_Posts 的定义文件存储结构是 controller/posts.php。
      * 
-     * 因此，在命名类时，应该按照“所属模块_名称_类型”的规则来进行。
+     * 在命名时，建议按照“所属模块_名称_类型”的规则来进行。
      * 
      * 例如：
      * 
      * - QDB_Table 这个类名称表示该类属于“QDB”模块，而“Table”则是类的名称；
-     * - QDB_ActiveRecord_Abstract 这个类名称在模块名和名称后面附加了类型“Abstract”，表示该类是一个抽象类（abstract）；
+     * - QDB_ActiveRecord_Abstract 这个类名称在模块名和名称后面附加了类型“Abstract”，
+     *   表示该类是一个抽象类（abstract）；
      * - 同理，QDB_ActiveRecord_Interface 表示该类是一个接口（interface）。
      * 
-     * 模块名可以是多个，如 QDB_ActiveRecord_Behavior_Abstract 表示该类属于“QDB/ActiveRecord”模块，类型是抽象类。
+     * 对于模块和子模块，类名称应该反应出这种模块间的结构关系。如 QDB_ActiveRecord_Behavior_Abstract 
+     * 表示该类属于“QDB/ActiveRecord”模块，类型是抽象类。
      * 
-     * 只要掌握了这种命名方式，就可以很容易的将大量类合理的组织起来，为简化应用程序的开发、维护提供一个良好的基础。
+     * 只要掌握了这种命名方式，就可以很容易的将大量类合理的组织起来，为简化应用程序的开发、
+     * 维护提供一个良好的基础。
      * 
      * @{
      */
