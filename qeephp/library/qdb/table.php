@@ -196,16 +196,16 @@ class QDB_Table
     {
         $this->removeAllLinks();
         if (is_array($this->has_one)) {
-            $this->createLinks($this->has_one, QDB::HAS_ONE);
+            $this->creates($this->has_one, QDB::HAS_ONE);
         }
         if (is_array($this->belongs_to)) {
-            $this->createLinks($this->belongs_to, QDB::BELONGS_TO);
+            $this->creates($this->belongs_to, QDB::BELONGS_TO);
         }
         if (is_array($this->has_many)) {
-            $this->createLinks($this->has_many, QDB::HAS_MANY);
+            $this->creates($this->has_many, QDB::HAS_MANY);
         }
         if (is_array($this->many_to_many)) {
-            $this->createLinks($this->many_to_many, QDB::MANY_TO_MANY);
+            $this->creates($this->many_to_many, QDB::MANY_TO_MANY);
         }
     }
 
@@ -221,7 +221,7 @@ class QDB_Table
             $links_params = array($links_params);
         }
         foreach ($links_params as $params) {
-            $link = QDB_Table_Link_Abstract::createLink($type, $params, $this);
+            $link = QDB_Table_Link_Abstract::create($type, $params, $this);
             $this->links[$link->mapping_name] = $link;
         }
     }

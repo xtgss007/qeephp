@@ -1,24 +1,33 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
- * 定义 QDB_ActiveRecord_Meta 类
+ * QeePHP Framework
  *
- * @package database
- * @version $Id$
+ * LICENSE
+ *
+ * This source file is subject to the new BSD license that is bundled
+ * with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://www.qeephp.org/license/new-bsd
+ *
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to supprt@qeeyuan.com so we can send you a copy immediately.
+ *
+ * Copyright (c) 2006-2008 QeeYuan Technologies Ltd. Inc. (http://www.qeeyuan.com)
+ *
+ * @addtogroup database
+ * @{
  */
 
 /**
- * QDB_ActiveRecord_Meta 类封装了 ActiveRecord 类的元数据
- *
- * @package database
+ * @file
+ * 定义 QDB_ActiveRecord_Meta 类
+ */
+
+/**
+ * QDB_ActiveRecord_Meta 类封装了 QDB_ActiveRecord_Abstract 继承类的元信息
  */
 class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
 {
@@ -533,6 +542,23 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
 
     /**
      * 添加一个对象聚合关联
+     * 
+     * $prop_name 参数指定了关联的对象做为当前类实例的哪一个属性，
+     * 例如多个“评论”对象关联到“文章”对象的 comments 属性。
+     * 
+     * $assoc_type 指定了关联的类型，可以是 QDB::BELONGS_TO、QDB::HAS_MANY、
+     * QDB::HAS_ONE 或 QDB::MANY_TO_MANY。
+     * 
+     * $params 指定了关联的属性，可用的属性有多项。
+     * 
+     * <strong>source_key</strong> 指示当前类用什么属性来引用关联对象，或被关联对象引用。
+     * 例如“文章”的“评论”关联，就是用“评论”对象的 article_id属性来引用“文章”对象。
+     * 所以需要将 source_key 指定为“article_id”。
+     * 
+     * 但对于“文章”对“作者”的关联来说，就是使用“文章”对象的“author_id”属性来引用作者对象。
+     * 
+     * 
+     * 
      *
      * @param string $prop_name
      * @param int $assoc_type
@@ -566,7 +592,7 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         $assoc = $params['assoc_params'];
         $assoc['mapping_name'] = $prop_name;
 
-        $this->associations[$prop_name] = QDB_ActiveRecord_Association_Abstract::createLink($assoc_type, $assoc, $this);
+        $this->associations[$prop_name] = QDB_ActiveRecord_Association_Abstract::create($assoc_type, $assoc, $this);
     }
 
     /**
@@ -729,3 +755,5 @@ class QDB_ActiveRecord_Meta implements QDB_ActiveRecord_Callbacks
         }
     }
 }
+
+/* @} */

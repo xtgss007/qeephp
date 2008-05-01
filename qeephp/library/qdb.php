@@ -1,52 +1,71 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
- * 定义 QDB 类
+ * QeePHP Framework
  *
- * @package database
- * @version $Id: qdb.php 955 2008-03-16 23:52:44Z dualface $
+ * LICENSE
+ *
+ * This source file is subject to the new BSD license that is bundled
+ * with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://www.qeephp.org/license/new-bsd
+ *
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to supprt@qeeyuan.com so we can send you a copy immediately.
+ *
+ * Copyright (c) 2006-2008 QeeYuan Technologies Ltd. Inc. (http://www.qeeyuan.com)
+ *
+ * @addtogroup database 数据库架构
+ * @{
  */
 
 /**
- * QDB 类提供了管理数据库驱动的接口
- *
- * @package database
+ * @file
+ * 定义 QDB 类
+ */
+
+/**
+ * QDB 类为数据库架构提供基础服务
+ * 
+ * 包含下列功能：
+ * 
+ * - 定义数据库架构使用的常量
+ * - 为管理数据库连接提供了接口
+ * - 分析 DSN 的辅助方法
  */
 abstract class QDB
 {
-    /**
-     * 参数占位符类型
-     */
-    const PARAM_QM          = '?'; // 问号作为参数占位符
-    const PARAM_CL_NAMED    = ':'; // 冒号开始的命名参数
-    const PARAM_DL_SEQUENCE = '$'; // $符号开始的序列
-    const PARAM_AT_NAMED    = '@'; // @开始的命名参数
+    //! 问号作为参数占位符
+    const PARAM_QM          = '?'; 
+    //! 冒号开始的命名参数
+    const PARAM_CL_NAMED    = ':'; 
+    //! $符号开始的序列
+    const PARAM_DL_SEQUENCE = '$'; 
+    //! @开始的命名参数
+    const PARAM_AT_NAMED    = '@'; 
 
-    /**
-     * 可用的查询结果集返回形式
-     */
-    const FETCH_MODE_ARRAY  = 1; // 返回的每一个记录就是一个索引数组
-    const FETCH_MODE_ASSOC  = 2; // 返回的每一个记录就是一个以字段名作为键名的数组
+    //! 返回的每一个记录就是一个索引数组
+    const FETCH_MODE_ARRAY  = 1;
+    //! 返回的每一个记录就是一个以字段名作为键名的数组
+    const FETCH_MODE_ASSOC  = 2;
 
-    /**
-     * 定义四种关联关系
-     */
+    //! 一对一关联
     const HAS_ONE       = 'has_one';
+    //! 一对多关联
     const HAS_MANY      = 'has_many';
+    //! 从属关联
     const BELONGS_TO    = 'belongs_to';
+    //! 多对多关联
     const MANY_TO_MANY  = 'many_to_many';
 
     /**
-     * 开发者必须通过该方法获得数据库访问对象实例
-     *
+     * 获得一个数据库连接对象
+     * 
+     * $dsn_name 参数指定要使用应用程序设置中的哪一个项目作为创建数据库连接的 DSN 信息。
+     * 对于同样的 DSN 信息，只会返回一个数据库连接对象。
+     * 
      * @param string $dsn_name
      *
      * @return QDB_Adapter_Abstract
@@ -108,3 +127,5 @@ abstract class QDB
         return $dsn;
     }
 }
+
+/* @} */

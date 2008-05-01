@@ -287,7 +287,7 @@ abstract class QDB_Link_Abstract
      *
      * @return QDB_Link_Abstract
      */
-    static function createLink($type, array $params, QDB_Table $source_table)
+    static function create($type, array $params, QDB_Table $source_table)
     {
         switch ($type) {
         case QDB::HAS_ONE:

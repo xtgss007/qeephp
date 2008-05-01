@@ -594,19 +594,20 @@ abstract class QDB_ActiveRecord_Abstract implements QDB_ActiveRecord_Callbacks, 
         $this->_props[$this->idname()] = $id;
 
         // 遍历关联的对象，并调用对象的save()方法
-        foreach ($meta->table->links as $prop => $link) {
+        foreach ($meta->associations as $prop => $assoc) {
             if (!isset($meta->props[$prop])) { continue; }
-            /* @var $link QDB_Table_Link_Abstract */
-            $link->init();
-
-            $source_key_prop = $meta->fields2prop[$link->source_key];
-            if (empty($this->{$source_key_prop})) {
-                // LC_MSG: 保存关联对象 "%s" 要求对象 "%s" 属性必须有值.
-                throw new QDB_Table_Link_Exception(__('保存关联对象 "%s" 要求对象 "%s" 属性必须有值.',
-                                                      $prop, $source_key_prop));
+            /* @var $assoc QDB_ActiveRecord_Association_Abstract */
+            $assoc->init();
+            
+            $source_key_value = $this->{$assoc->source_key};
+            
+            if (strlen($source_key_value) == 0) {
+                // LC_MSG: 保存关联对象 "%s" 时，要求当前对象的 "%s" 属性必须有值.
+                throw new QDB_Table_Link_Exception(__('保存关联对象 "%s" 时，要求当前对象的 "%s" 属性必须有值.',
+                                                      $prop, $assoc->source_key));
             }
 
-            $link->saveTarget($this->{$prop}, $this->{$source_key_prop}, $recursion - 1);
+            $assoc->saveTarget($this->{$prop}, $source_key_value, $recursion - 1);
         }
 
         // 引发after_create事件

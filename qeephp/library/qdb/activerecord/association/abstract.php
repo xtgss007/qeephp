@@ -20,11 +20,6 @@
  *
  * @package database
  */
-/**
- * QDB_ActiveRecord_Association_Abstract 封装了一个关联
- *
- * @package database
- */
 abstract class QDB_ActiveRecord_Association_Abstract extends QDB_Link_Abstract
 {
     /**
@@ -65,7 +60,7 @@ abstract class QDB_ActiveRecord_Association_Abstract extends QDB_Link_Abstract
      *
      * @return QDB_ActiveRecord_Association_Abstract
      */
-    static function createLink($type, array $params, QDB_ActiveRecord_Meta $source_meta)
+    static function create($type, array $params, QDB_ActiveRecord_Meta $source_meta)
     {
         switch ($type) {
         case QDB::HAS_ONE:
@@ -90,8 +85,6 @@ abstract class QDB_ActiveRecord_Association_Abstract extends QDB_Link_Abstract
     function init()
     {
         if ($this->_is_init) { return $this; }
-
-        $this->source_meta->connect();
         $params = $this->_init_params;
 
         /**
