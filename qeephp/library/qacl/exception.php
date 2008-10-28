@@ -10,15 +10,10 @@
 
 /**
  * 定义 QACL_Exception 异常
- *
- * @package mvc
- * @version $Id$
  */
 
 /**
  * QACL_Exception 异常封装了 QACL 相关的错误
- *
- * @package mvc
  */
 class QACL_Exception extends QException
 {

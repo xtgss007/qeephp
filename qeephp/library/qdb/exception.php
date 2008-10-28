@@ -22,17 +22,17 @@
  */
 class QDB_Exception extends QException
 {
-    /**
-     * 引发异常的 SQL 语句
-     *
-     * @var string
-     */
-    public $sql;
+	/**
+	 * 引发异常的 SQL 语句
+	 *
+	 * @var string
+	 */
+	public $sql;
 
-    function __construct($sql, $error, $errcode = 0)
-    {
-        QDebug::dump($sql, 'ERROR SQL');
-        $this->sql = $sql;
-        parent::__construct($error, $errcode);
-    }
+	function __construct($sql, $error, $errcode = 0)
+	{
+		$this->sql = $sql;
+		parent::__construct($error, $errcode);
+	}
 }
+

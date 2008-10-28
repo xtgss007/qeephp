@@ -10,15 +10,10 @@
 
 /**
  * 定义 QException 类
- *
- * @package core
- * @version $Id$
  */
 
 /**
  * QException 是 QeePHP 的异常基础类
- *
- * @package core
  */
 class QException extends Exception
 {
@@ -41,16 +36,20 @@ class QException extends Exception
     static function dump(Exception $ex)
     {
         $out = "exception '" . get_class($ex) . "'";
-        if ($ex->getMessage() != '') {
+        if ($ex->getMessage() != '')
+        {
             $out .= " with message '" . $ex->getMessage() . "'";
         }
 
         $out .= ' in ' . $ex->getFile() . ':' . $ex->getLine() . "\n\n";
         $out .= $ex->getTraceAsString();
 
-        if (ini_get('html_errors')) {
+        if (ini_get('html_errors'))
+        {
             echo nl2br(htmlspecialchars($out));
-        } else {
+        }
+        else
+        {
             echo $out;
         }
     }

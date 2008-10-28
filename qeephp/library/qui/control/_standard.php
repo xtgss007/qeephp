@@ -22,21 +22,21 @@
  */
 abstract class Control_Input_Abstract extends QUI_Control_Abstract
 {
-    protected function _make($type, $return = false)
-    {
-        $out = "<input type=\"{$type}\" ";
-        $out .= $this->setIdName();
-        $out .= 'value="'. htmlspecialchars($this->attr('value')) . '" ';
-        $out .= $this->attribsToString();
-        $out .= $this->setDisabled();
-        $out .= '/>';
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+	protected function _make($type, $return = false)
+	{
+		$out = "<input type=\"{$type}\" ";
+		$out .= QUI::renderIdAndName($this);
+		$out .= 'value="'. htmlspecialchars($this->extractAttrib('value')) . '" ';
+		$out .= QUI::renderAttribs($this);
+		$out .= QUI::renderDisabled($this);
+		$out .= '/>';
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }
 
 /**
@@ -46,130 +46,133 @@ abstract class Control_Input_Abstract extends QUI_Control_Abstract
  */
 abstract class Control_CheckboxGroup_Abstract extends QUI_Control_Abstract
 {
-    function _make($type, $suffix, $return = false)
-    {
-        static $id_index = 1;
+	protected function _make($type, $suffix, $return = false)
+	{
+		static $id_index = 1;
 
-        $selected = $this->attr('selected');
-        if (!is_array($selected) && substr($selected, 0, 1) == ':') {
-            $selected = intval(substr($selected, 1));
-            $selected_by_index = true;
-        } else {
-            $selected_by_index = false;
-        }
+		$selected = $this->extractAttrib('selected');
+		if (!is_array($selected) && substr($selected, 0, 1) == ':') {
+			$selected = intval(substr($selected, 1));
+			$selected_by_index = true;
+		} else {
+			$selected_by_index = false;
+		}
 
-        $out = '';
-        $items = $this->attr('items');
-        $max = count($items);
-        if ($max == 0) { return ''; }
+		$out = '';
+		$items = $this->extractAttrib('items');
+		$max = count($items);
+		if ($max == 0) { return ''; }
 
-        $key         = $this->attr('key');
-        $caption     = $this->attr('caption');
-        $key2caption = $this->attr('key2caption');
+		$key         = $this->extractAttrib('key');
+		$caption     = $this->extractAttrib('caption');
+		$key2caption = $this->extractAttrib('key2caption');
 
-        if ($key) {
-            $this->splitMultiDimArray($items, $key, $caption, $key2caption);
-        } else if ($key2caption) {
-            $tmp = array();
-            foreach ($items as $caption => $key) {
-                $tmp[$key] = $caption;
-            }
-            $items = $tmp;
-        }
 
-        $ix = 0;
-        $col = 0;
-        $table       = $this->attr('table');
-        $border      = $this->attr('border');
-        $cellspacing = $this->attr('cellspacing');
-        $cellpadding = $this->attr('cellpadding');
-        $multirow    = $this->attr('multirow');
-        $cols        = $this->attr('cols');
+		if ($key) {
+			QUI::splitMultiDimArray($items, $key, $caption, $key2caption);
+		} else if ($key2caption) {
+			$tmp = array();
+			foreach ($items as $caption => $key) {
+				$tmp[$key] = $caption;
+			}
+			$items = $tmp;
+		}
 
-        if ($table) {
-            $border = is_null($border) ? 0 : $border;
-            $cellspacing = is_null($cellspacing) ? 0 : $cellspacing;
-            $cellpadding = is_null($cellpadding) ? 0 : $cellpadding;
-            $out .= "<table border=\"{$border}\" cellspacing=\"{$cellspacing}\" cellpadding=\"{$cellpadding}\">\n";
-            if ($multirow) { $out .= "<tr>\n"; }
-        }
-        foreach ($items as $caption => $value) {
-            if ($table) { $out .= "<td>"; }
-            $checked = false;
-            if ($selected_by_index) {
-                if (is_array($selected)) {
-                    if (in_array($ix, $selected)) { $checked = true; }
-                } else if ($ix == $selected) {
-                    $checked = true;
-                }
-            } else {
-                if (is_array($selected)) {
-                    if (in_array($value, $selected)) { $checked = true; }
-                } else if ($value == $selected) {
-                    $checked = true;
-                }
-            }
+		$ix = 0;
+		$col = 0;
+		$table       = $this->extractAttrib('table');
+		$border      = $this->extractAttrib('border');
+		$cellspacing = $this->extractAttrib('cellspacing');
+		$cellpadding = $this->extractAttrib('cellpadding');
+		$multirow    = $this->extractAttrib('multirow');
+		$cols        = $this->extractAttrib('cols');
 
-            $out .= "<input type=\"{$type}\" ";
-            $out .= 'name="' . htmlspecialchars($this->id) . $suffix . '" ';
-            $id_index++;
-            $out .= 'id="' . htmlspecialchars($this->id) . "_{$id_index}\" ";
-            if (strlen($value) == 0) { $value = 1; }
-            $out .= 'value="' . htmlspecialchars($value) . '" ';
-            $out .= $this->attribsToString();
-            $out .= $this->setChecked();
-            $out .= $this->setDisabled();
-            if ($checked) {
-                $out .= 'checked="checked" ';
-            }
-            $this->setDisabled();
-            $out .= '/>';
-            if ($caption) {
-                $ctl = QUI_Control::instance($this->view_adapter, 'label', "{$this->id}_{$id_index}_label", array(
-                    'for' => "{$this->id}_{$id_index}", 'caption' => $caption
-                ));
-                $out .= $ctl->render(true);
-            }
+		if ($table) {
+			$border = is_null($border) ? 0 : $border;
+			$cellspacing = is_null($cellspacing) ? 0 : $cellspacing;
+			$cellpadding = is_null($cellpadding) ? 0 : $cellpadding;
+			$out .= "<table border=\"{$border}\" cellspacing=\"{$cellspacing}\" cellpadding=\"{$cellpadding}\">\n";
+			if ($multirow) { $out .= "<tr>\n"; }
+		}
+		foreach ($items as $caption => $value) {
+			if ($table) { $out .= "<td>"; }
+			$checked = false;
+			if ($selected_by_index) {
+				if (is_array($selected)) {
+					if (in_array($ix, $selected)) { $checked = true; }
+				} else if ($ix == $selected) {
+					$checked = true;
+				}
+			} else {
+				if (is_array($selected)) {
+					if (in_array($value, $selected)) { $checked = true; }
+				} else if ($value == $selected && strlen($value) == strlen($selected)) {
+					$checked = true;
+				}
+			}
 
-            if ($ix < $max) {
-                if ($multirow) {
-                    if ($cols) {
-                        $col++;
-                        if ($col >= $cols) {
-                            if ($table) { $out .= "</td>\n</tr>\n<tr>\n"; }
-                            else { $out .= "<br />\n"; }
-                            $col = 0;
-                        } else {
-                            if ($table) { $out .= "</td>\n"; }
-                            else { $out .= "&nbsp;&nbsp;\n"; }
-                        }
-                    } else {
-                        if ($table) { $out .= "</td>\n</tr>\n<tr>\n"; }
-                        else { $out .= "<br />\n"; }
-                    }
-                } else {
-                    if ($table) { $out .= "</td>\n"; }
-                    else { $out .= "&nbsp;&nbsp;\n"; }
-                }
-            }
+			$out .= "<input type=\"{$type}\" ";
+			$name = $this->id() . $suffix;
+			$id = $this->id() . "_{$id_index}";
+			$out .= "name=\"{$name}\" ";
+			$id_index++;
+			$out .= "id=\"{$id}\" ";
+			if (strlen($value) == 0) { $value = 1; }
+			$out .= 'value="' . htmlspecialchars($value) . '" ';
+			$out .= QUI::renderAttribs($this);
+			$out .= QUI::renderChecked($this);
+			$out .= QUI::renderDisabled($this);
+			if ($checked) {
+				$out .= 'checked="checked" ';
+			}
+			QUI::renderDisabled($this);
+			$out .= '/>';
+			if ($caption) {
+				$ctl = QUI::control($this->context, 'label', "{$id}_label", array(
+					'for' => $id, 'caption' => $caption
+				));
+				$out .= $ctl->render(true);
+			}
 
-            $ix++;
-        }
+			if ($ix < $max) {
+				if ($multirow) {
+					if ($cols) {
+						$col++;
+						if ($col >= $cols) {
+							if ($table) { $out .= "</td>\n</tr>\n<tr>\n"; }
+							else { $out .= "<br />\n"; }
+							$col = 0;
+						} else {
+							if ($table) { $out .= "</td>\n"; }
+							else { $out .= "&nbsp;&nbsp;\n"; }
+						}
+					} else {
+						if ($table) { $out .= "</td>\n</tr>\n<tr>\n"; }
+						else { $out .= "<br />\n"; }
+					}
+				} else {
+					if ($table) { $out .= "</td>\n"; }
+					else { $out .= "&nbsp;&nbsp;\n"; }
+				}
+			}
 
-        if ($table) {
-            if ($cols && $ix % $cols > 0) {
-               $out .= str_repeat("<td>&nbsp;</td>\n", $cols - $ix % $cols);
-            }
-            $out .= "</tr>\n</table>\n";
-        }
+			$ix++;
+		}
 
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+		if ($table) {
+			if ($cols && $ix % $cols > 0) {
+			   $out .= str_repeat("<td>&nbsp;</td>\n", $cols - $ix % $cols);
+			}
+			$out .= "</tr>\n</table>\n";
+		}
+
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }
 
 /**
@@ -179,31 +182,39 @@ abstract class Control_CheckboxGroup_Abstract extends QUI_Control_Abstract
  */
 abstract class Control_Checkbox_Abstract extends QUI_Control_Abstract
 {
-    protected function _make($type, $return = false)
-    {
-        $value = $this->attr('value');
-        if (empty($value)) {
-            $value = 1;
-        }
-        $out = "<input type=\"{$type}\" ";
-        $out .= $this->setIdName();
-        $out .= 'value="' . htmlspecialchars($value) . '" ';
-        $out .= $this->attribsToString('id, value, checked, disabled, caption');
-        $out .= $this->setDisabled();
-        $out .= $this->setChecked();
-        $out .= '/>';
-        if (!empty($this->attribs['caption'])) {
-            $attribs = array('for' => $this->id, 'caption' => $this->attribs['caption']);
-            $label = QUI_Control::instance('label', $this->id . '_label', $attribs, $this->namespace, $this->module);
-            $out .= "\n" . $label->render(true);
-        }
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+	protected function _make($type, $return = false)
+	{
+	    $value_check = $this->extractAttrib('value_check');
+		$value = $this->extractAttrib('value');
+		if (empty($value))
+		{
+			$value = 1;
+		}
+		elseif ($value_check)
+		{
+		    $this->setAttrib('checked', true);
+		}
+
+		$out = "<input type=\"{$type}\" ";
+		$out .= QUI::renderIdAndName($this);
+		$out .= 'value="' . htmlspecialchars($value) . '" ';
+		$out .= QUI::renderAttribs($this);
+		$out .= QUI::renderDisabled($this);
+		$out .= QUI::renderChecked($this);
+		$out .= '/>';
+		$caption = $this->extractAttrib('caption');
+		if ($caption) {
+			$attribs = array('for' => $this->id(), 'caption' => $caption);
+			$label = QUI::control($this->context, 'label', $this->id() . '_label', $attribs);
+			$out .= "\n" . $label->render(true);
+		}
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }
 
 /**
@@ -213,10 +224,10 @@ abstract class Control_Checkbox_Abstract extends QUI_Control_Abstract
  */
 class Control_Textbox extends Control_Input_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('text', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('text', $return);
+	}
 }
 
 /**
@@ -226,10 +237,10 @@ class Control_Textbox extends Control_Input_Abstract
  */
 class Control_Password extends Control_Input_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('password', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('password', $return);
+	}
 }
 
 /**
@@ -239,10 +250,10 @@ class Control_Password extends Control_Input_Abstract
  */
 class Control_Hidden extends Control_Input_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('hidden', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('hidden', $return);
+	}
 }
 
 
@@ -253,10 +264,10 @@ class Control_Hidden extends Control_Input_Abstract
  */
 class Control_Upload extends Control_Input_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('file', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('file', $return);
+	}
 }
 
 /**
@@ -266,23 +277,23 @@ class Control_Upload extends Control_Input_Abstract
  */
 class Control_Memo extends QUI_Control_Abstract
 {
-    function render($return = false)
-    {
-        $value = $this->attr('value');
-        $out = '<textarea ';
-        $out .= $this->setIdName();
-        $out .= $this->attribsToString();
-        $out .= $this->setDisabled();
-        $out .= '>';
-        $out .= htmlspecialchars($value);
-        $out .= '</textarea>';
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+	function render($return = false)
+	{
+		$value = $this->extractAttrib('value');
+		$out = '<textarea ';
+		$out .= QUI::renderIdAndName($this);
+		$out .= QUI::renderAttribs($this);
+		$out .= QUI::renderDisabled($this);
+		$out .= '>';
+		$out .= htmlspecialchars($value);
+		$out .= '</textarea>';
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }
 
 /**
@@ -292,10 +303,10 @@ class Control_Memo extends QUI_Control_Abstract
  */
 class Control_Checkbox extends Control_Checkbox_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('checkbox', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('checkbox', $return);
+	}
 }
 
 /**
@@ -305,10 +316,10 @@ class Control_Checkbox extends Control_Checkbox_Abstract
  */
 class Control_Radio extends Control_Checkbox_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('radio', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('radio', $return);
+	}
 }
 
 /**
@@ -318,10 +329,10 @@ class Control_Radio extends Control_Checkbox_Abstract
  */
 class Control_CheckboxGroup extends Control_CheckboxGroup_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('checkbox', '[]', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('checkbox', '[]', $return);
+	}
 }
 
 /**
@@ -331,10 +342,10 @@ class Control_CheckboxGroup extends Control_CheckboxGroup_Abstract
  */
 class Control_RadioGroup extends Control_CheckboxGroup_Abstract
 {
-    function render($return = false)
-    {
-        return $this->_make('radio', '', $return);
-    }
+	function render($return = false)
+	{
+		return $this->_make('radio', '', $return);
+	}
 }
 
 /**
@@ -344,78 +355,78 @@ class Control_RadioGroup extends Control_CheckboxGroup_Abstract
  */
 class Control_Listbox extends QUI_Control_Abstract
 {
-    function render($return = false)
-    {
-        $selected   = $this->attr('selected');
-        $size       = $this->attr('size');
-        $items      = $this->attr('items');
-        $multiple   = $this->attr('multiple');
-        $key        = $this->attr('key');
-        $caption    = $this->attr('caption');
+	function render($return = false)
+	{
+		$selected   = $this->extractAttrib('selected');
+		$size       = $this->extractAttrib('size');
+		$items      = $this->extractAttrib('items');
+		$multiple   = $this->extractAttrib('multiple');
+		$key        = $this->extractAttrib('key');
+		$caption    = $this->extractAttrib('caption');
 
-        if (!is_array($selected) && substr($selected, 0, 1) == ':') {
-            $selected = intval(substr($selected, 1));
-            $selected_by_index = true;
-        } else {
-            $selected_by_index = false;
-        }
-        $out = '<select ';
-        $out .= $this->setIdName();
-        if ($size <= 0) {
-            $size = 4;
-        }
-        $out .= 'size="' . $size . '" ';
-        if ($multiple) {
-            $out .= 'multiple="multiple" ';
-        }
-        $out .= $this->setDisabled();
-        $out .= $this->attribsToString();
-        $out .= ">\n";
+		if (!is_array($selected) && substr($selected, 0, 1) == ':') {
+			$selected = intval(substr($selected, 1));
+			$selected_by_index = true;
+		} else {
+			$selected_by_index = false;
+		}
+		$out = '<select ';
+		$out .= QUI::renderIdAndName($this);
+		if ($size <= 0) {
+			$size = 4;
+		}
+		$out .= 'size="' . $size . '" ';
+		if ($multiple) {
+			$out .= 'multiple="multiple" ';
+		}
+		$out .= QUI::renderDisabled($this);
+		$out .= QUI::renderAttribs($this);
+		$out .= ">\n";
 
-        $items = (array)$items;
+		$items = (array)$items;
 
-        if ($key) {
-            $this->splitMultiDimArray($items, $key, $caption);
-        }
+		if ($key) {
+			QUI::splitMultiDimArray($items, $key, $caption);
+		}
 
-        $ix = 0;
-        foreach ($items as $caption => $value) {
-            $out .= '<option value="' . htmlspecialchars($value) . '" ';
-            $checked = false;
-            if ($selected_by_index) {
-                if (is_array($selected)) {
-                    if (in_array($ix, $selected)) {
-                        $checked = true;
-                    }
-                } else if ($ix == $selected) {
-                    $checked = true;
-                }
-            } else {
-                if (is_array($selected)) {
-                    if (in_array($value, $selected)) {
-                        $checked = true;
-                    }
-                } else if ($value == $selected) {
-                    $checked = true;
-                }
-            }
-            if ($checked) {
-                $out .= 'selected="selected" ';
-            }
-            $out .= '>';
-            $out .= htmlspecialchars($caption);
-            $out .= "</option>\n";
-            $ix++;
-        }
-        $out .= "</select>\n";
+		$ix = 0;
+		foreach ($items as $caption => $value) {
+			$out .= '<option value="' . htmlspecialchars($value) . '" ';
+			$checked = false;
+			if ($selected_by_index) {
+				if (is_array($selected)) {
+					if (in_array($ix, $selected)) {
+						$checked = true;
+					}
+				} else if ($ix == $selected) {
+					$checked = true;
+				}
+			} else {
+				if (is_array($selected)) {
+					if (in_array($value, $selected)) {
+						$checked = true;
+					}
+				} else if ($value == $selected) {
+					$checked = true;
+				}
+			}
+			if ($checked) {
+				$out .= 'selected="selected" ';
+			}
+			$out .= '>';
+			$out .= htmlspecialchars($caption);
+			$out .= "</option>\n";
+			$ix++;
+		}
+		$out .= "</select>\n";
 
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }
 
 /**
@@ -425,58 +436,73 @@ class Control_Listbox extends QUI_Control_Abstract
  */
 class Control_DropdownList extends QUI_Control_Abstract
 {
-    function render($return = false)
-    {
-        $selected = $this->attr('selected');
-        $key      = $this->attr('key');
-        $items    = $this->attr('items');
-        $caption  = $this->attr('caption');
+	function render($return = false)
+	{
+        $selected = $this->extractAttrib('selected');
+        $value    = $this->extractAttrib('value');
+		$key      = $this->extractAttrib('key');
+		$items    = $this->extractAttrib('items');
+        $caption  = $this->extractAttrib('caption');
+        $no_keys  = $this->extractAttrib('no_keys');
 
-        if (substr($selected, 0, 1) == ':') {
-            $selected = intval(substr($selected, 1));
-            $selected_by_index = true;
-        } else {
-            $selected_by_index = false;
+        if (strlen($value) && strlen($selected) == 0)
+        {
+            $selected = $value;
         }
 
-        $out = '<select ';
-        $out .= $this->setIdName();
-        $out .= $this->setDisabled();
-        $out .= $this->attribsToString();
-        $out .= ">\n";
+        if (substr($selected, 0, 1) == ':')
+        {
+			$selected = intval(substr($selected, 1));
+			$selected_by_index = true;
+        }
+        else
+        {
+			$selected_by_index = false;
+		}
 
-        $items = (array)$items;
+		$out = '<select ';
+		$out .= QUI::renderIdAndName($this);
+		$out .= QUI::renderDisabled($this);
+		$out .= QUI::renderAttribs($this);
+		$out .= ">\n";
 
-        if ($key) {
-            $this->splitMultiDimArray($items, $key, $caption);
+		$items = (array)$items;
+
+        if ($no_keys)
+        {
+            $items = array_combine($items, $items);
+        }
+        elseif ($key)
+        {
+			QUI::splitMultiDimArray($items, $key, $caption);
         }
 
-        $ix = 0;
-        foreach ($items as $caption => $value) {
-            $out .= '<option value="' . htmlspecialchars($value) . '" ';
-            if ($selected_by_index) {
-                if ($ix == $selected) {
-                    $out .= 'selected="selected" ';
-                }
-            } else {
-                if ($value == $selected) {
-                    $out .= 'selected="selected" ';
-                }
-            }
-            $out .= '>';
-            $out .= htmlspecialchars($caption);
-            $out .= "</option>\n";
-            $ix++;
-        }
-        $out .= "</select>\n";
+		$ix = 0;
+		foreach ($items as $caption => $value) {
+			$out .= '<option value="' . htmlspecialchars($value) . '" ';
+			if ($selected_by_index) {
+				if ($ix == $selected) {
+					$out .= 'selected="selected" ';
+				}
+			} else {
+				if ($value == $selected) {
+					$out .= 'selected="selected" ';
+				}
+			}
+			$out .= '>';
+			$out .= htmlspecialchars($caption);
+			$out .= "</option>\n";
+			$ix++;
+		}
+		$out .= "</select>\n";
 
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }
 
 /**
@@ -486,14 +512,14 @@ class Control_DropdownList extends QUI_Control_Abstract
  */
 class Control_Button extends Control_Input_Abstract
 {
-    function render($return = false, $button_type = 'button')
-    {
-        $caption = $this->attr('caption');
-        if (!empty($caption)) {
-            $this->attribs['value'] = $caption;
-        }
-        return $this->_make($button_type, $return);
-    }
+	function render($return = false, $button_type = 'button')
+	{
+		$caption = $this->extractAttrib('caption');
+		if (!empty($caption)) {
+		    $this->setAttrib('value', $caption);
+		}
+		return $this->_make($button_type, $return);
+	}
 }
 
 /**
@@ -503,14 +529,14 @@ class Control_Button extends Control_Input_Abstract
  */
 class Control_Submit extends Control_Button
 {
-    function render($return = false)
-    {
-        $caption = $this->attr('caption');
-        if (!empty($caption)) {
-            $this->attribs['value'] = $caption;
-        }
-        return $this->_make('submit', $return);
-    }
+	function render($return = false)
+	{
+		$caption = $this->extractAttrib('caption');
+		if (!empty($caption)) {
+		    $this->setAttrib('value', $caption);
+		}
+		return $this->_make('submit', $return);
+	}
 }
 
 /**
@@ -520,14 +546,14 @@ class Control_Submit extends Control_Button
  */
 class Control_Reset extends Control_Button
 {
-    function render($return = false)
-    {
-        $caption = $this->attr('caption');
-        if (!empty($caption)) {
-            $this->attribs['value'] = $caption;
-        }
-        return $this->_make('reset', $return);
-    }
+	function render($return = false)
+	{
+		$caption = $this->extractAttrib('caption');
+		if (!empty($caption)) {
+		    $this->setAttrib('value', $caption);
+		}
+		return $this->_make('reset', $return);
+	}
 }
 
 /**
@@ -537,24 +563,24 @@ class Control_Reset extends Control_Button
  */
 class Control_Label extends QUI_Control_Abstract
 {
-    function render($return = false)
-    {
-        $caption = $this->attr('caption');
+	function render($return = false)
+	{
+		$caption = $this->extractAttrib('caption');
 
-        $out = '<label ';
-        $out .= $this->setIdName();
-        $out .= $this->attribsToString();
-        $out .= '>';
-        $out .= htmlspecialchars($caption);
-        $out .= '</label>';
+		$out = '<label ';
+		$out .= QUI::renderIdAndName($this);
+		$out .= QUI::renderAttribs($this);
+		$out .= '>';
+		$out .= htmlspecialchars($caption);
+		$out .= '</label>';
 
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }
 
 /**
@@ -564,21 +590,21 @@ class Control_Label extends QUI_Control_Abstract
  */
 class Control_Static extends QUI_Control_Abstract
 {
-    function render($return = false)
-    {
-        $caption = $this->attr('caption');
-        $out = '<div ';
-        $out .= $this->setIdName();
-        $out .= $this->attribsToString();
-        $out .= '>';
-        $out .= htmlspecialchars($caption);
-        $out .= '</div>';
+	function render($return = false)
+	{
+		$caption = $this->extractAttrib('caption');
+		$out = '<div ';
+		$out .= QUI::renderIdAndName($this);
+		$out .= QUI::renderAttribs($this);
+		$out .= '>';
+		$out .= htmlspecialchars($caption);
+		$out .= '</div>';
 
-        if ($return) {
-            return $out;
-        } else {
-            echo $out;
-            return null;
-        }
-    }
+		if ($return) {
+			return $out;
+		} else {
+			echo $out;
+			return null;
+		}
+	}
 }

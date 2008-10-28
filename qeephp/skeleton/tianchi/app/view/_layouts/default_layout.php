@@ -53,7 +53,7 @@ a:hover {
     padding-right: 30px;
 }
 #header {
-    background-image: url("%MACRO:PUBLIC_ROOT%img/qeephp.png");
+    background-image: url("img/qeephp.png");
     background-repeat: no-repeat;
     background-position: top left;
     height: 64px;

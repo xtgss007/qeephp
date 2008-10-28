@@ -10,9 +10,6 @@
 
 /**
  * 定义 QGenerator_Runner_Cli 类
- *
- * @package generator
- * @version $Id: cli.php 976 2008-03-20 00:28:23Z dualface $
  */
 
 /**
@@ -22,79 +19,82 @@
  */
 class QGenerator_Runner_Cli extends QGenerator_Runner_Abstract
 {
-    /**
-     * 命令行参数
-     *
-     * @var array
-     */
-    protected $argv;
+	/**
+	 * 命令行参数
+	 *
+	 * @var array
+	 */
+	protected $argv;
 
-    /**
-     * 构造函数
-     *
-     * @param array $argv
-     */
-    function __construct(array $argv)
-    {
-        array_shift($argv);
-        $this->argv = $argv;
-    }
+	/**
+	 * 构造函数
+	 *
+	 * @param array $argv
+	 */
+	function __construct(array $argv)
+	{
+		array_shift($argv);
+		$this->argv = $argv;
 
-    /**
-     * 执行代码生成器
-     */
-    function run()
-    {
-        $params = $this->argv;
-
-        if (empty($params)) {
-            $this->help();
-            exit(-1);
+        if (!function_exists('mysql_query'))
+        {
+            dl('php_mysql.' . PHP_SHLIB_SUFFIX);
         }
+	}
 
-        $type = reset($params);
-        array_shift($params);
+	/**
+	 * 执行代码生成器
+	 */
+	function run()
+	{
+		$params = $this->argv;
 
-        try {
-            $generator = $this->getGenerator($type);
-            if ($generator->execute($params) === false) {
-                $this->help();
-            }
-        } catch (QGenerator_Exception $ex) {
-            echo "\nERROR: ";
-            echo $ex->getMessage();
-            echo "\n";
-            $this->help();
-            exit(-1);
-        }
-    }
+		if (empty($params)) {
+			$this->help();
+			exit(-1);
+		}
 
-    /**
-     * 显示命令行帮助
-     */
-    function help()
-    {
-        echo <<<EOT
+		$type = reset($params);
+		array_shift($params);
+
+		try {
+			$generator = $this->getGenerator($type);
+			if ($generator->execute($params) === false) {
+				$this->help();
+			}
+		} catch (QGenerator_Exception $ex) {
+			echo "\nERROR: ";
+			echo $ex->getMessage();
+			echo "\n";
+			$this->help();
+			exit(-1);
+		}
+	}
+
+	/**
+	 * 显示命令行帮助
+	 */
+	function help()
+	{
+		echo <<<EOT
 
 scripts/generator <type> <....>
 
 syntax:
-    php script/generate.php controller <[namespace::]controller name> [-m module]
-    php script/generate.php table <database table name> [table class name] [-m module]
-    php script/generate.php model <class name> <database table name | table class name> [-m module]
+	php script/generate.php controller <[namespace::]controller name[@module]>
+	php script/generate.php model <class name[@module]> <database table name>
 
 examples:
-    php script/generate.php controller posts
-    php script/generate.php controller admin::posts
+	php script/generate.php controller posts
+	php script/generate.php controller admin::posts
+	php script/generate.php controller posts@cms
+	php script/generate.php controller admin::posts@cms
 
-    php script/generate.php table posts
-    php script/generate.php table q_contents Table_Contents
-
-    php script/generate.php model post posts
-    php script/generate.php model post Table_Posts
+	php script/generate.php model post posts
+	php script/generate.php model post@cms posts
 
 
 EOT;
 
-    }
+	}
 }

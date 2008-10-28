@@ -1,240 +1,316 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
+ * @file
  * 定义 QUI_Control_Abstract 类
  *
- * @package mvc
- * @version $Id: abstract.php 955 2008-03-16 23:52:44Z dualface $
+ * @ingroup ui
+ *
+ * @{
  */
 
 /**
  * QUI_Control_Abstract 是用户界面控件的基础类
- *
- * @package mvc
  */
 abstract class QUI_Control_Abstract
 {
-    /**
-     * 定义控件可以响应的事件
-     */
-    const onclick       = 'onclick';
-    const ondblclick    = 'ondblclick';
-    const onchange      = 'onchange';
-    const onfocus       = 'onfocus';
-    const onkeypress    = 'onkeypress';
-    const onload        = 'onload';
-    const onresize      = 'onresize';
-    const onunload      = 'onunload';
+	/**
+	 * 控件可以响应的事件类型
+	 */
+	const ON_CLICK      = 'onclick';
+	const ON_DBLCLICK   = 'ondblclick';
+	const ON_CHANGE     = 'onchange';
+	const ON_FOCUS      = 'onfocus';
+	const ON_BLUR		= 'onblur';
+	const ON_KEYPRESS   = 'onkeypress';
+	const ON_RESIZE     = 'onresize';
+	const ON_LOAD       = 'onload';
+	const ON_UNLOAD     = 'onunload';
+
+	/**
+	 * 运行时上下文
+	 *
+	 * @var QContext
+	 */
+	public $context;
+
+	/**
+	 * 渲染控件视图时要使用的视图变量
+	 *
+	 * @var array
+	 */
+	public $view = array();
+
+	/**
+	 * 用于处理事件的 ID
+	 */
+	protected $_id_for_event;
+
+	/**
+	 * 控件的 ID
+	 *
+	 * @var string
+	 */
+	protected $_id;
+
+	/**
+	 * 渲染控件时，控件 id 和 name 属性要添加的前缀
+	 *
+	 * @var string
+	 */
+	protected $_id_prefix = '';
+
+	/**
+	 * 控件的属性
+	 *
+	 * @var array
+	 */
+	protected $_attribs;
+
+	/**
+	 * 指示要使用的视图适配器，如果未指定则使用 view_adapter 设置
+	 *
+	 * @var string
+	 */
+	protected $_view_adapter_class;
 
     /**
-     * 控件的 ID
-     *
-     * @var string
-     */
-    protected $id;
-
-    /**
-     * 控件所属名字空间
-     *
-     * @var string
-     */
-    public $namespace;
-
-    /**
-     * 控件所属模块
-     *
-     * @var string
-     */
-    public $module;
-
-    /**
-     * 控件的属性
-     *
-     * @var array
-     */
-    public $attribs;
-
-    /**
-     * 额外的视图数据，通常来自控制器
-     *
-     * @var array
-     */
-    public $viewdata = null;
-
-    /**
-     * 视图适配器
+     * 当前使用的视图适配器
      *
      * @var QView_Adapter_Abstract
      */
-    public $view_adapter;
+    protected $_view_adapter;
 
     /**
-     * 构造函数
+     * 控件视图文件所在目录
      *
-     * @param string $id
-     * @param array $attribs
+     * @var string
      */
-    function __construct(QView_Adapter_Abstract $view_adapter, $id, array $attribs = null)
-    {
-        $this->view_adapter = $view_adapter;
-        $this->id = $id;
-        $this->attribs = (array)$attribs;
-    }
+    protected $_controls_view_dir;
 
-    /**
-     * 返回控件的 ID
-     *
-     * @return string
-     */
-    function id()
-    {
-        return $this->id;
-    }
+	/**
+	 * 构造函数
+	 *
+	 * @param string $id
+	 * @param array $attribs
+	 */
+	function __construct(QContext $context, $id, array $attribs = array())
+	{
+		$this->context = $context;
+		$this->_id = $id;
+        if (!isset($attribs['name']))
+        {
+			$attribs['name'] = $id;
+		}
+		$this->_attribs = (array)$attribs;
+		$this->_id_for_event = self::_uuid();
+	}
 
-    /**
-     * 渲染控件
-     */
+	/**
+	 * 返回控件的 ID
+	 *
+	 * @return string
+	 */
+	function id()
+	{
+		return $this->_id;
+	}
+
+	/**
+	 * 返回控件的 name
+	 *
+	 * @return string
+	 */
+	function name()
+	{
+		return isset($this->_attribs['name']) ? $this->_attribs['name'] : $this->_id;
+	}
+
+	/**
+	 * 返回控件指定属性的值
+	 *
+	 * @param string $attr
+	 * @param mixed $default
+	 *
+	 * @return mixed
+	 */
+	function getAttrib($attr, $default = null)
+	{
+		return isset($this->_attribs[$attr]) ? $this->_attribs[$attr] : $default;
+	}
+
+	/**
+	 * 返回控件所有属性的值
+	 *
+	 * @return array
+	 */
+	function getAttribs()
+	{
+		return $this->_attribs;
+	}
+
+	/**
+	 * 提取控件指定属性的值
+	 *
+	 * @param string $attr
+	 * @param mixed $default
+	 *
+	 * @return mixed
+	 */
+	function extractAttrib($attr, $default = null)
+	{
+		$ret = isset($this->_attribs[$attr]) ? $this->_attribs[$attr] : $default;
+		unset($this->_attribs[$attr]);
+		return $ret;
+	}
+
+	/**
+	 * 返回控件所有属性的值
+	 *
+	 * @return array
+	 */
+	function extractAttribs()
+	{
+		$ret = $this->_attribs;
+		$this->_attribs = array();
+		return $ret;
+	}
+
+	/**
+	 * 设置控件指定属性的值
+	 *
+	 * @param string $attr
+	 * @param mixed $value
+	 *
+	 * @return QUI_Control_Abstract
+	 */
+	function setAttrib($attr, $value)
+	{
+		$this->_attribs[$attr] = $value;
+		return $this;
+	}
+
+	/**
+	 * 设置控件多个属性的值
+	 *
+	 * @param array $attribs
+	 *
+	 * @return QUI_Control_Abstract
+	 */
+	function setAttribs(array $attribs)
+	{
+		$this->_attribs = array_merge($this->_attribs, $attribs);
+		return $this;
+	}
+
+	/**
+	 * 引发指定的事件
+	 *
+	 * @param enum $event
+	 * @param array $params
+	 *
+	 * @return mixed
+	 */
+	function handlingEvent($event, array $params = null)
+	{
+		return null;
+	}
+
+	/**
+	 * 渲染一个控件
+	 *
+	 * @param boolean $return
+	 *
+	 * @return mixed
+	 */
     abstract function render($return = false);
 
     /**
-     * 如果控件需要处理事件，则必须覆盖此方法
+     * 渲染一个控件
      *
-     * @param enum $event
-     * @param array $params
-     *
-     * @return mixed
-     */
-    function events($event, array $params = null)
-    {
-        return null;
-    }
-
-    /**
-     * 根据 ID 和 NAME 属性返回字符串
+     * @param string $type
+     * @param string $id
+     * @param array $attribs
      *
      * @return string
      */
-    protected function setIdName()
+    protected function _renderControl($type, $id = null, array $attribs = null)
     {
-        $out = '';
-        $name = $this->attr('name');
-        if (empty($name)) {
-            $name = $this->id;
-        }
-        $out .= 'name="' . htmlspecialchars($name) . '" ';
-        $out .= 'id="' . htmlspecialchars($this->id) . '" ';
-        unset($this->attribs['id']);
-        return $out;
+        return QUI::control($this->context, $type, $id, $attribs)->render(true);
     }
 
-    /**
-     * 根据 DISABLED 属性返回字符串
-     *
-     * @return string
-     */
-    protected function setDisabled()
-    {
-        $disabled = $this->attr('disabled');
-        return ($disabled) ? 'disabled="disabled" ' : '';
-    }
+	/**
+	 * 渲染指定的视图文件
+	 *
+	 * 渲染时，视图要使用的数据保存在控件的 $view 属性中。
+	 *
+	 * @param string $viewname
+	 * @param boolean $return
+	 *
+	 * @return string
+	 */
+	protected function _renderBlock($viewname, $return = false)
+	{
+	    if (!is_object($this->_view_adapter))
+	    {
+    		$adapter_class = is_null($this->_view_adapter_class)
+    		               ? $this->context->getIni('view_adapter')
+    		               : $this->_view_adapter_class;
+    		$adapter_obj_id = "webcontrols_{$adapter_class}";
 
-    /**
-     * 根据 CHECKED 属性返回字符串
-     *
-     * @return string
-     */
-    protected function setChecked()
-    {
-        $checked = $this->attr('checked');
-        if (empty($checked)) { return ''; }
+    		if (Q::isRegistered($adapter_obj_id))
+    		{
+    			/**
+    			 * @var QView_Adapter_Abstract
+    			 */
+    			$adapter = Q::registry($adapter_obj_id);
+    		}
+    		else
+    		{
+    			/**
+    			 * @var QView_Adapter_Abstract
+    			 */
+    			$adapter = new $adapter_class($this->context);
+    			Q::register($adapter, $adapter_obj_id);
+    		}
+	    }
+	    else
+	    {
+	        $adapter = $this->_view_adapter;
+	    }
 
-        if (!empty($this->attribs['value'])) {
-            if ($checked == $this->attribs['value']) {
-                return 'checked="checked" ';
-            } else {
-                return '';
-            }
-        } else {
-            return 'checked="checked" ';
-        }
-    }
+		$adapter->clear();
+		$adapter->assign($this->view);
+		$adapter->assign('_ctx', $this->context);
 
-    /**
-     * 尝试获得特定属性的值
-     *
-     * @param string $attr
-     * @param mixed $default
-     *
-     * @return mixed
-     */
-    protected function attr($attr, $default = null)
-    {
-        $value = isset($this->attribs[$attr]) ? $this->attribs[$attr] : $default;
-        unset($this->attribs[$attr]);
-        return $value;
-    }
+		$filename = QView::getControlViewFilename($this->context, $adapter, $viewname, $this->_controls_view_dir);
 
-    /**
-     * 构造控件的属性字符串
-     *
-     * @param array|string $exclude
-     *
-     * @return string
-     */
-    protected function attribsToString($exclude = array())
-    {
-        $exclude = Q::normalize($exclude);
-        $exclude = array_flip($exclude);
-        $out = '';
-        foreach ($this->attribs as $attrib => $value) {
-            if (isset($exclude[$attrib])) { continue; }
-            $out .= $attrib .'="' . str_replace('"', '\'', $value) . '" ';
-        }
-        return $out;
-    }
+		if ($return)
+		{
+			return $adapter->fetch($filename);
+		}
+		else
+		{
+			return $adapter->display($filename);
+		}
+	}
 
-    /**
-     * 将多维数组转换为一维数组
-     *
-     * @param array $items
-     * @param string $key
-     * @param string $caption
-     * @param boolean $key2caption
-     *
-     * @return boolean
-     */
-    protected function splitMultiDimArray(& $items, $key, $caption, $key2caption = false)
-    {
-        if ($caption == '') {
-            $first = reset($items);
-            if (!is_array($first)) {
-                // LC_MSG: 无效的 items 属性.
-                throw new QUI_Exception(__('无效的 items 属性.'));
-            }
-            next($first);
-            $caption = key($first);
-        }
+	/**
+	 * 为控件生成一个不重复的 ID，用于事件系统
+	 *
+	 * @return string
+	 */
+	static private function _uuid()
+	{
+		static $being_timestamp = 1206576000; // 2008-03-27
+		static $suffix_len = 3;
 
-        // 传入的 items 是一个多维数组
-        $new = array();
-        if ($key2caption) {
-            foreach ($items as $item) {
-                $new[$item[$key]] = $item[$caption];
-            }
-        } else {
-            foreach ($items as $item) {
-                $new[$item[$caption]] = $item[$key];
-            }
-        }
-        $items = $new;
-        return true;
-    }
+		$time = explode( ' ', microtime());
+		$id = ($time[1] - $being_timestamp) . sprintf('%06u', substr($time[0], 2, 6));
+		if ($suffix_len > 0) {
+			$id .= substr(sprintf('%010u', mt_rand()), 0, $suffix_len);
+		}
+		return $id;
+	}
 }

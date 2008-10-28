@@ -1,12 +1,4 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
 
 /**
  * 定义 QGenerator_Model 类
@@ -22,82 +14,82 @@
  */
 class QGenerator_Model extends QGenerator_Abstract
 {
-    /**
-     * 执行代码生成器
-     */
-    function execute(array $opts)
-    {
-        $model_name = array_shift($opts);
-        $table_name = array_shift($opts);
-        if (empty($model_name) || empty($table_name)) { return false; }
+	/**
+	 * 执行代码生成器
+	 */
+	function execute(array $opts)
+	{
+		$model_name = array_shift($opts);
+		$table_name = array_shift($opts);
+		if (empty($model_name) || empty($table_name)) { return false; }
 
-        if (strtolower(substr($table_name, 0, 6)) == 'table_') {
-            $table_class = $table_name;
-            $table_name = null;
-        } else {
-            $table_class = null;
+		// 确定模型的类名称
+		list($model_name, , $module) = $this->_splitName($model_name);
+
+        if ($module)
+        {
+            $dir = "{$this->root_dir}/modules/{$module}/model";
+        }
+        else
+        {
+            $dir = "{$this->root_dir}/app/model";
         }
 
+        $class_name = $this->_formatClassName($model_name);
+        $path = $this->_getClassFilePath($dir, $class_name);
 
-        $dir = ROOT_DIR . '/app/model';
-        $this->createDir($dir);
-        $filename = $dir . '/' . strtolower($model_name) . '.php';
-        $class_name = ucfirst($model_name);
+		// 确定控制器文件是否存在
+		if (is_file($path)) {
+			echo "Class '{$class_name}' declare file '{$path}' exists.\n";
+			return 0;
+		}
 
-        if (file_exists($filename)) {
-            echo "Class '{$class_name}' declare file '{$filename}' exists.\n";
-            return 0;
+		$content = $this->getCode($class_name, $table_name);
+		return $this->_createFile($path, $content);
+	}
+
+	/**
+	 * 生成代码
+	 */
+	function getCode($class_name, $table_name)
+	{
+        $arr = explode('.', $table_name);
+        if (isset($arr[1]))
+        {
+            $table_name = $arr[1];
+            $schema = $arr[0] . '.';
+        }
+        else
+        {
+            $table_name = $arr[0];
+            $schema = '';
         }
 
-        $content = $this->getCode($class_name, $table_class, $table_name);
-        if ($content == -1 || empty($content) || !file_put_contents($filename, $content)) {
-            return false;
-        } else {
-            $filename = str_replace('/', DS, $filename);
-            echo "Create file '{$filename}' successed.\n";
-            return true;
-        }
-    }
-
-    /**
-     * 生成代码
-     */
-    function getCode($class_name, $table_class, $table_name)
-    {
-        if ($table_class) {
-            // 首先尝试创建表数据入口的文件，然后再创建 Model 文件
-            require_once dirname(__FILE__) . DS . 'table.php';
-            $generator = new QGenerator_Table();
-            if ($generator->execute(array($table_name)) === false) {
-                return false;
-            }
-
-            // 尝试读取数据表的信息
-            Q::loadClass($table_class);
-            $table = new $table_class();
-            /* @var $table QDB_Table */
-        } else {
-            Q::loadClass('QDB_Table');
-            $params = array('table_name' => $table_name);
-            $table = new QDB_Table($params);
+        $dbo = QDB::getConn();
+        $prefix = $dbo->getTablePrefix();
+        if ($prefix && substr($table_name, 0, strlen($prefix)) == $prefix)
+        {
+            $table_name = substr($table_name, strlen($prefix));
         }
 
-        $table->connect();
-        $meta = $table->columns();
-        $pk = array();
-        foreach ($meta as $field) {
-            if ($field['pk']) {
-                $pk[] = $field['name'];
-            }
-        }
+        $table_name = "{$schema}{$table_name}";
+		$config = array('name' => $table_name);
+		$table = new QDB_Table($config);
 
-        $viewdata = array(
-            'class_name'  => $class_name,
-            'table_class' => $table_class,
-            'table_name'  => $table_name,
-            'meta'        => $meta,
-            'pk'          => $pk,
-        );
-        return $this->parseTemplate('model', $viewdata);
-    }
+		$meta = $table->columns();
+		$pk = array();
+		foreach ($meta as $field) {
+			if ($field['pk']) {
+				$pk[] = $field['name'];
+			}
+		}
+
+		$viewdata = array(
+			'class_name'  => $class_name,
+			'table_name'  => $table_name,
+			'meta'        => $meta,
+			'pk'          => $pk,
+		);
+		return $this->_parseTemplate('model', $viewdata);
+	}
 }

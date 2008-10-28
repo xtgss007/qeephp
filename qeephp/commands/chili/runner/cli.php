@@ -10,9 +10,6 @@
 
 /**
  * 定义 Chili_Runner_Cli 类
- *
- * @package chili
- * @version $Id$
  */
 
 /**

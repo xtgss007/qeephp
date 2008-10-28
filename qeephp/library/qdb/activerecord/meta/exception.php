@@ -12,7 +12,7 @@
  * 定义 QDB_ActiveRecord_Meta_Exception 异常
  *
  * @package database
- * @version $Id$
+ * @version $Id: exception.php 300 2008-04-14 06:16:13Z dualface $
  */
 
 /**

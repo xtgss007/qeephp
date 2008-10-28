@@ -22,118 +22,110 @@
  */
 class QDB_Transaction
 {
-    /**
-     * 数据库访问对象
-     *
-     * @var QDB_Adapter_Abstract
-     */
-    protected $dbo;
+	/**
+	 * 数据库访问对象
+	 *
+	 * @var QDB_Adapter_Abstract
+	 */
+	protected $_dbo;
 
-    /**
-     * 指示当前是否在事务中
-     *
-     * @var boolean
-     */
-    protected $in_transaction = true;
+	/**
+	 * 指示当前是否在事务中
+	 *
+	 * @var boolean
+	 */
+	protected $_in_transaction = true;
 
-    /**
-     * 是否将事务标记为已经失败
-     *
-     * @var boolean
-     */
-    protected $trans_failed = false;
+	/**
+	 * 是否将事务标记为已经失败
+	 *
+	 * @var boolean
+	 */
+	protected $_trans_failed = false;
 
-    /**
-     * 该事务对象使用的助手
-     *
-     * @var QDB_Transaction_Helper
-     */
-    protected $helper;
+	/**
+	 * 该事务对象使用的助手
+	 *
+	 * @var QDB_Transaction_Helper
+	 */
+	protected $_helper;
 
-    /**
-     * 事务的ID
-     *
-     * @var string
-     */
-    protected $id;
+	/**
+	 * 事务的ID
+	 *
+	 * @var string
+	 */
+	protected $_id;
 
-    /**
-     * 构造函数
-     *
-     * @param QDB_Adapter_Abstract $dbo
-     */
-    function __construct(QDB_Adapter_Abstract $dbo)
-    {
-        $this->dbo = $dbo;
-        $this->dbo->startTrans();
-        $this->id = $dbo->getID();
-        $this->helper = new QDB_Transaction_Helper($this);
+	/**
+	 * 构造函数
+	 *
+	 * @param QDB_Adapter_Abstract $dbo
+	 */
+	function __construct(QDB_Adapter_Abstract $dbo)
+	{
+		QDebug::dump(__METHOD__);
+		$this->_dbo = $dbo;
+		$this->_dbo->startTrans();
+		$this->_id = $dbo->getID();
+		$this->_helper = new QDB_Transaction_Helper($this->_trans_failed);
+	}
 
-        // #IFDEF DEBUG
+	/**
+	 * 析构函数
+	 */
+	function __destruct()
+	{
+		// $this->_helper->release();
+		unset($this->_helper);
+		$this->_helper = null;
+		QDebug::dump(__METHOD__);
+		if ($this->_trans_failed) {
+			$this->rollback();
+		} else {
+			$this->commit();
+		}
+	}
 
-        // #ENDIF
-    }
+	/**
+	 * 完成事务，根据事务期间的查询是否出错决定是提交还是回滚事务
+	 *
+	 * 如果 $commit_on_no_errors 参数为 true，当事务期间所有查询都成功完成时，则提交事务，否则回滚事务；
+	 * 如果 $commit_on_no_errors 参数为 false，则强制回滚事务。
+	 *
+	 * @param $commit_on_no_errors
+	 */
+	function commit($commit_on_no_errors = true)
+	{
+		if (!$this->_in_transaction) { return; }
+		$this->_dbo->completeTrans($commit_on_no_errors);
+		$this->_in_transaction = false;
+	}
 
-    /**
-     * 析构函数
-     */
-    function __destruct()
-    {
-        if ($this->trans_failed) {
-            $this->rollback();
-        } else {
-            $this->commit();
-        }
-    }
+	/**
+	 * 回滚事务
+	 */
+	function rollback()
+	{
+		if (!$this->_in_transaction) { return; }
+		$this->_dbo->completeTrans(false);
+		$this->_in_transaction = false;
+	}
 
-    /**
-     * 解除事务对象与助手对象的绑定
-     */
-    function unbindHelper()
-    {
-        unset($this->helper);
-        $this->helper = null;
-    }
+	/**
+	 * 指示在调用 complete_trans() 时回滚事务
+	 */
+	function setTransFailed()
+	{
+		$this->_trans_failed = true;
+		$this->_dbo->setTransFailed();
+	}
 
-    /**
-     * 完成事务，根据事务期间的查询是否出错决定是提交还是回滚事务
-     *
-     * 如果 $commit_on_no_errors 参数为 true，当事务期间所有查询都成功完成时，则提交事务，否则回滚事务；
-     * 如果 $commit_on_no_errors 参数为 false，则强制回滚事务。
-     *
-     * @param $commit_on_no_errors
-     */
-    function commit($commit_on_no_errors = true)
-    {
-        if (!$this->in_transaction) { return; }
-        $this->dbo->completeTrans($commit_on_no_errors);
-        $this->in_transaction = false;
-    }
-
-    /**
-     * 回滚事务
-     */
-    function rollback()
-    {
-        if (!$this->in_transaction) { return; }
-        $this->dbo->completeTrans(false);
-        $this->in_transaction = false;
-    }
-
-    /**
-     * 指示在调用 complete_trans() 时回滚事务
-     */
-    function setTransFailed()
-    {
-        $this->trans_failed = true;
-        $this->dbo->setTransFailed();
-    }
-
-    /**
-     * 确定事务过程中是否出现失败的查询
-     */
-    function hasFailedQuery()
-    {
-        return $this->dbo->hasFailedQuery();
-    }
+	/**
+	 * 确定事务过程中是否出现失败的查询
+	 */
+	function hasFailedQuery()
+	{
+		return $this->_dbo->hasFailedQuery();
+	}
 }

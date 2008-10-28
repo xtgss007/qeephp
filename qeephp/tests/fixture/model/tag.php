@@ -25,6 +25,7 @@ class Tag extends QDB_ActiveRecord_Abstract
                 'tag_id' => array('readonly' => true),
                 'contents' => array('many_to_many'   => 'Tag',
                                     'mid_table_name' => 'contents_has_tags',
+                                    'mid_source_key' => 'tag_name',
                                     'count_set_to'   => 'tags_count'),
             ),
 
@@ -47,12 +48,12 @@ class Tag extends QDB_ActiveRecord_Abstract
      *
      * @static
      *
-     * @return QDB_ActiveRecord_Select
+     * @return QDB_Select
      */
     static function find()
     {
         $args = func_get_args();
-        return QDB_ActiveRecord_Meta::getInstance(__CLASS__)->findArgs($args);
+        return QDB_ActiveRecord_Meta::instance(__CLASS__)->findByArgs($args);
     }
 
     /**
@@ -64,23 +65,11 @@ class Tag extends QDB_ActiveRecord_Abstract
      */
     static function meta()
     {
-        return QDB_ActiveRecord_Meta::getInstance(__CLASS__);
+        return QDB_ActiveRecord_Meta::instance(__CLASS__);
     }
 
 /* -------------------------------------------------------------------- */
 
-}
-
-class Tag_Null extends Tag
-{
-    function id() { return null; }
-    function setProps(array $props) {}
-    function save($force_create = false, $recursion = 99) {}
-    function reload($recursion = 1) {}
-    function validate($mode = 'general', $throw = false) {}
-    function destroy($recursion = 99) {}
-    protected function create($recursion = 99) {}
-    protected function update($recursion = 99) {}
 }
 
 class Tag_Exception extends QException

@@ -1,99 +1,16 @@
-sdfksdofsdf
-f
-sdf
-sdf<?php
-// $Id$
-
-/**
- * QeePHP Framework
- *
- * LICENSE
- *
- * This source file is subject to the new BSD license that is bundled
- * with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://qeephp.org/license/new-bsd
- *
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to supprt@qeeyuan.com so we can send you a copy immediately.
- *
- * Copyright (c) 2006-2008 QeeYuan Technologies Ltd. Inc. (http://www.qeeyuan.com)
- *
- */
+<?php
+// $Id: q.php 351 2008-05-01 17:47:05Z dualface $
 
 /**
  * @file
- * @mainpage
- * 
- * <b>QeePHP 是一个快速、灵活的开发框架。应用各种成熟的架构模式和创新的设计，帮助开发者提高开发效率、降低开发难度。</b>
+ * 定义 QeePHP 框架核心类
  *
- * 
- * <h3>API 手册主要内容：</h3>
- * 
- * API 手册按照功能划分为多个区域，分别是：
- * 
- * - @ref core
- *   - @ref config
- *   - @ref loader
- *   - @ref registry
- *   - @ref cache
- *   - @ref common
- * - @ref mvc
- *   - @ref application
- *   - @ref controller
- *   - @ref helper
- *   - @ref response
- * - @ref view
- *   - @ref template
- *   - @ref webcontrols
- *   - @ref ajax
- * - @ref database
- *   - @ref connection
- *   - @ref adapter
- *   - @ref select
- *   - @ref table
- *   - @ref activerecord
+ * @ingroup core
  *
- * <hr>
- *  
- * <h3>QeePHP 主要目标：</h3>
- * 
- * QeePHP 的主要目标是为开发者创建更复杂、更灵活、更大规模的 Web 应用程序提供一个基础解决方案。 
- * 
- * 运用 QeePHP 创建应用程序，开发者可以获得更高的开发效率，并且更容易保持应用程序良好的整体架构和细节实现，
- * 同时为今后的扩展提供了充分的灵活性。
- *  
- * 
- * <h3>QeePHP 的主要特征包括：</h3>
- * 
- * - 完全“面向接口”架构；
- * - 具有一个微内核。该内核提供各种基础服务，帮助开发者将各个组件组装起来形成完整的应用程序；
- * - 简单易用、功能强大、高性能的数据库抽象层和表数据入口； 
- * - 为面向对象应用量身订造的 ActiveRecord 实现，让 PHP 应用程序充分利用面向对象技术带来的优势； 
- * - WebControls 机制，提供了将用户界面组件化的能力，帮助开发者创建复杂易用的用户界面； 
- * - 支持多种流行的模板引擎，保护开发者现有的知识和技能；
- * - 基于角色的访问控制，以及高度可定制的访问控制组件；
- * - 丰富的辅助功能，解决开发中最常见的问题；
- * - 采用限制最少的 BSD 协议，让企业可以充分利用 QeePHP 带来的利益。
- *  
- * 
- * <h3>QeePHP 拥有丰富的文档和活跃的社区：</h3>
- * 
- * - 完全中文化的文档，最大程度降低中文开发者的学习成本；
- * - 活跃的社区，让开发者可以自由交流，并且及时获得帮助。
- * 
- * 
- * <h3>QeePHP 与 FleaPHP 的关系：</h3>
- * 
- * - QeePHP 是起源科技在成功研发 FleaPHP，并推广应用后。总结经验，并且运用各种最新技术开发的新一代框架。
- * QeePHP 充分利用 PHP5 的优势，为企业和开发者提供标准化、规范化、可控制的开发基础平台。
- * 
- * 详情请访问 http://qeephp.org/
- * 
- * @addtogroup core 框架核心
  * @{
  */
+
+if (defined('Q_VERSION')) { return; }
 
 //! QeePHP 框架的版本号
 define('Q_VERSION', '2.0');
@@ -104,14 +21,16 @@ define('Q_DIR', dirname(__FILE__));
 //! DIRECTORY_SEPARATOR 的简写
 define('DS', DIRECTORY_SEPARATOR);
 
+//! CURRENT_TIMESTAMP 定义为当前时间，减少框架调用 time() 的次数
+define('CURRENT_TIMESTAMP', time());
+
+// 设置对象的自动载入
 Q::import(Q_DIR);
 spl_autoload_register(array('Q', 'loadClass'));
-Q::setIni(require(Q_DIR . '/_config/default_config.php'));
-
 
 /**
  * 类 Q 提供 QeePHP 框架的基本服务
- * 
+ *
  * 包括：
  *   - @ref config
  *   - @ref loader
@@ -121,12 +40,13 @@ Q::setIni(require(Q_DIR . '/_config/default_config.php'));
  */
 abstract class Q
 {
+
     /**
-     * 配置存储容器
-     *
-     * @var array
+     * 指示应用程序运行模式
      */
-    private static $_config = array();
+    const RUN_MODE_DEVEL    = 'devel';
+    const RUN_MODE_DEPLOY   = 'deploy';
+    const RUN_MODE_TEST     = 'test';
 
     /**
      * 对象注册表
@@ -142,223 +62,114 @@ abstract class Q
      */
     private static $_class_path = array();
 
-    /** 
-     * @addtogroup config 配置管理
-     * @ingroup core
-     * 
-     * QeePHP 提供一组接口，让框架和应用程序可以处理不同来源的配置信息。
-     * 
-     * 不管配置信息的来源是什么，所有的配置信息都会被保存在一个内部的配置存储容器中。
-     * 然后框架和应用程序可以利用 Q::getIni() 、 Q::setIni() 等方法读取或修改容器中的配置信息。
-     * 
-     * @{
-     */
-    
     /**
-     * 获取指定的配置内容
-     * 
-     * $option 参数指定要获取的设置名。
-     * 如果指定名称的设置不存在，则返回由 $default 参数指定的值。
-     * 
-     * @code
-     * $option_value = Q::getIni('my_option');
-     * @endcode
-     * 
-     * 对于层次化的配置信息（类似 PHP 的嵌套数组），可以通过在 $option 中使用“/”符号来指定。
-     * 
-     * 例如有一个名为 option_group 的设置项，其中包含三个子项目。现在要查询其中的 my_option 设置项的内容。
-     * 
-     * @code
-     * // +--- option_group
-     * //    +-- my_option  = this is my_option 
-     * //    +-- my_option2 = this is my_option2
-     * //    \-- my_option3 = this is my_option3
-     * 
-     * // 查询 option_group 设置组里面的 my_option 项
-     * $option_value = Q::getIni('option_group/my_option');
-     * 
-     * // 将会显示 this is my_option
-     * echo $option_value;
-     * 
-     * @endcode
-     * 
-     * 要读取更深层次的设置项，可以使用更多的“/”符号。但太多层次会导致读取速度变慢。
-     * 
-     * 如果要获得所有设置项的内容，将 $option 参数指定为 '/' 即可：
-     * 
-     * @code
-     * // 获取所有设置项的内容
-     * $all = Q::getIni('/');
-     * @endcode
+     * 获取指定模块的配置内容
+     *
+     * 具体用法请参考 QContext::getIni() 方法。
+     *
+     * $module_name 参数为 null 或 app 时，则表示读取全局设置。
      *
      * @param string $option
      *   要获取设置项的名称
      * @param mixed $default
      *   当设置不存在时要返回的设置默认值
+     * @param string $module_name
+     *   要从哪一个模块读取设置
+     *
      * @return mixed
      *   返回设置项的值
      */
-    static final function getIni($option, $default = null)
+    static final function getIni($option, $default = null, $module_name = null)
     {
-        if ($option == '/') {
-            return self::$_config;
-        }
-        if (strpos($option, '/') === false) {
-            return isset(self::$_config[$option]) ? self::$_config[$option] : $default;
-        }
-        $parts = explode('/', $option);
-        $pos =& self::$_config;
-        foreach ($parts as $part) {
-            if (!isset($pos[$part])) { return $default; }
-            $pos =& $pos[$part];
-        }
-        return $pos;
+        return QContext::instance($module_name)->getIni($option, $default);
     }
 
     /**
-     * 修改指定配置的内容
+     * 修改指定模块配置的内容
      *
-     * 当 $option 参数是字符串时，$option 指定了要修改的设置项，$data 则是要为该设置项指定的新数据。
-     * 
-     * @code
-     * // 修改一个设置项
-     * Q::setIni('option_group/my_option2', 'new value');
-     * @endcode
-     * 
-     * 如果 $option 是一个数组，则假定要修改多个设置项。那么 $option 则是一个由设置项名称和设置值组成的名值对，
-     * 或者是一个嵌套数组。
-     * 
-     * @code
-     * // 修改多个设置项
-     * $arr = array(
-     *      'option_1' => 'value 1',
-     *      'option_2' => 'value 2',
-     *      'option_group/my_option3' => 'new value', 
-     * );
-     * Q::setIni($arr);
-     * 
-     * // 修改多个设置项，以及 option_group 中的多个设置项 
-     * $arr = array(
-     *      'option_group' => array(
-     *          'my_option'  => '1',
-     *          'my_option2' => '2',
-     *      ),
-     *      'option_1' => 'value 1',
-     *      'option_2' => 'value 2',
-     * );
-     * Q::setIni($arr); 
-     * @endcode
-     * 
-     * 在修改包含子项目的设置项时，不管使用哪种方式，都不会清空设置项的所有内容，而只是替换要修改的内容。
-     * 因此如果要清空某个设置项，应该使用 Q::unsetIni() 方法。
-     * 
+     * 具体使用方法请参考 QContext::setIni()。
+     *
+     * $module_name 参数为 null 或 app 时，则表示修改全局设置。
+     *
      * @param string $option
      *   要修改的设置项名称，或包含多个设置项目的数组
      * @param mixed $data
      *   指定设置项的新值
+     * @param string $module_name
+     *   要修改哪一个模块的设置
      */
-    static final function setIni($option, $data = null)
+    static final function setIni($option, $data = null, $module_name = null)
     {
-        if (is_array($option)) {
-            foreach ($option as $key => $value) {
-                self::setIni($key, $value);
-            }
-            return;
-        }
-        
-        if (!is_array($data)) {
-            if (strpos($option, '/') === false) {
-                self::$_config[$option] = $data;
-                return;
-            }
-            
-            $parts = explode('/', $option);
-            $max = count($parts) - 1;
-            $pos =& self::$_config;
-            for ($i = 0; $i <= $max; $i++) {
-                $part = $parts[$i];
-                if ($i < $max) {
-                    if (!isset($pos[$part])) {
-                        $pos[$part] = array();
-                    }
-                    $pos =& $pos[$part];
-                } else {
-                    $pos[$part] = $data;
-                }
-            }
-            return;
-        }
-        
-        foreach ($data as $key => $value) {
-            self::setIni($option . '/' . $key, $value);
-        }
+        QContext::instance($module_name)->setIni($option, $data);
     }
-    
+
     /**
      * 删除指定的配置
-     * 
-     * $option 参数的用法同 Q::getIni() 和 Q::setIni()。
-     * 
+     *
+     * $option 和 $module_name 参数的用法同 QContext::getIni() 和 QContext::setIni()。
+     *
      * @param mixed $option
      *   要删除的设置项名称
+     * @param string $module_name
+     *   要修改哪一个模块的设置
      */
-    static final function unsetIni($option)
+    static final function unsetIni($option, $module_name = null)
     {
-        if (strpos($option, '/') === false) {
-            unset(self::$_config[$option]);
-        } else {
-            $parts = explode('/', $option);
-            $max = count($parts) - 1;
-            $pos =& self::$_config;
-            for ($i = 0; $i <= $max; $i++) {
-                $part = $parts[$i];
-                if ($i < $max) {
-                    if (!isset($pos[$part])) {
-                        $pos[$part] = array();
-                    }
-                    $pos =& $pos[$part];
-                } else {
-                    unset($pos[$part]);
-                }
-            }
-        }
+        QContext::instance($module_name)->unsetIni($option);
     }
 
     /* @} */
-    
+
     /**
      * @addtogroup loader 类和文件的载入
      * @ingroup core
-     * 
-     * QeePHP 为管理大量类提供了便捷手段，帮助开发者更好得组织应用程序的目录结构。
-     * 
-     * 当 QeePHP 运行过程中需要构造某个尚未载入定义的对象时，会尝试自动加载类的定义文件。
+     *
+     * QeePHP 为管理大量类提供了便捷手段，帮助开发者更好地组织应用程序的目录结构。
+     *
+     * 当 QeePHP 运行过程中需要构造某个尚未定义的对象时，会尝试自动加载类的定义文件。
      * 这种能力既可以简化开发，又可以实现“按需加载”，从而避免无谓的性能影响。
      *
+     * <h3>用包来组织大量的类</h3>
+     *
      * 要充分利用 QeePHP 提供的类载入机制，需要按照特定的规则对类以及类定义文件进行命名：
-     * 
-     * - 组成类名称的多个单词之间以“_”符号分隔，例如 QDB_Table、Controller_Posts；
-     * - 将类名称中的“_”符号替换为目录分隔符，再加上“.php”就是类定义文件的存储结构；
-     * - 类定义文件的文件名及其目录名全部为小写。
-     * 
-     * 例如 QDB_Table 这个类的定义文件存储结构是 qdb/table.php，
-     * 而 Controller_Posts 的定义文件存储结构是 controller/posts.php。
-     * 
-     * 在命名时，建议按照“所属模块_名称_类型”的规则来进行。
-     * 
+     *
+     * <ul>
+     *   <li>组成类名称的多个单词之间以“_”（下划线）分隔，例如 QDB_Table、Controller_Posts；</li>
+     *   <li>将类名称中的“_”（下划线）符号替换为目录分隔符，再加上“.php”就是类定义文件的存储路径；</li>
+     *   <li>类定义文件的文件名及其目录名全部为小写。</li>
+     * </ul>
+     *
+     * 例如 QDB_Table 这个类的定义文件存储路径是 qdb/table.php，
+     * 而 Controller_Posts 的定义文件存储路径是 controller/posts.php。
+     *
+     * 在命名时，建议按照“所属包_名称_类型”的规则来进行。
+     *
      * 例如：
-     * 
-     * - QDB_Table 这个类名称表示该类属于“QDB”模块，而“Table”则是类的名称；
-     * - QDB_ActiveRecord_Abstract 这个类名称在模块名和名称后面附加了类型“Abstract”，
-     *   表示该类是一个抽象类（abstract）；
-     * - 同理，QDB_ActiveRecord_Interface 表示该类是一个接口（interface）。
-     * 
-     * 对于模块和子模块，类名称应该反应出这种模块间的结构关系。如 QDB_ActiveRecord_Behavior_Abstract 
-     * 表示该类属于“QDB/ActiveRecord”模块，类型是抽象类。
-     * 
-     * 只要掌握了这种命名方式，就可以很容易的将大量类合理的组织起来，为简化应用程序的开发、
-     * 维护提供一个良好的基础。
-     * 
+     *
+     * <ul>
+     *   <li>QDB_Table 这个类名称表示该类属于 QDB 包，而 Table 则是类的名称；</li>
+     *   <li>QDB_ActiveRecord_Abstract 这个类名称在包名和名称后面附加了类型 Abstract，
+     *   表示该类是一个抽象类（abstract）；</li>
+     *   <li>同理，QDB_ActiveRecord_Interface 表示该类是一个接口（interface）。</li>
+     * </ul>
+     *
+     * 对于包和子包，类名称应该反应出这种包间的结构关系。
+     * 如 QDB_ActiveRecord_Behavior_Abstract 表示该类属于 QDB/ActiveRecord 包。
+     *
+     * 只要掌握了这种命名方式，就可以很容易的将大量类合理的组织起来，
+     * 为简化应用程序的开发、维护提供一个良好的基础。
+     *
+     * <h3>使用模块</h3>
+     *
+     * 在 QeePHP 中，模块是一个逻辑上的子系统。每个模块都有自己的控制器、模型、视图等内容。
+     * 模块放置在应用程序的 modules 目录的一个子目录中。子目录名就是模块名。
+     * 例如 /modules/cms/ 目录中的模块名为 cms。
+     *
+     * 在一个模块中，类名称不需要添加特定前缀。因此在命名时，应该尽量避免多个模块之间的命名冲突。
+     * 幸运的是由于 PHP 的脚本语言特性，只要不同时载入两个同名的类，就不会发生错误。
+     *
+     * QeePHP 中使用一个模块是非常容易的，可以利用 Q::loadClass()、Q::getSingleton() 等方法来使用模块中的类。
+     *
      * @{
      */
 
@@ -369,52 +180,109 @@ abstract class Q
      * Q::loadClass('Table_Posts');
      * @endcode
      *
-     * Q::loadClass() 会按照
-     *  
-     * 在查找类定义文件时，类名称中的“_”会被替换为目录分隔符，
-     * 从而确定类名称和类定义文件的映射关系 (例如：Table_Posts 的定义文件为 table/posts.php)
+     * 在查找类定义文件时，类名称中的“_”（下划线）会被替换为目录分隔符，从而确定类定义文件的存储路径。
      *
-     * loadClass() 会首先尝试从开发者指定的搜索路径中查找类的定义文件。
-     * 搜索路径可以用 Q::import() 添加。
+     * 为了能够适应复杂应用程序的需求，Q::loadClass() 会按照两种方式在特定的目录中查找类定义文件。
      *
-     * @param string $className 要载入的类名字
+     * <ul>
+     *   <li>
+     *   如果没有提供 $dirs 参数，Q::loadClass() 会按照 QeePHP 内部的一个“类载入路径”来查找指定类的定义文件；
+     *
+     *   “类载入路径”是 QeePHP 内部的一个目录列表，确定了 Q::loadClass() 会自动到哪些目录中去查找类定义文件。
+     *   当 Q::loadClass() 查找类定义文件时，首先将类名称中的“_”（下划线）替换为目录分隔符，
+     *   然后按照“类载入路径”一个个目录的去查找类定义文件。
+     *
+     *   <ul>
+     *     <li>假设当前的“类载入路径”为 /www/mysite/app 和 /www/mysite/lib/qeephp；</li>
+     *     <li>要载入 QDB_ActiveRecord_Meta 类；</li>
+     *     <li>Q::loadClass() 首先从 QDB_ActiveRecord_Meta 类名称获得定义文件的存储路径为 qdb/activerecord/meta.php；</li>
+     *     <li>Q::loadClass() 接下来会尝试读取 /www/mysite/app/qdb/activerecord/meta.php 和
+     *     /www/mysite/lib/qeephpqdb/activerecord/meta.php 文件。</li>
+     *   </ul>
+     *
+     *   从这个搜索过程可以看出，“类搜索路径”确定了类定义文件所在的父级目录，而类定义文件的确切存储位置是根据
+     *   “类搜索路径”和类名称来确定的。可以使用 Q::import() 方法来添加更多的目录到 QeePHP 内部的“类搜索路径”中。
+     *   </li>
+     *
+     *   <li>如果提供了 $dirs 参数，则忽略 QeePHP 内部的“类搜索路径”，而是按照 $dirs 参数指定的“搜索路径”来查找类定义文件。</li>
+     * </ul>
+     *
+     * $dirs 参数可以是一个以 PATH_SEPARATOR 常量分隔的字符串，也可以是一个包含多个目录名的数组。
+     *
+     * @code
+     * Q::loadClass('Table_Posts', array('/www/mysite/app', '/www/mysite/lib'));
+     * @endcode
+     *
+     * 如果要载入特定模块的一个类，可以在类名称后面添加 "@模块名" 来指定，例如：
+     *
+     * @code
+     * // 载入 CMS 模块的 Post 类
+     * Q::loadClass('Post@cms');
+     * @endcode
+     *
+     * 模块名是不区分大小写的，但建议使用全小写的模块名。
+     *
+     * @param string $className
+     *   要载入的类
      * @param string|array $dirs
+     *   指定载入类的搜索路径
      */
     static final function loadClass($class_name, $dirs = null)
     {
-        if (class_exists($class_name, false) || interface_exists($class_name, false)) {
+        if (class_exists($class_name, false) || interface_exists($class_name, false))
+        {
             return;
         }
 
         $class_name = strtolower($class_name);
+        if (strpos($class_name, '@') !== false)
+        {
+            list ($class_name, $module_name) = explode('@', $class_name);
+            QContext::instance($module_name);
+        }
         $filename = str_replace('_', DS, $class_name);
 
-        if ($filename != $class_name) {
+        if ($filename != $class_name)
+        {
             $dirname = dirname($filename);
-            if (!empty($dirs)) {
-                if (!is_array($dirs)) {
-                    if (empty($dirs)) {
+            if (! empty($dirs))
+            {
+	            if (! is_array($dirs))
+                {
+    				if (empty($dirs))
+                    {
                         $dirs = array();
-                    } else {
+                    }
+                    else
+                    {
                         $dirs = explode(PATH_SEPARATOR, $dirs);
                     }
                 }
-                foreach ($dirs as $offset => $dir) {
+                foreach ($dirs as $offset => $dir)
+                {
                     $dirs[$offset] = $dir . DS . $dirname;
                 }
-            } else {
+            }
+            else
+            {
                 $dirs = array();
-                foreach (self::$_class_path as $dir) {
-                    if ($dir == '.') {
+                foreach (self::$_class_path as $dir)
+                {
+                    if ($dir == '.')
+                    {
                         $dirs[] = $dirname;
-                    } else {
+                    }
+                    else
+                    {
                         $dir = rtrim($dir, '\\/');
                         $dirs[] = $dir . DS . $dirname;
                     }
                 }
             }
             $filename = basename($filename) . '.php';
-        } else {
+        }
+        else
+        {
             $dirs = self::$_class_path;
             $filename .= '.php';
         }
@@ -423,140 +291,174 @@ abstract class Q
     }
 
     /**
-     * 载入指定名称的第三方库
+     * 添加一个类搜索路径
      *
-     * @param string $name
-     */
-    static final function loadVendor($name)
-    {
-        Q::loadFile($name . '.php', true, (array)self::getIni('runtime_vendor_dirs'));
-    }
-    
-    /**
-     * 导入文件搜索路径
+     * 如果需要载入的类没有在 QeePHP 和应用程序的默认目录中，必须使用 Q::import() 添加类定义文件所在目录到“类搜索路径”中。
+     * 这样 Q::loadClass() 才能找到类定义文件。
      *
-     * 在使用 loadClass() 时，会通过 import() 指定的搜索路径查找类定义文件。
+     * 要注意，Q::import() 添加的路径和类名称有关系。
      *
-     * 当 loadClass('Service_Products') 时，由于类名称映射出来的类定义文件已经包含了目录名
-     * （Service_Products 映射为 Service/Products.php）。
-     * 所以只能将 Service 子目录所在目录添加到搜索路径，而不是直接将 Service 目录添加到搜索路径。
+     * 例如类的名称为 Vendor_Smarty_Adapter，那么该类的定义文件存储结构就是 vendor/smarty/adapter.php。
+     * 因此在用 Q::import() 添加 Vendor_Smarty_Adapter 类的搜索路径时，只能添加 vendor/smarty/adapter.php 的父目录。
      *
-     * example:
-     * <code>
-     * // 假设要载入的文件完整路径为 /www/app/Service/Products.php
+     * @code
      * Q::import('/www/app');
-     * Q::loadClass('Service_Products');
-     * </code>
+     * Q::loadClass('Vendor_Smarty_Adapter');
+     * // 实际载入的文件是 /www/app/vendor/smarty/adapter.php
+     * @endcode
      *
      * @param string $dir
+     *   要添加的搜索路径
      */
     static final function import($dir)
     {
-        if (!isset(self::$_class_path[$dir]) || !is_dir($dir)) {
-            self::$_class_path[$dir] = realpath($dir);
+        if (! isset(self::$_class_path[$dir]))
+        {
+            self::$_class_path[$dir] = $dir;
         }
     }
-    
+
     /**
      * 载入特定文件，并检查是否包含指定类的定义
      *
+     * 该方法从 $dirs 参数提供的目录中查找并载入 $filename 参数指定的文件。
+     * 然后检查该文件是否定义了 $class_name 参数指定的类。
+     *
+     * 如果没有找到指定类，则抛出异常。
+     *
+     * @code
+     * Q::loadClassFile('Smarty.class.php', $dirs, 'Smarty');
+     * @endcode
+     *
      * @param string $filename
+     *   要载入文件的文件名（含扩展名）
      * @param string|array $dirs
+     *   文件的搜索路径
      * @param string $class_name
+     *   要检查的类
      */
     static final function loadClassFile($filename, $dirs, $class_name)
     {
-        if (class_exists($class_name, false) || interface_exists($class_name, false)) {
+        if (class_exists($class_name, false) || interface_exists($class_name, false))
+        {
             return;
         }
-        Q::loadFile($filename, true, $dirs);
-        if (!class_exists($class_name, false) && !interface_exists($class_name, false)) {
-            // LC_MSG: %s "%s" not defined in file "%s".
-            throw new QException(__('Class "%s" not defined in file "%s".', $class_name, $filename));
+        Q::loadFile($filename, $dirs);
+        if (!class_exists($class_name, false) && ! interface_exists($class_name, false))
+        {
+            throw new QException_ClassNotDefined($class_name, $filename);
         }
     }
-    
+
     /**
      * 载入指定的文件
      *
-     * $filename 参数必须是一个包含扩展名的完整文件名。
-     * loadFile() 会首先从 $dirs 参数指定的路径中查找文件，
-     * 找不到时再从 PHP 的 include_path 搜索路径中查找文件。
+     * 该方法从 $dirs 参数提供的目录中查找并载入 $filename 参数指定的文件。
+     * 如果文件不存在，则根据 $throw 参数决定是否抛出异常。
      *
-     * $once 参数指示同一个文件是否只载入一次。
+     * @code
+     * Q::loadFile('my_file.php', $dirs);
+     * @endcode
      *
-     * @param string $filename 要载入的文件名
-     * @param boolean $once 指示对于同一个文件是否只载入一次
-     * @param array $dirs 搜索目录
-     * @param boolean $throw 在找不到文件时是否抛出异常
+     * @param string $filename
+     *   要载入文件的文件名（含扩展名）
+     * @param array $dirs
+     *   文件的搜索路径
+     * @param boolean $throw
+     *   在找不到文件时是否抛出异常
      *
      * @return mixed
      */
-    static final function loadFile($filename, $once = false, $dirs = null, $throw = true)
+    static final function loadFile($filename, $dirs = null, $throw = true)
     {
-        static $loaded = array();
-
-        $id = $filename . implode(':', (array)$dirs);
-
-        if ($once && isset($loaded[$id])) { return null; }
-        if (preg_match('/[^a-z0-9\-_.]/i', $filename)) {
-            // LC_MSG: Security check: Illegal character in filename "%s".
-            throw new QException(__('Security check: Illegal character in filename "%s".', $filename));
+        if (preg_match('/[^a-z0-9\-_.]/i', $filename))
+        {
+            throw new QException_IllegalFilename($filename);
         }
 
-        if (is_null($dirs)) {
+        if (is_null($dirs))
+        {
             $dirs = array();
-        } elseif (is_string($dirs)) {
+        }
+        elseif (is_string($dirs))
+        {
             $dirs = explode(PATH_SEPARATOR, $dirs);
         }
-        foreach ($dirs as $dir) {
+        foreach ($dirs as $dir)
+        {
             $path = rtrim($dir, '\\/') . DS . $filename;
-            if (self::isReadable($path)) {
-                if ($once) {
-                    $loaded[$id] = true;
-                    return include_once $path;
-                } else {
-                    return include $path;
-                }
+            if (is_file($path))
+            {
+                return include $path;
             }
         }
 
-        // include 会在 include_path 中寻找文件
-        if (self::isReadable($filename)) {
-            if ($once) {
-                $loaded[$id] = true;
-                return include $filename;
-            } else {
-                return include $filename;
-            }
-        }
-
-        if ($throw) {
-            // LC_MSG: File "%s" not found.
-            throw new QException(__('File "%s" not found.', $filename));
+        if ($throw)
+        {
+            throw new QException_FileNotFound($filename);
         }
 
         return false;
     }
-    
+
     /* @} */
-    
+
     /**
      * @addtogroup registry 对象注册表
      * @ingroup core
+     *
+     * 对象注册表为管理大量对象提供了方便。
+     *
+     * 开发者可以将对象实例登记到对象注册表中，并在后续的执行过程中从注册表中查找登记的对象。
+     * 对于一些不需要多次构造的对象，这种方式可以避免不必要的对象构造操作，提高性能。
+     *
      * @{
      */
 
     /**
-     * 返回指定对象的唯一实例，如果指定类无法载入或不存在，则抛出异常
+     * 返回指定对象的唯一实例，如果该对象的类定义无法载入则抛出异常
      *
-     * @param string $class_name 要获取的对象的类名字
+     * Q::getSingleton() 完成下列工作：
+     *
+     * <ul>
+     *   <li>在对象注册表中查找指定类名称的对象实例是否存在；</li>
+     *   <li>如果存在，则返回该对象实例；</li>
+     *   <li>如果不存在，则载入类定义文件，并构造一个对象实例；</li>
+     *   <li>将新构造的对象以类名称作为对象名登记到对象注册表；</li>
+     *   <li>返回查找到的对象实例或新构造的对象实例。</li>
+     * </ul>
+     *
+     * 使用 Q::getSingleton() 的好处在于不管在应用程序有多少个地方需要用到同一个对象，都只需要构造一次对象：
+     *
+     * @code
+     * // 在位置 A 处使用对象 My_Object
+     * $obj = Q::getSingleton('My_Object');
+     * ...
+     * ...
+     * // 在位置 B 处使用对象 My_Object
+     * $obj2 = Q::getSingleton('My_Object');
+     * // $obj 和 $obj2 都是指向同一个对象实例，避免了多次构造，提高了性能
+     * @endcode
+     *
+     * 如果要实例化特定模块的一个类，可以在类名称后面添加 "@模块名" 来指定，例如：
+     *
+     * @code
+     * // 获得 HTML 模块 Helper_Render 类的一个实例
+     * Q::getSingleton('Helper_Render@html');
+     * @endcode
+     *
+     * 模块名是不区分大小写的，但建议使用全小写的模块名。
+     *
+     * @param string $class_name
+     *   要获取的对象的类名字
      *
      * @return object
+     *   返回对象实例
      */
     static final function getSingleton($class_name)
     {
-        if (isset(self::$_objects[$class_name])) {
+        if (isset(self::$_objects[$class_name]))
+        {
             return self::$_objects[$class_name];
         }
         self::loadClass($class_name);
@@ -564,28 +466,11 @@ abstract class Q
     }
 
     /**
-     * 获得指定名字的服务对象实例
+     * 以特定名字在对象注册表中登记一个对象
      *
-     * @param string $service_name
+     * 开发者可以将一个对象登记到对象注册表中，以便在应用程序其他位置使用 Q::registry() 来查询该对象。
+     * 登记时，如果没有为对象指定一个名字，则以对象的类名称作为登记名。
      *
-     * @return object
-     */
-    static final function getService($service_name)
-    {
-        $class_name = self::getIni('service_' . strtolower($service_name));
-        if (empty($class_name)) {
-            // LC_MSG: 未配置的服务名 "%s".
-            throw new QException(__('未配置的服务名 "%s".', $service_name));
-        }
-
-        return self::getSingleton($class_name);
-    }
-
-    /**
-     * 以特定名字注册一个对象，以便稍后用 registry() 方法取回该对象。
-     * 如果指定名字已经被使用，则抛出异常
-     *
-     * example:
      * @code
      * // 注册一个对象
      * Q::register(new MyObject(), 'MyObejct');
@@ -594,41 +479,43 @@ abstract class Q
      * $obj = Q::regitry('MyObject');
      * @endcode
      *
-     * QEE 提供一个对象注册表，开发者可以将一个对象以特定名称注册到其中。
-     * 当没有提供 $name 参数时，则以对象的类名称作为注册名。
+     * 当 $persistent 参数为 true 时，对象将被放入持久存储区。
+     * 在下一次执行脚本时，可以通过 Q::registry() 取出放入持久存储区的对象，并且无需重新构造对象。
      *
-     * 当 $persistent 参数为 true 时，对象将被放入持久存储区。在下一次执行脚本时，
-     * 可以通过 Q::registry() 取出放入持久存储区的对象，无需重新构造对象。
      * 利用这个特性，开发者可以将一些需要大量构造时间的对象放入持久存储区，
      * 从而避免每一次执行脚本都去做对象构造操作。
      *
      * 使用哪一种持久化存储区来保存对象，由配置 object_persistent_provier 决定。
      * 该设置指定一个提供持久化服务的对象名。
      *
-     * example:
      * @code
      * if (!Q::isRegistered('ApplicationObject')) {
      *      Q::loadClass('Application');
-     *      Q::registry(new Application(), 'ApplicationObject', true);
+     *      Q::registry(MyApp::instance(), 'ApplicationObject', true);
      * }
      * $app = Q::registry('ApplicationObject');
      * @endcode
      *
-     * @param object $obj 要注册的对象
-     * @param string $name 注册的名字
-     * @param boolean $persistent 是否将对象放入持久化存储区
+     * @param object $obj
+     *   要登记的对象
+     * @param string $name
+     *   用什么名字登记
+     * @param boolean $persistent
+     *   是否将对象放入持久化存储区
      *
      * @return object
      */
     static final function register($obj, $name = null, $persistent = false)
     {
-        if (!is_object($obj)) {
+        if (! is_object($obj))
+        {
             // LC_MSG: Type mismatch. $obj expected is object, actual is "%s".
             throw new QException(__('Type mismatch. $obj expected is object, actual is "%s".', gettype($obj)));
         }
 
         // TODO: 实现对 $persistent 参数的支持
-        if (is_null($name)) {
+        if (is_null($name))
+        {
             $name = get_class($obj);
         }
         self::$_objects[$name] = $obj;
@@ -636,15 +523,26 @@ abstract class Q
     }
 
     /**
-     * 取得指定名字的对象实例，如果指定名字的对象不存在则抛出异常
+     * 查找指定名字的对象实例，如果指定名字的对象不存在则抛出异常
+     *
+     * @code
+     * // 注册一个对象
+     * Q::register(new MyObject(), 'MyObejct');
+     * .....
+     * // 稍后取出对象
+     * $obj = Q::regitry('MyObject');
+     * @endcode
      *
      * @param string $name
+     *   要查找对象的名字
      *
      * @return object
+     *   查找到的对象
      */
     static final function registry($name)
     {
-        if (isset(self::$_objects[$name])) {
+        if (isset(self::$_objects[$name]))
+        {
             return self::$_objects[$name];
         }
         // LC_MSG: No object is registered of name "%s".
@@ -655,65 +553,138 @@ abstract class Q
      * 检查指定名字的对象是否已经注册
      *
      * @param string $name
+     *   要检查的对象名字
      *
      * @return boolean
+     *   对象是否已经登记
      */
     static final function isRegistered($name)
     {
         return isset(self::$_objects[$name]);
     }
-    
+
     /* @} */
-    
+
     /**
      * @addtogroup cache 缓存服务
      * @ingroup core
+     *
+     * QeePHP 提供了多样化的缓存服务，并且在框架核心提供了一个统一的接口，让开发者能够用一致的方式使用缓存服务。
+     *
+     * <ul>
+     *   <li>Q::getCache() 尝试读取指定的缓存，成果返回缓存内容，失败返回 false；</li>
+     *   <li>Q::setCache() 将内容写入指定的缓存；</li>
+     *   <li>Q::removeCache() 删除指定的缓存数据。</li>
+     * </ul>
+     *
+     * 这三个全局缓存方法，让开发者可以根据需要选择不同的缓存策略和缓存服务。
+     *
+     * @code
+     * if (!($data = Q::getCache($cache_id))) {
+     *     // 读取缓存失败，因此需要从数据库读取需要的数据
+     *     $data = ... // 从数据库读取数据
+     *     // 指定缓存策略，并将数据写入缓存
+     *     $policy = array(
+     *         'life_time' => 300, // 缓存数据失效时间是 5 分钟
+     *         'serialize' => true, // 自动序列化和反序列化缓存数据
+     *     );
+     *     Q::setCache($cache_di, $data, $policy);
+     * }
+     *
+     * // 使用 $data 中包含的数据
+     * @endcode
+     *
+     * QeePHP 的缓存系统提供名为“缓存策略”的机制，让开发者可以为不同的缓存项目指定不同的缓存选项。
+     * 并且在读取缓存时，无需再次指定缓存项目的缓存策略。
+     *
+     * 例如数据 A 的缓存失效时间是 5 分钟，而数据 B 的缓存失效时间是 10 分钟。
+     * QeePHP 读取这两项缓存时，能够知道两项数据的失效时间不同，不需要开发者在读取缓存时再指定缓存的失效时间。
+     *
+     * 这个特性对于大量使用缓存的场合非常方便，避免了由于忘记指定合适选项，导致缓存效果和预期不符的情况。
+     *
      * @{
      */
-    
+
     /**
-     * 读取指定缓存的内容，如果缓存内容不存在或已经失效，则返回 false
+     * 读取指定的缓存内容，如果内容不存在或已经失效，则返回 false
+     *
+     * 在操作缓存数据时，必须指定缓存的 ID。每一个缓存内容都有一个唯一的 ID。
+     * 例如数据 A 的缓存 ID 是 data-a，而数据 B 的缓存 ID 是 data-b。
+     *
+     * 在大量使用缓存时，应该采用一定的规则来确定缓存 ID。下面是一个推荐的方案：
+     *
+     * <ul>
+     *   <li>首先按照缓存数据的性质确定前缀，例如 page、db 等；</li>
+     *   <li>然后按照数据的唯一索引来确定后缀，并和前缀一起组合成完整的缓存 ID。</li>
+     * </ul>
+     *
+     * 按照这个规则，缓存 ID 看上去类似 page.news.1、db.members.userid。
+     *
+     * Q::getCache() 可以指定 $policy 参数来覆盖缓存数据本身带有的策略。
+     * 具体哪些策略可以使用，请参考不同缓存服务的文档。
+     *
+     * $backend_class 用于指定要使用的缓存服务对象类名称。例如 QCache_File、QCache_APC 等。
      *
      * @param string $id
+     *   缓存的 ID
      * @param array $policy
-     * @param string $backend
+     *   缓存策略
+     * @param string $backend_class
+     *   要使用的缓存服务
      *
      * @return mixed
+     *   成功返回缓存内容，失败返回 false
      */
-    static final function getCache($id, array $policy = null, $backend = null)
+    static final function getCache($id, array $policy = null, $backend_class = null)
     {
         static $obj = null;
 
-        if (is_null($backend)) {
-            if (is_null($obj)) {
+        if (is_null($backend_class))
+        {
+            if (is_null($obj))
+            {
                 $obj = self::getSingleton(self::getIni('runtime_cache_backend'));
             }
             return $obj->get($id, $policy);
-        } else {
-            $cache = self::getSingleton($backend);
+        }
+        else
+        {
+            $cache = self::getSingleton($backend_class);
             return $cache->get($id, $policy);
         }
     }
 
     /**
-     * 将变量内容写入缓存
+     * 将变量内容写入缓存，失败抛出异常
+     *
+     * $data 参数指定要缓存的内容。如果 $data 参数不是一个字符串，则必须将缓存策略 serialize 设置为 true。
+     * $policy 参数指定了内容的缓存策略，如果没有提供该参数，则使用缓存服务的默认策略。
+     * 其他参数同 Q::getCache()。
      *
      * @param string $id
+     *   缓存的 ID
      * @param mixed $data
+     *   要缓存的数据
      * @param array $policy
-     * @param string $backend
+     *   缓存策略
+     * @param string $backend_class
+     *   要使用的缓存服务
      */
-    static final function setCache($id, $data, array $policy = null, $backend = null)
+    static final function setCache($id, $data, array $policy = null, $backend_class = null)
     {
         static $obj = null;
 
-        if (is_null($backend)) {
-            if (is_null($obj)) {
+        if (is_null($backend_class))
+        {
+            if (is_null($obj))
+            {
                 $obj = self::getSingleton(self::getIni('runtime_cache_backend'));
             }
             $obj->set($id, $data, $policy);
-        } else {
-            $cache = self::getSingleton($backend);
+        }
+        else
+        {
+            $cache = self::getSingleton($backend_class);
             $cache->set($id, $data, $policy);
         }
     }
@@ -721,133 +692,110 @@ abstract class Q
     /**
      * 删除指定的缓存内容
      *
+     * 通常，失效的缓存数据无需清理。但有时候，希望在某些操作完成后立即清除缓存。
+     * 例如更新数据库记录后，希望删除该记录的缓存文件，以便在下一次读取缓存时重新生成缓存文件。
+     *
      * @param string $id
+     *   缓存的 ID
      * @param array $policy
-     * @param string $backend
+     *   缓存策略
+     * @param string $backend_class
+     *   要使用的缓存服务
      */
-    static final function removeCache($id, array $policy = null, $backend = null)
+    static final function removeCache($id, array $policy = null, $backend_class = null)
     {
-        if (is_null($backend)) {
-            $cache = self::getSingleton(self::getIni('runtime_cache_backend'));
-        } else {
-            $cache = self::getSingleton($backend);
+        static $obj = null;
+
+        if (is_null($backend_class))
+        {
+            if (is_null($obj))
+            {
+                $obj = self::getSingleton(self::getIni('runtime_cache_backend'));
+            }
+            $obj->remove($id, $policy);
         }
-        $cache->remove($id, $policy);
+        else
+        {
+            $cache = self::getSingleton($backend_class);
+            $cache->remove($id, $policy);
+        }
     }
-    
+
     /* @} */
 
     /**
      * @addtogroup common 公共服务
      * @ingroup core
+     *
+     * 公共服务由一些非常基本和常用的方法组成。
+     *
+     * 包括：
+     *
+     * <ul>
+     *   <li>Q::normalize() 对字符串或数组进行格式化，返回格式化后的数组；</li>
+     * </ul>
+     *
      * @{
      */
-    
+
     /**
-     * 对输入的数组或字符串进行规格化
+     * 对字符串或数组进行格式化，返回格式化后的数组
+     *
+     * $input 参数如果是字符串，则首先以“,”为分隔符，将字符串转换为一个数组。
+     * 接下来对数组中每一个项目使用 trim() 方法去掉首位的空白字符。最后过滤掉空字符串项目。
+     *
+     * 该方法的主要用途是将诸如：“item1, item2, item3” 这样的字符串转换为数组。
+     *
+     * @code
+     * $input = 'item1, item2, item3';
+     * $output = Q::normalize($input);
+     * // $output 现在是一个数组，结果如下：
+     * // $output = array(
+     * //   'item1',
+     * //   'item2',
+     * //   'item3',
+     * // );
+     *
+     * $input = 'item1|item2|item3';
+     * // 指定使用什么字符作为分割符
+     * $output = Q::normalize($input, '|');
+     * @endcode
      *
      * @param array|string $input
+     *   要格式化的字符串或数组
+     * @param string $delimiter
+     *   按照什么字符进行分割
      *
      * @return array
+     *   格式化结果
      */
-    static final function normalize($input)
+    static final function normalize($input, $delimiter = ',')
     {
-        if (!is_array($input)) {
-            $input = explode(',', $input);
+        if (!is_array($input))
+        {
+            $input = explode($delimiter, $input);
         }
         $input = array_map('trim', $input);
         return array_filter($input, 'strlen');
     }
 
-    /**
-     * 载入 YAML 文件，返回分析结果
-     *
-     * loadYAML() 会自动使用缓存，只有当 YAML 文件被改变后，缓存才会更新。
-     *
-     * 关于 YAML 的详细信息,请参考 www.yaml.org 。
-     *
-     * 用法：
-     * <code>
-     * $data = Q::loadYAML('myData.yaml');
-     * </code>
-     *
-     * 注意：为了安全起见，不要将 yaml 文件置于浏览器能够访问的目录中。
-     * 或者将 YAML 文件的扩展名设置为 .yaml.php，并且在每一个 YAML 文件开头添加“exit()”。
-     * 例如：
-     * <code>
-     * # <?php exit(); ?>
-     *
-     * invoice: 34843
-     * date   : 2001-01-23
-     * bill-to: &id001
-     * ......
-     * </code>
-     *
-     * 这样可以确保即便浏览器直接访问该 .yaml.php 文件，也无法看到内容。
-     *
-     * @param string $filename
-     * @param array $replace 对于 YAML 内容要进行自动替换的字符串对
-     *
-     * @return array
-     */
-    static final function loadYAML($filename, $replace = null)
-    {
-        static $callback;
-
-        if (!Q::isReadable($filename)) {
-            // LC_MSG: File "%s" not found.
-            throw new QException(__('File "%s" not found.', $filename));
-        }
-
-        Q::loadVendor('spyc');
-        $yaml = Spyc::YAMLLoad($filename);
-
-        if (is_null($callback)) {
-            $callback = create_function('& $v, $key, $replace', 'foreach ($replace as $search => $rep) { $v = str_replace($search, $rep, $v); }; return $v;');
-        }
-        array_walk_recursive($yaml, $callback, $replace);
-        return $yaml;
-    }
-    
-    /**
-     * 检查指定文件是否可读
-     *
-     * 这个方法会在 PHP 的搜索路径中查找文件。
-     *
-     * @param string $filename
-     *
-     * @return boolean
-     */
-    static final function isReadable($filename)
-    {
-        if (is_readable($filename)) { return true; }
-
-        $path = get_include_path();
-        $dirs = explode(PATH_SEPARATOR, $path);
-
-        foreach ($dirs as $dir) {
-            if ('.' == $dir) { continue; }
-            if (@is_readable($dir . DS . $filename)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-    
     /* @} */
+
 }
 
 /**
  * @addtogroup internal 内部服务
  * @ingroup core
+ *
+ * 仅用于 QeePHP 内部的方法。
+ *
  * @{
  */
 
 /**
  * QeePHP 内部使用的多语言翻译函数
  *
- * 应用程序应该使用 Translate 组件实现多语言界面。
+ * 应用程序应该使用 QTranslate 组件实现多语言界面。
  *
  * @return $msg
  */
@@ -856,8 +804,9 @@ function __()
     $args = func_get_args();
     $msg = array_shift($args);
     $language = strtolower(Q::getIni('error_language'));
-    $messages = Q::loadFile('LC_MESSAGES.php', false, Q_DIR . '/_lang/' . $language, false);
-    if (isset($messages[$msg])) {
+    $messages = Q::loadFile('lc_messages.php', Q_DIR . '/_lang/' . $language, false);
+    if (isset($messages[$msg]))
+    {
         $msg = $messages[$msg];
     }
     array_unshift($args, $msg);
@@ -867,3 +816,4 @@ function __()
 /* @} */
 
 /* @} */
+

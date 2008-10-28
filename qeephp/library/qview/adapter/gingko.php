@@ -1,171 +1,130 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
- * 定义 QView_Adapter_Gingko 类
+ * @file
+ * 定义 QView_Adapter_Gingko 类以及一些辅助方法
  *
- * @package mvc
- * @version $Id$
+ * @ingroup view
+ *
+ * @{
  */
-
-// {{{ includes
-include_once Q_DIR . '/qview/helper/general.php';
-// }}}
 
 /**
  * QView_Adapter_Gingko 是 QeePHP 内置的一个模板引擎
- *
- * @package mvc
  */
 class QView_Adapter_Gingko extends QView_Adapter_Abstract
 {
-    /**
-     * 模板文件所在路径
-     *
-     * @var string
-     */
-    public $template_dir = '';
+	/**
+	 * 模板变量
+	 *
+	 * @var array
+	 */
+	protected $_vars = array();
 
-    /**
-     * 设置响应对象对应的控制器
-     *
-     * @var QController_Abstract
-     */
-    public $controller;
+	/**
+	 * 指定模板变量
+	 *
+	 * @param string|array $data
+	 * @param mixed $value
+	 */
+	function assign($data, $value = null)
+	{
+		if (is_array($data))
+		{
+			$this->_vars = array_merge($this->_vars, $data);
+		}
+		else
+		{
+			$this->_vars[$data] = $value;
+		}
+	}
 
-    /**
-     * 模板变量
-     *
-     * @var array
-     */
-    protected $vars = array();
+	/**
+	 * 显示指定文件
+	 *
+	 * @param string $filename
+	 */
+	function display($filename)
+	{
+		echo $this->fetch($filename);
+	}
 
-    /**
-     * 响应对象
-     *
-     * @var QResponse
-     */
-    protected $response;
+	/**
+	 * 载入指定文件并返回解析结果
+	 *
+	 * @param string $___filename
+	 *
+	 * @return string
+	 */
+	function fetch($___filename)
+	{
+		extract($this->_vars);
+		ob_start();
+		include $___filename;
+		return ob_get_clean();
+	}
 
-    /**
-     * 构造函数
-     *
-     * @param QResponse_Render $response
-     */
-    function __construct(QResponse_Render $response)
-    {
-        $this->response = $response;
-        $this->controller = $response->controller;
+	/**
+	 * 清除所有模板变量
+	 */
+	function clear()
+	{
+		$this->_vars = array();
     }
 
     /**
-     * 指定模板引擎要使用的数据
+     * 动态载入视图插件
      *
-     * @param mixed $data
-     * @param mixed $value
+     * @param string $helper_name
+     *
+     * @return Helper_Abstract
      */
-    function assign($data, $value = null)
+	function __get($helper_name)
     {
-        if (is_array($data)) {
-            $this->vars = array_merge($this->vars, $data);
-        } else {
-            $this->vars[$data] = $value;
-        }
-    }
-
-    /**
-     * 渲染指定的视图，并输出渲染结果
-     *
-     * @param string $viewname
-     */
-    function display($viewname = null)
-    {
-        echo $this->fetch(is_null($viewname) ? $this->viewname : $viewname);
-    }
-
-    /**
-     * 渲染指定的视图，并返回渲染结果
-     *
-     * @param string $viewname
-     *
-     * @return string
-     */
-    function fetch($viewname)
-    {
-        $___filename = $this->getFilename($viewname);
-        ob_start();
-        extract($this->vars);
-        require $___filename;
-        $content = ob_get_clean();
-        return $this->filter($content);
-    }
-
-    /**
-     * 检查指定的视图是否存在
-     *
-     * @param string $viewname
-     *
-     * @return boolean
-     */
-    function exists($viewname)
-    {
-        return Q::isReadable($this->getFilename($viewname));
-    }
-
-    /**
-     * 清除已经设置的所有数据
-     */
-    function clear()
-    {
-        $this->vars = array();
-    }
-
-    /**
-     * 魔法方法，用于自动加载 helper
-     *
-     * @param string $varname
-     *
-     * @return mixed
-     */
-    function __get($varname)
-    {
-        return $this->controller->{$varname};
-    }
-
-    /**
-     * 获得视图对应的文件名
-     *
-     * @param string $viewname
-     *
-     * @return string
-     */
-    private function getFilename($viewname)
-    {
-        if (empty($this->template_dir)) {
-            if ($this->module) {
-                $root = ROOT_DIR . DS . 'module' . DS . 'view' . DS;
-            } else {
-                $root = ROOT_DIR . DS . 'app' . DS . 'view' . DS;
-            }
-            if ($this->namespace) {
-                $root .= $this->namespace . DS;
-            }
-            $this->template_dir = $root;
-            return $this->template_dir . $viewname . '.php';
-        } else {
-            return rtrim($this->template_dir, '/\\') . DS . $viewname . '.php';
-        }
-    }
-
-    protected function include_file($viewname)
-    {
-        echo $this->fetch($viewname);
-    }
+        return $this->{$helper_name} = $this->_getHelper($helper_name);
+	}
 }
+
+/**
+ * 转换 HTML 特殊字符，等同于 htmlspecialchars()
+ *
+ * @param string $text
+ *
+ * @return string
+ */
+function h($text)
+{
+    return htmlspecialchars($text);
+}
+
+/**
+ * 转换 HTML 特殊字符以及空格和换行符
+ *
+ * 空格替换为 &nbsp; ，换行符替换为 <br />。
+ *
+ * @param string $text
+ *
+ * @return string
+ */
+function t($text)
+{
+    return nl2br(str_replace(' ', '&nbsp;', htmlspecialchars($text)));
+}
+
+/**
+ * 将任意字符串转换为 JavaScript 字符串（不包括首尾的"）
+ *
+ * @param string $content
+ *
+ * @return string
+ */
+function t2js($content)
+{
+    return str_replace(array("\r", "\n"), array('', '\n'), addslashes($content));
+}
+
+
+/**
+ * @}
+ */

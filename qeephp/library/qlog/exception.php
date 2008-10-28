@@ -10,15 +10,10 @@
 
 /**
  * 定义 QLog_Exception 异常
- *
- * @package core
- * @version $Id$
  */
 
 /**
  * QLog_Exception 异常封装与 QLog 有关的错误
- *
- * @package core
  */
 class QLog_Exception extends QException
 {

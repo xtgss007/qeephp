@@ -10,15 +10,10 @@
 
 /**
  * 定义 QACL_User_Exception 异常
- *
- * @package mvc
- * @version $Id$
  */
 
 /**
  * QACL_User_Exception 异常封装所有和 ACL 用户相关的错误
- *
- * @package mvc
  */
 class QACL_User_Exception extends QException
 {

@@ -12,7 +12,7 @@
  * 定义 QDB_ActiveRecord_Interface 接口
  *
  * @package database
- * @version $Id$
+ * @version $Id: interface.php 309 2008-04-18 14:52:52Z dualface $
  */
 
 /**
@@ -22,6 +22,14 @@
  */
 interface QDB_ActiveRecord_Interface
 {
+    /**
+     * 自动填充常量
+     */
+    //! 当前日期和时间
+    const AUTOFILL_DATETIME = '@#@_current_datetime_@#@';
+    //! 当前 UNIX TIMESTAMP
+    const AUTOFILL_TIMESTAMP = '@#@_current_timestamp_@#@';
+
     /**
      * 返回对象的定义
      *
@@ -36,7 +44,7 @@ interface QDB_ActiveRecord_Interface
      *
      * @static
      *
-     * @return QDB_ActiveRecord_Select
+     * @return QDB_Select
      */
     static function find();
 

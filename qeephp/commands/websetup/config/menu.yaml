@@ -1,0 +1,36 @@
+-
+  title: 基本设置
+  controller: default
+  action: index
+  items:
+    -
+      controller: default
+      action: index
+      title: 确认应用程序基本信息
+    -
+      controller: default
+      action: setdsn
+      title: 修改数据库连接设置
+    -
+      controller: default
+      action: setenv
+      title: 修改运行环境设置
+    -
+      controller: default
+      action: thanks
+      title: 感谢
+
+-
+  title: 代码生成器
+  controller: generate
+  action: index
+  items:
+    -
+      controller: generate
+      action: controllers
+      title: 列出控制器
+    -
+      controller: generate
+      action: models
+      title: 列出模型
+

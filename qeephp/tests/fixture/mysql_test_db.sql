@@ -1,40 +1,49 @@
 -- phpMyAdmin SQL Dump
--- version 2.11.5-rc1
+-- version 2.11.0
 -- http://www.phpmyadmin.net
 --
--- 主机: localhost
--- 生成日期: 2008 年 02 月 26 日 19:33
--- 服务器版本: 5.0.45
--- PHP 版本: 5.2.4
+-- Host: localhost
+-- Generation Time: May 03, 2008 at 12:10 PM
+-- Server version: 5.0.51
+-- PHP Version: 5.2.5
 
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+
 --
--- 数据库: `test`
+-- Database: `qeephp_test_db`
 --
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `q_authors`
+-- Table structure for table `q_authors`
 --
 
-CREATE TABLE `q_authors` (
+DROP TABLE IF EXISTS `q_authors`;
+CREATE TABLE IF NOT EXISTS `q_authors` (
   `author_id` int(11) NOT NULL auto_increment,
   `name` varchar(40) NOT NULL,
   `contents_count` int(11) NOT NULL default '0',
   `comments_count` int(11) NOT NULL default '0',
   `created` int(11) NOT NULL,
+  `updated` int(11) NOT NULL,
   PRIMARY KEY  (`author_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `q_books`
+-- Table structure for table `q_books`
 --
 
-CREATE TABLE `q_books` (
+DROP TABLE IF EXISTS `q_books`;
+CREATE TABLE IF NOT EXISTS `q_books` (
   `book_code` char(8) NOT NULL,
   `title` varchar(240) NOT NULL,
   `intro` text NOT NULL,
@@ -45,10 +54,11 @@ CREATE TABLE `q_books` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `q_books_has_authors`
+-- Table structure for table `q_books_has_authors`
 --
 
-CREATE TABLE `q_books_has_authors` (
+DROP TABLE IF EXISTS `q_books_has_authors`;
+CREATE TABLE IF NOT EXISTS `q_books_has_authors` (
   `book_code` char(8) NOT NULL,
   `author_id` int(11) NOT NULL,
   `remark` text NOT NULL,
@@ -58,10 +68,11 @@ CREATE TABLE `q_books_has_authors` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `q_comments`
+-- Table structure for table `q_comments`
 --
 
-CREATE TABLE `q_comments` (
+DROP TABLE IF EXISTS `q_comments`;
+CREATE TABLE IF NOT EXISTS `q_comments` (
   `comment_id` int(11) NOT NULL auto_increment,
   `author_id` int(11) NOT NULL,
   `content_id` int(11) NOT NULL,
@@ -70,45 +81,49 @@ CREATE TABLE `q_comments` (
   PRIMARY KEY  (`comment_id`),
   KEY `author_id` (`author_id`),
   KEY `content_id` (`content_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- 表的结构 `q_contents`
---
-
-CREATE TABLE `q_contents` (
-  `content_id` int(11) NOT NULL auto_increment,
-  `author_id` int(11) NOT NULL,
-  `title` varchar(240) NOT NULL,
-  `comments_count` int(11) NOT NULL default '0',
-  `marks_avg` float NOT NULL default '0',
-  `created` int(11) NOT NULL,
-  `updated` datetime NOT NULL,
-  PRIMARY KEY  (`content_id`),
-  KEY `author_id` (`author_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- 表的结构 `q_contents_has_tags`
---
-
-CREATE TABLE `q_contents_has_tags` (
-  `content_id` int(11) NOT NULL,
-  `tag_id` int(11) NOT NULL,
-  PRIMARY KEY  (`content_id`,`tag_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `q_marks`
+-- Table structure for table `q_contents`
 --
 
-CREATE TABLE `q_marks` (
+DROP TABLE IF EXISTS `q_contents`;
+CREATE TABLE IF NOT EXISTS `q_contents` (
+  `content_id` int(11) NOT NULL auto_increment,
+  `author_id` int(11) NOT NULL,
+  `title` varchar(240) NOT NULL,
+  `comments_count` int(11) NOT NULL default '0',
+  `tags_count` int(11) NOT NULL default '0',
+  `marks_avg` float NOT NULL default '0',
+  `created` int(11) NOT NULL,
+  `updated` datetime NOT NULL,
+  PRIMARY KEY  (`content_id`),
+  KEY `author_id` (`author_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `q_contents_has_tags`
+--
+
+DROP TABLE IF EXISTS `q_contents_has_tags`;
+CREATE TABLE IF NOT EXISTS `q_contents_has_tags` (
+  `content_id` int(11) NOT NULL,
+  `tag_name` varchar(20) NOT NULL,
+  PRIMARY KEY  (`content_id`,`tag_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `q_marks`
+--
+
+DROP TABLE IF EXISTS `q_marks`;
+CREATE TABLE IF NOT EXISTS `q_marks` (
   `content_id` int(11) NOT NULL,
   `author_id` int(11) NOT NULL,
   `score` smallint(6) NOT NULL,
@@ -119,10 +134,11 @@ CREATE TABLE `q_marks` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `q_posts`
+-- Table structure for table `q_posts`
 --
 
-CREATE TABLE `q_posts` (
+DROP TABLE IF EXISTS `q_posts`;
+CREATE TABLE IF NOT EXISTS `q_posts` (
   `post_id` int(11) NOT NULL auto_increment,
   `title` varchar(300) NOT NULL,
   `body` text NOT NULL,
@@ -135,12 +151,25 @@ CREATE TABLE `q_posts` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `q_tags`
+-- Table structure for table `q_profiles`
 --
 
-CREATE TABLE `q_tags` (
-  `tag_id` int(11) NOT NULL auto_increment,
-  `name` varchar(40) NOT NULL,
-  PRIMARY KEY  (`tag_id`),
-  UNIQUE KEY `name` (`name`)
+DROP TABLE IF EXISTS `q_profiles`;
+CREATE TABLE IF NOT EXISTS `q_profiles` (
+  `author_id` int(11) NOT NULL,
+  `address` varchar(200) NOT NULL,
+  `postcode` varchar(10) NOT NULL,
+  PRIMARY KEY  (`author_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `q_tags`
+--
+
+DROP TABLE IF EXISTS `q_tags`;
+CREATE TABLE IF NOT EXISTS `q_tags` (
+  `name` varchar(20) NOT NULL,
+  PRIMARY KEY  (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

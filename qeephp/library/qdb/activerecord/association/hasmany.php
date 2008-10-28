@@ -1,111 +1,105 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
+ * @file
  * 定义 QDB_ActiveRecord_Association_HasMany 类
  *
- * @package database
- * @version $Id$
+ * @ingroup activerecord
+ *
+ * @{
  */
 
 /**
  * QDB_ActiveRecord_Association_HasMany 类封装数据表之间的 has many 关联
- *
- * @package database
  */
 class QDB_ActiveRecord_Association_HasMany extends QDB_ActiveRecord_Association_Abstract
 {
-    /**
-     * 构造函数
-     *
-     * @param array $params
-     * @param QDB_ActiveRecord_Meta $source_meta
-     *
-     * @return QDB_ActiveRecord_Association
-     */
-    protected function __construct(array $params, QDB_ActiveRecord_Meta $source_meta)
-    {
-        parent::__construct(QDB::HAS_MANY, $params, $source_meta);
-        $this->one_to_one = false;
-    }
+	public $one_to_one = false;
+	public $on_delete = 'cascade';
+	public $on_save   = 'save';
 
-    /**
-     * 初始化
-     */
     function init()
     {
-        if ($this->_is_init) { return $this; }
+        if ($this->_inited) { return $this; }
         parent::init();
-        $params = $this->_init_params;
-        $this->source_key   = !empty($params['source_key']) ? $params['source_key'] : $this->source_meta->pk;
-        $this->target_key   = !empty($params['target_key']) ? $params['target_key'] : $this->source_meta->pk;
-        $this->on_delete    = !empty($params['on_delete'])  ? $params['on_delete']  : 'cascade';
-        $this->on_save      = !empty($params['on_save'])    ? $params['on_save']    : 'save';
-        $this->source_key_alias = $this->mapping_name . '_source_key';
-        $this->target_key_alias = $this->mapping_name . '_target_key';
+
+        $p = $this->_init_config;
+        $this->source_key = !empty($p['source_key']) ? $p['source_key'] : reset($this->source_meta->idname);
+        $this->target_key = !empty($p['target_key']) ? $p['target_key'] : reset($this->source_meta->idname);
+
+        unset($this->_init_config);
+        return $this;
+    }
+
+    function onSourceSave(QDB_ActiveRecord_Abstract $source, $recursion)
+    {
+    	$this->init();
+    	$mapping_name = $this->mapping_name;
+    	if ($this->on_save === 'skip' || $this->on_save === false || !isset($source->{$mapping_name}))
+    	{
+    		return $this;
+    	}
+
+    	$source_key_value = $source->{$this->source_key};
+    	foreach ($source->{$mapping_name} as $obj)
+    	{
+    		/* @var $obj QDB_ActiveRecord_Abstract */
+    		$obj->changePropForce($this->target_key, $source_key_value);
+    		$obj->save($recursion - 1, $this->on_save);
+    	}
+
+        return $this;
+    }
+
+    function onSourceDestroy(QDB_ActiveRecord_Abstract $source)
+    {
+        $this->init();
+        if ($this->on_delete === false || $this->on_delete == 'skip') { return $this; }
+
+        $source_key_value = $source->{$this->source_key};
+        $cond = array($this->target_key => $source_key_value);
+        if ($this->on_delete === true || $this->on_delete == 'cascade')
+        {
+        	$this->target_meta->destroyWhere($cond);
+        }
+        elseif ($this->on_delete == 'reject')
+        {
+            $row = $this->target_meta->find($cond)->count()->query();
+            if (intval($row['row_count']) > 0)
+            {
+            	// LC_MSG: 对象 "%s" 的关联 "%s" 拒绝了对象的删除操作.
+                throw new QDB_ActiveRecord_Association_Exception_Reject(__(
+                        '对象 "%s" 的关联 "%s" 拒绝了对象的删除操作.',
+                        $this->source_meta->class_name, $this->mapping_name));
+            }
+        }
+        else
+        {
+            $fill = ($this->on_delete == 'set_null') ? null : $this->on_delete_set_value;
+            $this->target_meta->updateWhere($cond, array($this->target_key => $fill));
+        }
+
         return $this;
     }
 
     /**
-     * 保存一对多数据
+     * 直接添加一个关联对象
      *
-     * @param array $target_data
-     * @param mixed $source_key_value
-     * @param int $recursion
-     */
-    function saveTarget(array $target_data, $source_key_value, $recursion)
-    {
-        $this->init();
-        if ($this->on_save === false || $this->on_save == 'skip') { return; }
-        foreach (array_keys($target_data) as $offset) {
-            $target_data[$offset][$this->target_key] = $source_key_value;
-        }
-        $this->target_meta->saveRowset($target_data, $recursion, $this->on_save);
-    }
-
-    /**
-     * 删除目标数据
+     * @param QDB_ActiveRecord_Abstract $source
+     * @param QDB_ActiveRecord_Abstract $target
      *
-     * @param mixed $source_key_value
-     * @param int $recursion
+     * @return QDB_ActiveRecord_Association_Abstract
      */
-    function removeTarget($source_key_value, $recursion)
+    function addRelatedObject(QDB_ActiveRecord_Abstract $source, QDB_ActiveRecord_Abstract $target)
     {
-        $this->init();
-        if ($this->on_delete === false || $this->on_delete == 'skip') { return; }
-        if ($this->on_delete === true || $this->on_delete == 'cascade') {
-            $this->target_meta->removeByField($this->target_key, $source_key_value, $recursion);
-        } elseif ($this->on_delete == 'reject') {
-            $row = $this->target_meta->find(array($this->target_key => $source_key_value))->count()->query();
-            if (intval($row['row_count']) > 0) {
-                // LC_MSG: 关联 "%s" 拒绝删除来源 "%s" 的数据.
-                throw new QDB_ActiveRecord_Association_Remove_Exception(__('关联 "%s" 拒绝删除来源 "%s" 的数据.',
-                                                             $this->name, $this->source_meta->table_name));
-            }
-        } else {
-            $fill = ($this->on_delete == 'set_null') ? null : $this->on_delete_set_value;
-            $this->target_meta->updateWhere(array($this->target_key => $fill), array($this->target_key => $source_key_value));
-        }
-    }
-
-    /**
-     * 返回用于 JOIN 操作的 SQL 字符串
-     *
-     * @return string
-     */
-    function getJoinSQL()
-    {
-        $this->init();
-        $sk = $this->source_meta->qfields($this->source_key);
-        $tk = $this->target_meta->qfields($this->target_key);
-
-        return " LEFT JOIN {$this->target_meta->qtable_name} ON {$sk} = {$tk} ";
+    	$this->init();
+    	$target->changePropForce($this->target_key, $source->{$this->source_key});
+        $target->save(0, $this->on_save);
+        return $this;
     }
 }
+
+/**
+ * @}
+ */

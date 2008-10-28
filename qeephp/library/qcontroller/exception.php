@@ -12,7 +12,7 @@
  * 定义 QController_Exception 异常
  *
  * @package mvc
- * @version $Id$
+ * @version $Id: exception.php 236 2008-03-10 14:27:29Z dualface $
  */
 
 /**

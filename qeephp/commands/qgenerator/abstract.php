@@ -1,40 +1,44 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
+ * @file
  * 定义 QGenerator_Abstract 类
  *
- * @package commands
- * @version $Id$
+ * @ingroup generator
+ *
+ * @{
  */
 
 /**
  * QGenerator_Abstract 是所有生成器的基础类
- *
- * @package commands
  */
 abstract class QGenerator_Abstract
 {
+    /**
+     * 应用程序根目录
+     *
+     * @var string
+     */
+    public $root_dir;
+
     /**
      * 应用程序的配置
      *
      * @var array
      */
-    protected $config;
+    protected $_config;
 
     /**
      * 构造函数
      */
-    function __construct()
+    function __construct($root_dir = ROOT_DIR)
     {
-        $this->config = load_boot_config();
+        $this->root_dir = $root_dir;
+        $this->_config = load_module_config_without_cache(null);
+        $this->_config['db_meta_cached'] = false;
+        $this->_config['log_enabled'] = false;
+        Q::setIni($this->_config);
     }
 
     /**
@@ -45,64 +49,86 @@ abstract class QGenerator_Abstract
     abstract function execute(array $opts);
 
     /**
-     * 将以“_”下划线分割的字符串转换成骆驼表示法（除第一个单词外，每个单词的第一个字母大写）
+     * 拆分一个名称，分解为 $name, $namespace 和 $module
      *
-     * @param string $name
+     * @return array
+     */
+    protected function _splitName($name)
+    {
+        $name = trim($name);
+        if (strpos($name, '::') !== false)
+        {
+            list ($namespace, $name) = explode('::', $name);
+        }
+        else
+        {
+            $namespace = null;
+        }
+
+        if (strpos($name, '@') !== false)
+        {
+            list ($name, $module) = explode('@', $name);
+        }
+        else
+        {
+            $module = null;
+        }
+
+        return array( $name, strtolower($namespace), strtolower($module) );
+    }
+
+    /**
+     * 格式化类名称，确保每个词首字母都是大写
+     *
+     * @param string $class_name
      *
      * @return string
      */
-    protected function camelName($name)
+    protected function _formatClassName($class_name)
     {
-        $name = strtolower($name);
-        while (($pos = strpos($name, '_')) !== false) {
-            $name = substr($name, 0, $pos) . ucfirst(substr($name, $pos + 1));
+        $arr = explode('_', $class_name);
+        foreach ($arr as $offset => $name)
+        {
+            $arr[$offset] = ucfirst($name);
         }
-        return $name;
+        return implode('_', $arr);
     }
 
     /**
-     * 检查指定的类文件是否在应用程序目录中
+     * 获得类定义文件的完整路径
      *
-     * @param string $class
-     * @param string $namespace
+     * @param string $dir
+     * @param string $class_name
+     * @param string $suffix
+     * @param string $prefix
      *
-     * @return string|boolean
+     * @return string
      */
-    protected function existsClassFile($class, $namespace = null)
+    protected function _getClassFilePath($dir, $class_name, $suffix = '.php', $prefix = '')
     {
-        $dir = ROOT_DIR . DS . 'app';
-        $filename = strtolower(str_replace('_', DS, $class) . '.php');
-        if ($namespace) {
-            $path = $dir . DS . dirname($filename) . DS . $namespace . DS . basename($filename);
-        } else {
-            $path = $dir . DS . $filename;
+        $arr = explode('_', strtolower($class_name));
+        $c = count($arr);
+        for ($i = 1; $i < $c; $i++)
+        {
+            $j = $i - 1;
+            $dir .= "/{$arr[$j]}";
         }
-        if (file_exists($path)) {
-            return $path;
-        } else {
-            return false;
-        }
+        $c--;
+        return "{$dir}/{$prefix}{$arr[$c]}{$suffix}";
     }
 
     /**
-     * 创建指定类的定义文件
+     * 创建指定文件
      *
-     * @param string $class
+     * @param string $path
      * @param string $content
-     * @param string $namespace
      */
-    protected function createClassFile($class, $content, $namespace = null)
+    protected function _createFile($path, $content)
     {
-        $dir = ROOT_DIR . DS . 'app';
-        $filename = strtolower(str_replace('_', DS, $class) . '.php');
-        if ($namespace) {
-            $path = $dir . DS . dirname($filename) . DS . $namespace . DS . basename($filename);
-        } else {
-            $path = $dir . DS . $filename;
-        }
-        $dir = dirname($path);
-        if (!file_exists($dir)) { mkdir($dir); }
-        if (file_put_contents($path, $content)) {
+        $this->_createDirs(dirname($path));
+        if (file_put_contents($path, $content))
+        {
+            $path = realpath($path);
             echo "Create file '{$path}' successed.\n";
             return true;
         }
@@ -114,14 +140,46 @@ abstract class QGenerator_Abstract
      *
      * @param string $dir
      */
-    protected function createDir($dir)
+    protected function _createDirs($dir)
     {
-        Q::loadVendor('filesys');
-        $dir = str_replace('/', DS, $dir);
-        if (!file_exists($dir)) {
-            mkdirs($dir);
+        $dir = str_replace('/\\', DS, $dir);
+        if (! file_exists($dir))
+        {
+            Helper_FileSys::mkdirs($dir);
+            $dir = realpath($dir);
             echo "Create directory '{$dir}' successed.\n";
         }
+    }
+
+    /**
+     * 获得符合规范的类名称
+     *
+     * @param string $name
+     * @param string $namespace
+     * @param string $module
+     *
+     * @return string
+     */
+    protected function _stdClassName($name, $namespace = null, $module = null)
+    {
+        $name = explode('_', $name);
+        $arr = array();
+        foreach ($name as $n)
+        {
+            $arr[] = ucfirst($n);
+        }
+        $name = implode('_', $arr);
+        $basename = $name;
+
+        if ($namespace)
+        {
+            $name = "{$namespace}::{$name}";
+        }
+        if ($module)
+        {
+            $name .= "@{$module}";
+        }
+        return array( $name, $basename );
     }
 
     /**
@@ -132,10 +190,10 @@ abstract class QGenerator_Abstract
      *
      * @return string
      */
-    protected function parseTemplate($__template, $viewdata)
+    protected function _parseTemplate($__template, $viewdata)
     {
         ob_start();
-        call_user_func_array(array(__CLASS__, 'parseTemplateStatic'), array($__template, $viewdata));
+        self::_parseTemplateStatic($__template, $viewdata);
         return ob_get_clean();
     }
 
@@ -147,7 +205,7 @@ abstract class QGenerator_Abstract
      *
      * @static
      */
-    protected static function parseTemplateStatic($__template, $viewdata)
+    protected static function _parseTemplateStatic($__template, $viewdata)
     {
         $__template = dirname(__FILE__) . '/templates/template_' . $__template . '.php';
         extract($viewdata);

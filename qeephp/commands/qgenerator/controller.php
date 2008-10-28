@@ -1,27 +1,21 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
+ * @file
  * 定义 QGenerator_Controller 类
  *
- * @package generator
- * @version $Id: controller.php 955 2008-03-16 23:52:44Z dualface $
+ * @ingroup generator
+ *
+ * @{
  */
 
 /**
  * QGenerator_Controller 创建控制器代码
- *
- * @package generator
  */
 class QGenerator_Controller extends QGenerator_Abstract
 {
+
     /**
      * 执行代码生成器
      *
@@ -32,52 +26,68 @@ class QGenerator_Controller extends QGenerator_Abstract
     function execute(array $opts)
     {
         $controller_name = reset($opts);
-        if (empty($controller_name)) {
+        if (empty($controller_name))
+        {
             return false;
         }
 
-        $arr = explode('::', $controller_name);
-        if (count($arr) == 2) {
-            list($namespace, $controller_name) = $arr;
-            $full_name = "{$namespace}::{$controller_name}";
-        } else {
-            $namespace = null;
-            $full_name = $controller_name;
+        // 确定控制器的类名称
+        list ($controller_name, $namespace, $module) = $this->_splitName($controller_name);
+
+        if ($module)
+        {
+            $dir = "{$this->root_dir}/modules/{$module}";
+        }
+        else
+        {
+            $dir = "{$this->root_dir}/app";
         }
 
-        $class_name = 'Controller_' . ucfirst($controller_name);
-        $filename = strtolower($controller_name) . '_controller.php';
-        Q::loadVendor('filesys');
-
-        if ($namespace) {
-            $path = ROOT_DIR . '/app/controller/' . $namespace;
-        } else {
-            $path = ROOT_DIR . '/app/controller';
+        if ($namespace)
+        {
+            $class_name = "Controller_{$namespace}_{$controller_name}";
         }
-        $this->createDir($path);
-        $path .= '/' . $filename;
+        else
+        {
+            $class_name = "Controller_{$controller_name}";
+        }
 
-        if (Q::isReadable($path)) {
-            echo "Class '{$full_name}' declare file '{$path}' exists.\n";
+        $class_name = $this->_formatClassName($class_name);
+        $path = $this->_getClassFilePath($dir, $class_name, '_controller.php');
+
+        if (file_exists($path))
+        {
+            echo "Class '{$class_name}' declare file '{$path}' exists.\n";
             return 0;
         }
 
-        $viewdata = array('class_name' => $class_name, 'namespace' => $namespace);
-        $content = $this->parseTemplate('controller', $viewdata);
-        if ($content == -1 || empty($content) || !file_put_contents($path, $content)) {
-            return false;
+        // 创建控制器文件
+        $viewdata = array
+        (
+            'class_name' => $class_name,
+            'namespace'  => $namespace,
+            'module'     => $module
+        );
+        $content = $this->_parseTemplate('controller', $viewdata);
+        $ret = $this->_createFile($path, $content);
+
+        // 建立视图目录
+        if ($module)
+        {
+            $dir = "{$this->root_dir}/modules/{$module}/view";
+        }
+        else
+        {
+            $dir = "{$this->root_dir}/app/view";
+        }
+        if ($namespace)
+        {
+            $dir .= "/{$namespace}";
         }
 
-        echo "Create file '{$path}' successed.\n";
+        $this->_createDirs($dir . '/_layouts');
+        $this->_createDirs($dir . "/{$controller_name}");
 
-        if ($namespace) {
-            $path = ROOT_DIR . '/app/view/' . $namespace;
-        } else {
-            $path = ROOT_DIR . '/app/view';
-        }
-        $this->createDir($path . '/_layouts');
-        $this->createDir($path . '/' . $controller_name);
-
-        return true;
+        return $ret;
     }
 }

@@ -2,10 +2,8 @@
 
 /**
  * 默认控制器
- *
- * @package app
  */
-class Controller_Default extends QController_Abstract
+class Controller_Default extends AppController_Abstract
 {
     /**
      * default action
@@ -20,3 +18,4 @@ class Controller_Default extends QController_Abstract
         $this->view = array('text' => '<Hello, PHPer!>');
     }
 }
+

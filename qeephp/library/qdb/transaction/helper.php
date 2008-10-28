@@ -12,7 +12,7 @@
  * 定义 QDB_Transaction_Helper 类
  *
  * @package database
- * @version $Id$
+ * @version $Id: helper.php 296 2008-04-11 16:05:01Z dualface $
  */
 
 /**
@@ -22,64 +22,69 @@
  */
 class QDB_Transaction_Helper
 {
-    /**
-     * 事务对象
-     *
-     * @var QDB_Transaction
-     */
-    protected $transaction;
+	/**
+	 * 是否将事务标记为已经失败
+	 *
+	 * @var boolean
+	 */
+	protected $_trans_failed;
 
-    /**
-     * 析构函数执行时要抛出的异常
-     *
-     * @var Exception
-     */
-    protected $exception;
+	/**
+	 * 析构函数执行时要抛出的异常
+	 *
+	 * @var Exception
+	 */
+	protected $_exception;
 
-    /**
-     * 上一个异常处理例程
-     *
-     * @var callback
-     */
-    protected $previous_handler;
+	/**
+	 * 上一个异常处理例程
+	 *
+	 * @var callback
+	 */
+	protected $_previous_handler;
 
-    /**
-     * 构造函数
-     *
-     * @param QDB_Transaction $transaction
-     */
-    function __construct(QDB_Transaction $transaction)
-    {
-        $this->transaction = $transaction;
-        $this->previous_handler = set_exception_handler(array($this, 'handler'));
-    }
+	/**
+	 * 构造函数
+	 *
+	 * @param bool $trans_failed
+	 */
+	function __construct(& $trans_failed)
+	{
+		$this->_trans_failed =& $trans_failed;
+		$this->_previous_handler = set_exception_handler(array($this, 'handler'));
+		QDebug::dump(__METHOD__);
+	}
 
-    /**
-     * 析构函数
-     */
-    function __destruct()
-    {
-        restore_exception_handler();
-        if ($this->exception) {
-            if ($this->previous_handler) {
-                call_user_func($this->previous_handler, $this->exception);
-            } else {
-                QException::dump($this->exception);
-            }
-        }
-    }
+	/**
+	 * 析构函数
+	 */
+	function __destruct()
+	{
+		QDebug::dump(__METHOD__);
+		$this->release();
+		if ($this->_exception) {
+			if ($this->_previous_handler) {
+				call_user_func($this->_previous_handler, $this->_exception);
+			} else {
+				QException::dump($this->_exception);
+			}
+		}
+	}
 
-    /**
-     * 异常处理方法
-     *
-     * @param Exception $ex
-     */
-    function handler(Exception $ex)
-    {
-        $this->transaction->setTransFailed();
-        $this->transaction->unbindHelper();
-        unset($this->transaction);
-        $this->transaction = null;
-        $this->exception = $ex;
-    }
+	function release()
+	{
+		restore_exception_handler();
+	}
+
+	/**
+	 * 异常处理方法
+	 *
+	 * @param Exception $ex
+	 */
+	function handler(Exception $ex)
+	{
+		QDebug::dump(__METHOD__);
+		$this->_trans_failed = true;
+		$this->_exception = $ex;
+	}
 }

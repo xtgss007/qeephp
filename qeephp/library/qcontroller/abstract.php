@@ -1,55 +1,50 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
+ * @file
  * 定义 QController_Abstract 类
  *
- * @package mvc
- * @version $Id$
+ * @ingroup mvc
+ *
+ * @{
  */
 
+// require Q_DIR . '/qcontroller/helper/general.php';
+
 /**
- * QController_Abstract 实现了一个其它控制器的超类，
- * 为开发者自己的控制器提供了一些方便的成员变量和方法
- *
- * @package mvc
+ * QController_Abstract 实现了一个其它控制器的基础类
  */
 abstract class QController_Abstract
 {
+
     /**
      * 应用程序对象
      *
-     * @var MyApp
+     * @var QApplication_Abstract
      */
     public $app;
 
     /**
      * 封装请求的对象
      *
-     * @var QRequest
+     * @var QContext
      */
-    public $request;
-
-    /**
-     * 封装 SESSION 对象
-     *
-     * @var QSession
-     */
-    public $session;
+    public $context;
 
     /**
      * 控制器要使用的布局视图
      *
      * @var string
      */
-    public $view_layouts = 'default';
+    public $view_layouts = null;
+
+    /**
+     * 控制器要使用的视图类
+     *
+     * @var string
+     */
+    public $view_class = null;
 
     /**
      * 控制器要使用的视图
@@ -59,6 +54,28 @@ abstract class QController_Abstract
     public $viewname = null;
 
     /**
+     * 视图设置
+     *
+     * @var array
+     */
+    public $view_config = array
+    (
+        /**
+         * 视图文件所在目录，如果不指定则由框架自行决定
+         *
+         * @var string
+         */
+        'view_dir' => null,
+
+        /**
+         * 布局视图文件所在目录，如果不指定则由框架自行决定
+         *
+         * @var string
+         */
+        'view_layouts_dir' => null,
+    );
+
+    /**
      * 控制器动作要渲染的数据
      *
      * @var array
@@ -66,94 +83,150 @@ abstract class QController_Abstract
     public $view = array();
 
     /**
-     * 控制器动作执行完毕后的响应对象
-     *
-     * @var QResponse_Interface
-     */
-    public $response;
-
-    /**
      * 构造函数
      */
-    function __construct(QApplication_Abstract $app)
+    function __construct(QApplication_Abstract $app, QContext $context)
     {
         $this->app = $app;
-        $this->app->current_controller = $this;
-        $this->request = $app->request;
+        $this->context = $context;
+    }
+
+    /**
+     * 返回该控制器所属的应用程序对象
+     *
+     * @return QApplication_Abstract
+     */
+    function app()
+    {
+        return $this->app;
     }
 
     /**
      * 执行指定的动作
      *
-     * @param string $action_name
-     * @param string $namespace
-     * @param string $module
-     *
      * @return mixed
      */
-    function execute($action_name, $namespace = null, $module = null)
+    function _execute(array $args = array())
     {
-        $action_method = 'action' . ucfirst(strtolower($action_name));
-        $action_method = str_replace('_', '', $action_method);
-        if (method_exists($this, $action_method)) {
-            $this->beforeExecute($action_name, $namespace, $module);
-            $ret = $this->{$action_method}();
-            return $this->afterExecute($action_name, $ret, $namespace, $module);
-        } else {
-            $arr = array($this->request->controller_name, $action_name, $namespace, $module);
-            $this->view = null;
-            return call_user_func_array(Q::getIni('dispatcher_on_action_not_found'), $arr);
+        $action_method = 'action' . ucfirst(strtolower($this->context->action_name));
+        if (! method_exists($this, $action_method))
+        {
+            return call_user_func($this->context->getIni('dispatcher_on_action_not_found'), $this->context);
         }
+
+        $this->_before_execute();
+
+        $response = call_user_func_array(array($this, $action_method), $args);
+        $response = $this->_after_execute($response);
+
+        if (is_null($response) && ! is_null($this->view))
+        {
+        	$viewname = $this->_getViewname();
+
+            /**
+             * 尝试载入控制器对应的视图类，如果没有找到则使用默认的 QView
+             */
+            if ($this->view_class)
+            {
+            	$view_class_name = $this->view_class;
+            }
+            else
+            {
+                $view_class_name = 'QView';
+            }
+
+            $response = new $view_class_name($this->context);
+            $response->viewname = $viewname;
+            $response->viewdata = (array)$this->view;
+            if (!empty($this->view_config['view_dir']))
+            {
+                $response->view_dir = $this->view_config['view_dir'];
+            }
+            $response->view_layouts = $this->view_layouts;
+            if (!empty($this->view_config['view_layouts_dir']))
+            {
+                $response->view_layouts_dir = $this->view_config['view_layouts_dir'];
+            }
+
+            if (method_exists($response, $action_method))
+            {
+            	$response->{$action_method}();
+            }
+        }
+
+        return $response;
     }
 
     /**
      * 魔法方法，用于自动加载 helper
      *
-     * @param string $varname
+     * @param string $helper_name
      *
      * @return mixed
      */
-    function __get($varname)
+    function __get($helper_name)
     {
-        static $dirs;
+        return $this->{$helper_name} = $this->_loadHelper($helper_name);
+    }
 
-        if (is_null($dirs)) {
-            $dirs = array(Q_DIR . '/qcontroller/helper');
-            if ($this->request->module_name) {
-                $dir = ROOT_DIR . '/module/' . $this->request->module_name . '/helper';
-            } else {
-                $dir = ROOT_DIR . '/app/helper';
-            }
-            if ($this->request->namespace) {
-                $dir .= '/' . $this->request->namespace;
-            }
-            $dirs[] = $dir;
+    /**
+     * 确定视图名字
+     *
+     * 继承类可以覆盖此方法来改变视图名称确认规则。
+     *
+     * @return string
+     */
+    protected function _getViewname()
+    {
+        $viewname = !empty($this->viewname) ? $this->viewname : $this->context->action_name;
+        if ($viewname[0] == '/')
+        {
+            return $viewname;
         }
 
-        $class_name = 'Helper_' . ucfirst($varname);
-        $filename = $varname . '_helper.php';
-        try {
-            Q::loadClassFile($filename, $dirs, $class_name);
-            $this->{$varname} = new $class_name($this);
-            return $this->{$varname};
-        } catch (Exception $ex) {
-            if (!class_exists($class_name, false)) {
-                // LC_MSG: Property "%s" not defined.
-                throw new QException(__('Property "%s" not defined.', $varname));
-            } else {
-                throw $ex;
-            }
+        $arr = $this->context->destinfo($viewname);
+
+        if ($this->context->getIni('view_config/flat_dir'))
+        {
+            return "{$this->context->controller_name}_{$viewname}";
+        }
+        else
+        {
+            return "{$this->context->controller_name}/{$viewname}";
         }
     }
 
     /**
-     * 执行控制器动作之前调用
+     * 转发请求到控制器的指定动作
      *
-     * @param string $action_name
-     * @param string $namespace
-     * @param string $module
+     * @param string $destination
+     *
+     * @return mixed
      */
-    function beforeExecute($action_name, $namespace, $module)
+    protected function _forward($destination)
+    {
+        $args = func_get_args();
+        array_shift($args);
+        return new QController_Forward($destination, $this->context, $args);
+    }
+
+    /**
+     * 载入指定名字的助手对象
+     *
+     * @param string $helper_name
+     *
+     * @return object
+     */
+    protected function _loadHelper($helper_name)
+    {
+        $class_name = 'Helper_' . ucfirst($helper_name);
+        return new $class_name($this->context);
+    }
+
+    /**
+     * 执行控制器动作之前调用
+     */
+    protected function _before_execute()
     {
         return true;
     }
@@ -161,28 +234,13 @@ abstract class QController_Abstract
     /**
      * 执行控制器动作之后调用
      *
-     * @param string $action_name
-     * @param mixed $ret
-     * @param string $action_name
-     * @param string $namespace
-     * @param string $module
+     * @param mixed $response
      *
      * @return mixed
      */
-    function afterExecute($action_name, $ret, $namespace = null, $module = null)
+    protected function _after_execute($response)
     {
-        return $ret;
-    }
-
-    /**
-     * 重定向浏览器
-     *
-     * @param string $url
-     * @param int $delay
-     */
-    protected function redirect($url, $delay = 0)
-    {
-        return new QResponse_Redirect($url, $delay);
+        return $response;
     }
 
     /**
@@ -193,8 +251,25 @@ abstract class QController_Abstract
      *
      * @return string
      */
-    protected function url($action, array $params = null)
+    protected function _url($action = null, array $params = null)
     {
-        return $this->url->make($this->request->getControllerName(), $action, $params);
+        return $this->context->url($this->context->controller_name, $action, $params);
+    }
+
+    /**
+     * 返回一个 QView_Redirect 对象
+     *
+     * @param string $url
+     * @param int $delay
+     *
+     * @return QView_Redirect
+     */
+    protected function _redirect($url, $delay = 0)
+    {
+        return new QView_Redirect($url, $delay);
     }
 }
+
+/**
+ * @}
+ */

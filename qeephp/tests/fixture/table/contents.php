@@ -12,7 +12,7 @@
  * 定义 Table_Contents 类
  *
  * @package test_fixture
- * @version $Id$
+ * @version $Id: contents.php 304 2008-04-15 21:32:10Z dualface $
  */
 
 /**

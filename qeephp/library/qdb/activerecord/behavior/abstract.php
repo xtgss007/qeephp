@@ -1,27 +1,21 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
+ * @file
  * 定义 QDB_ActiveRecord_Behavior_Abstract 类
  *
- * @package database
- * @version $Id: interface.php 955 2008-03-16 23:52:44Z dualface $
+ * @ingroup activerecord
+ *
+ * @{
  */
 
 /**
  * QDB_ActiveRecord_Behavior_Abstract 抽象类是所有行为插件的基础类
- *
- * @package database
  */
 abstract class QDB_ActiveRecord_Behavior_Abstract implements QDB_ActiveRecord_Callbacks
 {
+
     /**
      * ActiveRecord 继承类的元信息对象
      *
@@ -37,16 +31,53 @@ abstract class QDB_ActiveRecord_Behavior_Abstract implements QDB_ActiveRecord_Ca
     protected $_settings = array();
 
     /**
+     * 插件添加的动态方法
+     *
+     * @var array
+     */
+    private $_dynamic_methods = array();
+
+    /**
+     * 插件添加的静态方法
+     *
+     * @var array
+     */
+    private $_static_methods = array();
+
+    /**
+     * 插件添加的事件处理函数
+     *
+     * @var array
+     */
+    private $_event_handlers = array();
+
+    /**
+     * 插件添加的 getter 方法
+     *
+     * @var array
+     */
+    private $_getters = array();
+
+    /**
+     * 插件添加的 setter 方法
+     *
+     * @var array
+     */
+    private $_setters = array();
+
+    /**
      * 构造函数
      *
-     * QDB_ActiveRecord_Meta $meta
+     * @param QDB_ActiveRecord_Meta $meta
      * @param array $settings
      */
     function __construct(QDB_ActiveRecord_Meta $meta, array $settings)
     {
         $this->_meta = $meta;
-        foreach ($settings as $key => $value) {
-            if (array_key_exists($key, $this->_settings)) {
+        foreach ($settings as $key => $value)
+        {
+            if (array_key_exists($key, $this->_settings))
+            {
                 $this->_settings[$key] = $value;
             }
         }
@@ -59,9 +90,95 @@ abstract class QDB_ActiveRecord_Behavior_Abstract implements QDB_ActiveRecord_Ca
     abstract function bind();
 
     /**
-     * 插件绑定完成后调用
+     * 撤销行为插件绑定
      */
-    function afterBind()
+    function unbind()
     {
+    	foreach ($this->_dynamic_methods as $method_name)
+    	{
+            $this->_meta->removeDynamicMethod($method_name);
+    	}
+    	foreach ($this->_static_methods as $method_name)
+    	{
+    		$this->_meta->removeStaticMethod($method_name);
+    	}
+    	foreach ($this->_event_handlers as $arr)
+    	{
+    		list($event_type, $callback) = $arr;
+    		$this->_meta->removeEventHandler($event_type, $callback);
+    	}
+    	foreach ($this->_getters as $prop_name)
+    	{
+    	    $this->_meta->unsetPropGetter($prop_name);
+    	}
+        foreach ($this->_setters as $prop_name)
+        {
+            $this->_meta->unsetPropSetter($prop_name);
+        }
+    }
+
+    /**
+     * 为 ActiveRecord 对象添加一个动态方法
+     *
+     * @param string $method_name
+     * @param callback $callback
+     * @param array $custom_parameters
+     */
+    protected function _addDynamicMethod($method_name, $callback, $custom_parameters = array())
+    {
+    	$this->_meta->addDynamicMethod($method_name, $callback, $custom_parameters);
+    	$this->_dynamic_methods[] = $method_name;
+    }
+
+    /**
+     * 为 ActiveRecord 类添加一个静态方法
+     *
+     * @param string $method_name
+     * @param callback $callback
+     * @param array $custom_parameters
+     */
+    protected function _addStaticMethod($method_name, $callback, $custom_parameters = array())
+    {
+        $this->_meta->addStaticMethod($method_name, $callback, $custom_parameters);
+        $this->_static_methods[] = $method_name;
+    }
+
+    /**
+     * 为 ActiveRecord 对象添加一个事件处理函数
+     *
+     * @param int $event_type
+     * @param callback $callback
+     * @param array $custom_parameters
+     */
+    protected function _addEventHandler($event_type, $callback, $custom_parameters = array())
+    {
+    	$this->_meta->addEventHandler($event_type, $callback, $custom_parameters);
+        $this->_event_handlers[] = array($event_type, $callback);
+    }
+
+    /**
+     * 设置一个属性的 getter 方法
+     *
+     * @param string $prop_name
+     * @param callback $callback
+     * @param array $custom_parameters
+     */
+    protected function _setPropGetter($prop_name, $callback, $custom_parameters = array())
+    {
+        $this->_meta->setPropGetter($prop_name, $callback, $custom_parameters);
+        $this->_getters[] = $prop_name;
+    }
+
+    /**
+     * 设置一个属性的 setter 方法
+     *
+     * @param string $prop_name
+     * @param callback $callback
+     * @param array $custom_parameters
+     */
+    protected function _setPropSetter($prop_name, $callback, $custom_parameters = array())
+    {
+        $this->_meta->setPropGetter($prop_name, $callback, $custom_parameters);
+        $this->_setters[] = $prop_name;
     }
 }

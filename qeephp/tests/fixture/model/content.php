@@ -36,6 +36,7 @@ class Content extends QDB_ActiveRecord_Abstract
                 // Content 关联到多个 Tag
                 'tags' => array('many_to_many'   => 'Tag',
                                 'mid_table_name' => 'contents_has_tags',
+                                'mid_target_key' => 'tag_name',
                                 'count_set_to'   => 'tags_count'),
             ),
 
@@ -59,12 +60,12 @@ class Content extends QDB_ActiveRecord_Abstract
      *
      * @static
      *
-     * @return QDB_ActiveRecord_Select
+     * @return QDB_Select
      */
     static function find()
     {
         $args = func_get_args();
-        return QDB_ActiveRecord_Meta::getInstance(__CLASS__)->findArgs($args);
+        return QDB_ActiveRecord_Meta::instance(__CLASS__)->findByArgs($args);
     }
 
     /**
@@ -76,23 +77,11 @@ class Content extends QDB_ActiveRecord_Abstract
      */
     static function meta()
     {
-        return QDB_ActiveRecord_Meta::getInstance(__CLASS__);
+        return QDB_ActiveRecord_Meta::instance(__CLASS__);
     }
 
 /* -------------------------------------------------------------------- */
 
-}
-
-class Content_Null extends Content
-{
-    function id() { return null; }
-    function setProps(array $props) {}
-    function save($force_create = false, $recursion = 99) {}
-    function reload($recursion = 1) {}
-    function validate($mode = 'general', $throw = false) {}
-    function destroy($recursion = 99) {}
-    protected function create($recursion = 99) {}
-    protected function update($recursion = 99) {}
 }
 
 class Content_Exception extends QException

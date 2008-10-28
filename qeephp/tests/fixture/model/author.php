@@ -30,6 +30,7 @@ class Author extends QDB_ActiveRecord_Abstract
 
                 'contents' => array('has_many' => 'Content', 'count_set_to' => 'contents_count'),
                 'comments' => array('has_many' => 'Comment', 'count_set_to' => 'comments_count'),
+                'profile' => array('has_one' => 'Profile', 'count_set_to' => 'has_profile'),
             ),
 
             // 在保存对象时，会按照下面指定的验证规则进行验证。验证失败会抛出异常。
@@ -52,12 +53,12 @@ class Author extends QDB_ActiveRecord_Abstract
      *
      * @static
      *
-     * @return QDB_ActiveRecord_Select
+     * @return QDB_Select
      */
     static function find()
     {
         $args = func_get_args();
-        return QDB_ActiveRecord_Meta::getInstance(__CLASS__)->findArgs($args);
+        return QDB_ActiveRecord_Meta::instance(__CLASS__)->findByArgs($args);
     }
 
     /**
@@ -69,23 +70,11 @@ class Author extends QDB_ActiveRecord_Abstract
      */
     static function meta()
     {
-        return QDB_ActiveRecord_Meta::getInstance(__CLASS__);
+        return QDB_ActiveRecord_Meta::instance(__CLASS__);
     }
 
 /* -------------------------------------------------------------------- */
 
-}
-
-class Author_Null extends Author
-{
-    function id() { return null; }
-    function setProps(array $props) {}
-    function save($force_create = false, $recursion = 99) {}
-    function reload($recursion = 1) {}
-    function validate($mode = 'general', $throw = false) {}
-    function destroy($recursion = 99) {}
-    protected function create($recursion = 99) {}
-    protected function update($recursion = 99) {}
 }
 
 class Author_Exception extends QException

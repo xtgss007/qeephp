@@ -12,7 +12,7 @@
  * 定义 QDB_ActiveRecord_Association_Exception 异常
  *
  * @package database
- * @version $Id$
+ * @version $Id: exception.php 338 2008-04-28 23:22:16Z dualface $
  */
 
 /**

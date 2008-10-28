@@ -10,9 +10,6 @@
 
 /**
  * 定义 Chili_Exception 异常
- *
- * @package chili
- * @version $Id$
  */
 
 /**

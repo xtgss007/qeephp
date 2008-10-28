@@ -1,0 +1,86 @@
+## 注意：书写时，缩进不能使用 Tab，必须使用空格
+
+#############################
+# 运行时环境
+#############################
+
+# 是否自动打开 session
+runtime_session_start:      true
+
+# 默认使用的缓存服务
+runtime_cache_backend:      QCache_Null
+
+# 数据库元信息要使用的缓存服务
+db_meta_cache_backend:      QCache_Null
+
+# 应用程序的 flash_message 用什么键名存储在 session 中
+app_flash_message_key:      _FLASH_MESSAGE_
+
+# 是否使用日志功能
+log_enabled:                true
+
+
+#############################
+# 调度器和访问控制
+#############################
+
+# url 参数的传递模式，可以是标准、PATHINFO、URL 重写等模式，分别对应 standard、pathinfo、rewrite 设置值
+dispatcher_url_mode:        standard
+
+# 指示当没有为控制器提供 ACT 时，要使用的默认 ACT
+default_act:
+  allow: acl_everyone
+
+# 指示 ACL 组件用什么键名在 session 中保存用户数据
+acl_session_key:            acl_generator_userdata
+
+
+#############################
+# 视图、国际化和本地化
+#############################
+
+# 要使用的模板引擎，'PHP' 表示使用 PHP 语言本身作模板引擎
+view_adapter:               QView_Adapter_Gingko
+
+# 指示 QeePHP 应用程序内部处理数据和输出内容要使用的编码
+i18n_response_charset:      utf-8
+
+# 指示是否启用多语言支持
+i18n_multi_languages:       false
+
+# 默认的时区设置
+l10n_default_timezone:      Asia/Shanghai
+
+
+#############################
+# 数据库元信息缓存设置
+#############################
+
+# 数据表元数据缓存时间（秒）
+db_meta_lifetime:       10
+
+# 指示是否缓存数据表的元数据
+db_meta_cached:         false
+
+
+#############################
+# 日志设置
+#############################
+
+# 指示用什么目录保存日志文件
+log_writer_dir:         %MANAGED_APP_ROOT_DIR%/log
+
+# 指示用什么文件名保存日志
+log_writer_filename:    websetup.log
+
+# 指示记录哪些优先级的日志（不符合条件的会直接过滤）
+log_priorities:         EMERG, ALERT, CRIT, ERR, WARN, NOTICE, INFO, DEBUG
+
+# 指示是否显示错误信息
+error_display:          true
+
+# 指示是否显示友好的错误信息
+error_display_friendly: true
+
+# 指示是否在错误信息中显示出错位置的源代码
+error_display_source:   true

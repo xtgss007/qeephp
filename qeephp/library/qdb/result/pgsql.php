@@ -24,16 +24,21 @@ class QDB_Result_Pgsql extends QDB_Result_Abstract
 {
     function free()
     {
-        if ($this->handle) { pg_free_result($this->handle); }
-        $this->handle = null;
+        if ($this->_handle) { pg_free_result($this->_handle); }
+        $this->_handle = null;
     }
 
     function fetchRow()
     {
         if ($this->fetch_mode == QDB::FETCH_MODE_ASSOC) {
-            return pg_fetch_assoc($this->handle);
+            $row = pg_fetch_assoc($this->_handle);
+            if ($this->result_field_name_lower && $row)
+            {
+                $row = array_change_key_case($row, CASE_LOWER);
+            }
+            return $row;
         } else {
-            return pg_fetch_array($this->handle);
+            return pg_fetch_array($this->_handle);
         }
     }
 }

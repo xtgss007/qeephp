@@ -1,31 +1,26 @@
 <?php
-/////////////////////////////////////////////////////////////////////////////
-// QeePHP Framework
-//
-// Copyright (c) 2005 - 2008 QeeYuan China Inc. (http://www.qeeyuan.com)
-//
-// 许可协议，请查看源代码中附带的 LICENSE.TXT 文件，
-// 或者访问 http://www.qeephp.org/ 获得详细信息。
-/////////////////////////////////////////////////////////////////////////////
+// $Id$
 
 /**
- * 定义 QDB_Cond 类
+ * @file
+ * 定义 QDB_Cond
  *
- * @package database
- * @version $Id$
+ * @ingroup database
+ *
+ * @{
  */
 
 /**
  * QDB_Cond 类封装复杂的查询条件
- *
- * @package database
  */
 class QDB_Cond
 {
+
     /**
      * 定义组
      */
     const BEGIN_GROUP = '(';
+
     const END_GROUP = ')';
 
     /**
@@ -41,8 +36,12 @@ class QDB_Cond
     function __construct()
     {
         $args = func_get_args();
-        if (!empty($args)) {
-            $this->_parts[] = array($args, true);
+        if (! empty($args))
+        {
+            $this->_parts[] = array(
+                $args,
+                true
+            );
         }
     }
 
@@ -56,12 +55,17 @@ class QDB_Cond
      */
     static function createCronDirect($cond, array $cond_args = null)
     {
-        if (!is_array($cond_args)) {
+        if (! is_array($cond_args))
+        {
             $cond_args = array();
         }
         $c = new QDB_Cond();
-        array_unshift($cond_args, $cond);
-        return $c->appendDirect($cond_args);
+        if (! empty($cond))
+        {
+            array_unshift($cond_args, $cond);
+            $c->appendDirect($cond_args);
+        }
+        return $c;
     }
 
     /**
@@ -74,7 +78,10 @@ class QDB_Cond
      */
     function appendDirect(array $args, $bool = true)
     {
-        $this->_parts[] = array($args, $bool);
+        $this->_parts[] = array(
+            $args,
+            $bool
+        );
         return $this;
     }
 
@@ -85,7 +92,10 @@ class QDB_Cond
      */
     function andCond()
     {
-        $this->_parts[] = array(func_get_args(), true);
+        $this->_parts[] = array(
+            func_get_args(),
+            true
+        );
         return $this;
     }
 
@@ -96,7 +106,10 @@ class QDB_Cond
      */
     function orCond()
     {
-        $this->_parts[] = array(func_get_args(), false);
+        $this->_parts[] = array(
+            func_get_args(),
+            false
+        );
         return $this;
     }
 
@@ -107,8 +120,14 @@ class QDB_Cond
      */
     function andGroup()
     {
-        $this->_parts[] = array(self::BEGIN_GROUP, true);
-        $this->_parts[] = array(func_get_args(), true);
+        $this->_parts[] = array(
+            self::BEGIN_GROUP,
+            true
+        );
+        $this->_parts[] = array(
+            func_get_args(),
+            true
+        );
         return $this;
     }
 
@@ -119,8 +138,14 @@ class QDB_Cond
      */
     function orGroup()
     {
-        $this->_parts[] = array(self::BEGIN_GROUP, false);
-        $this->_parts[] = array(func_get_args(), false);
+        $this->_parts[] = array(
+            self::BEGIN_GROUP,
+            false
+        );
+        $this->_parts[] = array(
+            func_get_args(),
+            false
+        );
         return $this;
     }
 
@@ -131,7 +156,10 @@ class QDB_Cond
      */
     function endGroup()
     {
-        $this->_parts[] = array(self::END_GROUP, null);
+        $this->_parts[] = array(
+            self::END_GROUP,
+            null
+        );
         return $this;
     }
 
@@ -140,95 +168,168 @@ class QDB_Cond
      *
      * @param QDB_Adapter_Abstract $conn
      * @param string $table_name
-     * @param array $mapping
+     * @param array $fields_mapping
+     * @param callback $callback
      *
      * @return string
      */
-    function formatToString($conn, $table_name = null, array $mapping = null)
+    function formatToString($conn, $table_name = null, array $fields_mapping = null, $callback = null)
     {
-        if (empty($this->_parts)) { return ''; }
-        if (is_null($mapping)) {
-            $mapping = array();
+        if (empty($this->_parts))
+        {
+            return '';
+        }
+        if (is_null($fields_mapping))
+        {
+            $fields_mapping = array();
         }
         $sql = '';
 
-        $skip = true;
+        $skip_cond_link = true;
         $bool = true;
-        foreach ($this->_parts as $part) {
-            list($args, $_bool) = $part;
-            if (empty($args)) { continue; }
 
-            if (!is_null($_bool)) {
+        /**
+         * _parts 的存储结构是一个二维数组
+         *
+         * 数组的每一项如下：
+         *
+         * - 要处理的查询条件
+         * - 该查询条件与其他查询条件是 AND 还是 OR 关系
+         */
+        foreach ($this->_parts as $part)
+        {
+            list ($args, $_bool) = $part;
+            if (empty($args))
+            {
+                // 如果查询条件为空，忽略该项
+                $skip_cond_link = true;
+                continue;
+            }
+
+            if (! is_null($_bool))
+            {
+                // 如果该项查询条件没有指定 AND/OR 关系，则不改变当前的 AND/OR 关系状态
                 $bool = $_bool;
             }
 
-            if (!is_array($args)) {
-                if ($args == self::BEGIN_GROUP) {
-                    if (!$skip) {
+            if (! is_array($args))
+            {
+                // 查询如果不是一个数组，则判断是否是特殊占位符
+                if ($args == self::BEGIN_GROUP)
+                {
+                    if (! $skip_cond_link)
+                    {
                         $sql .= ($bool) ? ' AND ' : ' OR ';
                     }
                     $sql .= self::BEGIN_GROUP;
-                    $skip = true;
-                } else {
+                    $skip_cond_link = true;
+                }
+                else
+                {
                     $sql .= self::END_GROUP;
                 }
                 continue;
-            } else {
-                if ($skip) {
-                    $skip = false;
-                } else {
+            }
+            else
+            {
+                if ($skip_cond_link)
+                {
+                    $skip_cond_link = false;
+                }
+                else
+                {
+                    /**
+                     * 如果 $skip_cond_link 为 false，表示前一个项目是一个查询条件，
+                     * 因此需要用 AND/OR 来连接多个查询条件。
+                     */
                     $sql .= ($bool) ? ' AND ' : ' OR ';
                 }
             }
 
+            // 剥离出查询条件，$args 剩下的内容是查询参数
             $cond = reset($args);
             array_shift($args);
-            if ($cond instanceof QDB_Cond || $cond instanceof QDB_Expr) {
-                $part = $cond->formatToString($conn, $table_name, $mapping);
-            } elseif (is_array($cond)) {
+
+            if ($cond instanceof QDB_Cond || $cond instanceof QDB_Expr)
+            {
+                // 使用 QDB_Cond 作为查询条件
+                $part = $cond->formatToString($conn, $table_name, $fields_mapping, $callback);
+            }
+            elseif (is_array($cond))
+            {
+                // 使用数组作为查询条件
                 $part = array();
-                foreach ($cond as $field => $value) {
-                    if (!is_string($field)) {
-                        if (empty($value)) { continue; }
-                        // 假定 $value 是一个字符串条件
-                        $value = $conn->qfieldsInto($value, $table_name, $mapping);
-                        if (!empty($args)) {
-                            $style = (strpos($value, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
-                            $part[] = $conn->qinto($conn->qfieldsInto($value, $table_name, $mapping), $args, $style);
-                        } else {
-                            $part[] = $value;
+                foreach ($cond as $field => $value)
+                {
+                    if (! is_string($field))
+                    {
+                        // 如果键名不是字符串，说明键值是一个查询条件
+                        if (empty($value))
+                        {
+                            continue;
                         }
-                    } else {
-                        if (isset($mapping[$field])) {
-                            $field = $mapping[$field];
+
+                        if ($value instanceof QDB_Cond || $cond instanceof QDB_Expr)
+                        {
+                            // 查询条件如果是 QDB_Cond 或 QDB_Expr，则格式化为字符串
+                            $value = $value->formatToString($conn, $table_name, $fields_mapping, $callback);
                         }
-                        if (!is_array($value)) {
-                            $part[] = $conn->qfield($field, $table_name) . '=' . $conn->qstr($value);
-                        } else {
+
+                        $value = $conn->qsql($value, $table_name, $fields_mapping, $callback);
+                        $style = (strpos($value, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
+                        $part[] = $conn->qinto($value, $args, $style);
+                    }
+                    else
+                    {
+                        // 如果键名是一个字符串，则假定为 “字段名” => “查询值” 这样的名值对
+                        $field = '[' . trim($field, '[]') . ']';
+                    	$field = $conn->qsql($field, $table_name, $fields_mapping, $callback);
+
+                        // 转义查询值
+                        if (! is_array($value))
+                        {
+                            $part[] = $conn->qid("{$field}") . ' = ' . $conn->qstr($value);
+                        }
+                        else
+                        {
                             $values = array();
-                            foreach ($value as $_v) {
+                            foreach ($value as $_v)
+                            {
                                 $values[] = $conn->qstr($_v);
                             }
                             unset($value);
-                            $part[] = $conn->qfield($field, $table_name) . ' IN(' . implode(',', $values) . ')';
+                            $part[] = $conn->qid("{$field}") . ' IN(' . implode(', ', $values) . ')';
                         }
                     }
                 }
+                // 用 AND 连接多个查询条件
                 $part = implode(' AND ', $part);
-            } else {
-                $part = $conn->qfieldsInto($cond, $table_name, $mapping);
-                if (!empty($args)) {
-                    $style = (strpos($part, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
-                    $part = $conn->qinto($part, $args, $style);
-                }
+            }
+            else
+            {
+                // 使用字符串做查询条件
+                $part = $conn->qsql($cond, $table_name, $fields_mapping, $callback);
+                $style = (strpos($part, '?') === false) ? QDB::PARAM_CL_NAMED : QDB::PARAM_QM;
+                $part = $conn->qinto($part, $args, $style);
             }
 
-            if (empty($part) || $part == '()') { continue; }
+            if (empty($part) || $part == '()')
+            {
+            	$skip_cond_link = true;
+                continue;
+            }
 
             $sql .= $part;
         }
 
-        if (empty($sql)) { return ''; }
+        if (empty($sql))
+        {
+            return '';
+        }
         return '(' . $sql . ')';
     }
 }
+
+/**
+ * @}
+ */
