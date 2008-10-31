@@ -108,4 +108,66 @@ class QDom_Element extends DOMElement {
         }
         return $newnode;
     }
+
+    /**
+     * 把节点插入到指定节点的指定位置
+     *
+     * @param   DOMNode $refnode
+     * @param   string  $where
+     * @return  DOMNode
+     */
+    public function inject(DOMNode $refnode, $where = 'bottom') {
+        $where = strtolower($where);
+
+        if ('before' == $where) {
+            $refnode->parentNode->insertBefore($this, $refnode);
+        } elseif ('after' == $where) {
+            $refnode->parentNode->insertAfter($this, $refnode);
+        } else {
+            if ('top' == $where AND $first = $refnode->firstChild) {
+                $refnode->insertBefore($this, $first);
+            } else {
+                $refnode->appendChild($this);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * 是否是第一个子节点
+     *
+     * @return  boolean
+     */
+    public function isFirst() {
+        return $this->prefiousSibling ? false : true;
+    }
+
+    /**
+     * 是否最后一个子节点
+     *
+     * @return  boolean
+     */
+    public function isLast() {
+        return $this->nextSibling ? false : true;
+    }
+
+    /**
+     * 清除所有的子节点
+     *
+     * @return DOMNode
+     */
+    public function empty() {
+        foreach ($this->childNodes as $child) {
+            $this->removeChild($child);
+        }
+        return $this;
+    }
+
+    /**
+     * 删除自己
+     */
+    public function erase() {
+        $this->parentNode->removeChild($this);
+    }
 }

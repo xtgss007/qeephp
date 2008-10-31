@@ -225,6 +225,26 @@ class QColl implements Iterator, ArrayAccess, Countable
     }
 
     /**
+     * 添加一个二维数组或一个 QColl 对象的内容到集合中
+     *
+     * @param array|QColl $data
+     *
+     * @return QColl
+     */
+    function append($data)
+    {
+        if (is_array($data) || ($data instanceof QColl))
+        {
+            foreach ($data as $key => $item)
+            {
+                $this->offsetSet($key, $item);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
      * 返回包含所有元素内容的数组
      *
      * @param int $recursion
@@ -355,6 +375,7 @@ class QColl implements Iterator, ArrayAccess, Countable
         // LC_MSG: Type mismatch. expected "%s", but actual is "%s".
         throw new QException(__('Type mismatch. expected "%s", but actual is "%s".', $this->_type, $type));
     }
+
 }
 
 /**

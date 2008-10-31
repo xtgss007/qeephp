@@ -1,6 +1,6 @@
 <?php
 
-class QException_FileNotFound extends QException
+class Q_FileNotFoundException extends QException
 {
     public $required_filename;
 

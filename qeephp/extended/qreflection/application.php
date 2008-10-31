@@ -19,16 +19,23 @@ class QReflection_Application
     /**
      * 应用程序的默认模块
      *
-     * @var QApplication_Module
+     * @var QReflection_Module
      */
-    protected $_default_module;
+    protected $_reflection_default_module;
 
     /**
-     * 应用程序的根上下文对象
+     * 应用所有模块的反射
      *
-     * @var QContext
+     * @var QColl
      */
-    protected $_root_context;
+    protected $_reflection_modules;
+
+    /**
+     * 应用所有模块的名字
+     *
+     * @var array of module name
+     */
+    protected $_reflection_modules_name;
 
     /**
      * 已经载入的应用程序设置描述信息
@@ -46,7 +53,7 @@ class QReflection_Application
     {
         $this->_app_config = $app_config;
         $this->_appid = $app_config['APPID'];
-        QApplication_Abstract::setAppConfig($this->_appid, $app_config);
+        QApplication_Abstract::setAppConfig($this->_appid, $this->_app_config);
     }
 
     /**
@@ -54,9 +61,19 @@ class QReflection_Application
      *
      * @return string
      */
-    function appid()
+    function APPID()
     {
         return $this->_appid;
+    }
+
+    /**
+     * 返回应用的 ROOT_DIR
+     *
+     * @return string
+     */
+    function ROOT_DIR()
+    {
+        return $this->configItem('ROOT_DIR');
     }
 
     /**
@@ -82,31 +99,107 @@ class QReflection_Application
     }
 
     /**
-     * 返回应用程序的默认模块
+     * 返回该应用所有模块的名字
      *
-     * @return QApplication_Module
+     * @return array of module name
      */
-    function defaultModule()
+    function reflectionModulesName()
     {
-        if (is_null($this->_default_module))
+        if (is_null($this->_reflection_modules_name))
         {
-            $this->_default_module = QApplication_Module::instance(null, $this->_appid);
+            $module_dir_layout = $this->configItem('MODULE_DIR_LAYOUT');
+            if (empty($module_dir_layout))
+            {
+                $module_dir_layout = QReflection_Module::MODULE_DIR_LAYOUT;
+            }
+
+            $search = array('%ROOT_DIR%', '%MODULE_NAME%');
+            $replace = array($this->ROOT_DIR(), '');
+            $dir = rtrim(str_replace($search, $replace, $module_dir_layout), '/\\');
+            $this->_modules_name = array();
+            foreach (glob($dir . '/*') as $file)
+            {
+                if (!is_dir($file))
+                {
+                    continue;
+                }
+
+                $basename = basename($file);
+                if ($basename == '.' || $basename == '..')
+                {
+                    continue;
+                }
+
+                $this->_reflection_modules_name[] = $basename;
+            }
+            sort($this->_reflection_modules_name, SORT_STRING);
         }
-        return $this->_default_module;
+
+        return $this->_reflection_modules_name;
     }
 
     /**
-     * 返回应用程序的根上下文对象
+     * 获得应用所有模块的反射
      *
-     * @return QContext
+     * @return array of QReflection_Module
      */
-    function rootContext()
+    function reflectionModules()
     {
-        if (is_null($this->_root_context))
+        if (is_null($this->_reflection_modules))
         {
-            $this->_root_context = QContext::instance(null, $this->_appid);
+            $this->_reflection_modules = new QColl('QReflection_Module');
+            $this->_reflection_modules[QApplication_Module::DEFAULT_MODULE_NAME] = new QReflection_Module($this, null);
+            foreach ($this->reflectionModulesName() as $module_name)
+            {
+                $this->_reflection_modules[$module_name] = new QReflection_Module($this, $module_name);
+            }
         }
-        return $this->_root_context;
+
+        return $this->_reflection_modules;
+    }
+
+    /**
+     * 获得指定名称模块的反射
+     *
+     * @param string $module_name
+     *
+     * @return QReflection_Module
+     */
+    function reflectionModule($module_name)
+    {
+        if (is_null($this->_reflection_modules))
+        {
+            $this->reflectionModules();
+        }
+        if (empty($module_name))
+        {
+            $module_name = QApplication_Module::DEFAULT_MODULE_NAME;
+        }
+        return $this->_reflection_modules[$module_name];
+    }
+
+    /**
+     * 返回应用程序的默认模块的反射
+     *
+     * @return QReflection_Module
+     */
+    function reflectionDefaultModule()
+    {
+        $all_reflection_modules = $this->reflectionModules();
+        return $all_reflection_modules[QApplication_Module::DEFAULT_MODULE_NAME];
+    }
+
+    /**
+     * 检查是否存在指定的模块
+     *
+     * @param string $module_name
+     *
+     * @return boolean
+     */
+    function hasModule($module_name)
+    {
+        $modules_name = $this->reflectionModulesName();
+        return in_array($module_name, $modules_name);
     }
 
     /**
@@ -118,7 +211,7 @@ class QReflection_Application
      */
     function getIni($path)
     {
-        return $this->rootContext()->getIni($path);
+        return $this->reflectionDefaultModule()->getIni($path);
     }
 
     /**
@@ -140,5 +233,21 @@ class QReflection_Application
         return self::$_ini_descriptions[$lang];
     }
 
+    /**
+     * 为应用程序生成一个控制器的代码
+     *
+     * @param string $controller_name
+     *
+     * @return QGenerator_Controller
+     */
+    function generateController($controller_name)
+    {
+        $module = null;
+        if (strpos($controller_name, '@') !== false)
+        {
+            list($controller_name, $module) = explode('@', $controller_name);
+        }
+        return $this->reflectionModule($module)->generateController($controller_name);
+    }
 }
 

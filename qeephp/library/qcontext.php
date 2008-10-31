@@ -1,5 +1,5 @@
 <?php
-// $Id: qcontext.php 1436 2008-10-27 16:32:45Z dualface $
+// $Id$
 
 /**
  * @file
@@ -175,13 +175,13 @@ class QContext implements ArrayAccess
      */
     protected function __construct(QApplication_Module $module)
     {
-        $module_name = $module->module_name();
-        $appid = $module->appid();
+        $module_name = $module->moduleName();
+        $appid = $module->APPID();
         self::$_instances[$appid][$module_name] = $this;
         $this->_app = QApplication_Abstract::app($appid);
         $this->_module = $module;
 
-        if ($module_name == '#default#')
+        if ($module_name == QApplication_Module::DEFAULT_MODULE_NAME)
         {
             // 初始化应用程序默认的上下文对象
             $this->_config = require Q_DIR . '/_config/default_config.php';
@@ -190,7 +190,7 @@ class QContext implements ArrayAccess
         else
         {
             // 构造其他模块的上下文对象
-            $root = self::$_instances[$appid]['#default#'];
+            $root = self::$_instances[$appid][QApplication_Module::DEFAULT_MODULE_NAME];
 
             $this->module_name      = $module_name;
             $this->namespace        = $root->namespace;
@@ -228,7 +228,7 @@ class QContext implements ArrayAccess
         }
         if (empty($module_name))
         {
-            $module_name = '#default#';
+            $module_name = QApplication_Module::DEFAULT_MODULE_NAME;
         }
 
         if (!isset(self::$_instances[$appid][$module_name]))

@@ -33,6 +33,10 @@
  */
 abstract class QApplication_Abstract
 {
+    const FLASH_MSG_ERROR   = '#flash_msg_error#';
+    const FLASH_MSG_INFO    = '#flash_msg_info#';
+    const FLASH_MSG_WARNING = '#flash_msg_warning#';
+
     /**
      * 用于提供验证服务的对象实例
      *
@@ -53,6 +57,13 @@ abstract class QApplication_Abstract
      * @var string
      */
     protected $_flash_message;
+
+    /**
+     * 消息类型
+     *
+     * @var string
+     */
+    protected $_flash_message_type;
 
     /**
      * 应用程序ID
@@ -113,6 +124,16 @@ abstract class QApplication_Abstract
     }
 
     /**
+     * 返回应用程序的ID
+     *
+     * @return string
+     */
+    function APPID()
+    {
+        return $this->_appid;
+    }
+
+    /**
      * 返回应用程序根目录
      *
      * @return string
@@ -161,7 +182,25 @@ abstract class QApplication_Abstract
         if (isset($_SESSION))
         {
             $key = $this->context->getIni('app_flash_message_key');
-            $this->_flash_message = isset($_SESSION[$key]) ? $_SESSION[$key] : null;
+            $arr = isset($_SESSION[$key]) ? $_SESSION[$key] : null;
+            if (!is_array($arr))
+            {
+                $arr = array(self::FLASH_MSG_INFO, $arr);
+            }
+            elseif (!isset($arr[1]))
+            {
+                $arr = array(self::FLASH_MSG_INFO, $arr[0]);
+            }
+
+            if ($arr[0] != self::FLASH_MSG_ERROR
+                && $arr[0] != self::FLASH_MSG_INFO
+                && $arr[0] != self::FLASH_MSG_WARNING)
+            {
+                $arr[0] = self::FLASH_MSG_INFO;
+            }
+
+            $this->_flash_message_type = $arr[0];
+            $this->_flash_message = $arr[1];
             unset($_SESSION[$key]);
         }
 
@@ -179,11 +218,21 @@ abstract class QApplication_Abstract
     function setFlashMessage()
     {
         $args = func_get_args();
+        $type = array_pop($args);
+        if ($type != self::FLASH_MSG_ERROR
+            && $type != self::FLASH_MSG_INFO
+            && $type != self::FLASH_MSG_WARNING)
+        {
+            array_push($args, $type);
+            $type = self::FLASH_MSG_INFO;
+        }
+
         $this->_flash_message = call_user_func_array('sprintf', $args);
+        $this->_flash_message_type = $type;
 
         if (isset($_SESSION))
         {
-            $_SESSION[$this->context->getIni('app_flash_message_key')] = $this->_flash_message;
+            $_SESSION[$this->context->getIni('app_flash_message_key')] = array($type, $this->_flash_message);
         }
     }
 
@@ -195,6 +244,16 @@ abstract class QApplication_Abstract
     function getFlashMessage()
     {
         return $this->_flash_message;
+    }
+
+    /**
+     * 返回用 setFlashMessage() 设置的提示信息的类型
+     *
+     * @return string
+     */
+    function getFlashMessageType()
+    {
+        return $this->_flash_message_type;
     }
 
     /**

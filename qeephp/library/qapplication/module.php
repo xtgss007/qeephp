@@ -3,6 +3,13 @@
 class QApplication_Module
 {
     /**
+     * 默认模块的名称
+     *
+     * @var string
+     */
+    const DEFAULT_MODULE_NAME = '#default#';
+
+    /**
      * 该模块所属的应用程序ID
      *
      * @var string
@@ -21,21 +28,21 @@ class QApplication_Module
      *
      * @var string
      */
-    private $_module_name;
+    protected $_module_name;
 
     /**
      * 使用的缓存对象
      *
      * @var QCache_File
      */
-    private $_cache_backend;
+    protected $_cache_backend;
 
     /**
      * 所有模块的注册索引
      *
      * @var array
      */
-    static private $_instances = array();
+    static protected $_instances = array();
 
     /**
      * 构造函数
@@ -48,7 +55,7 @@ class QApplication_Module
         $this->_appid = $appid;
         if (empty($module_name))
         {
-            $module_name = '#default#';
+            $module_name = self::DEFAULT_MODULE_NAME;
         }
         $this->_module_name = $module_name;
         self::$_instances[$appid][$module_name] = $this;
@@ -67,7 +74,7 @@ class QApplication_Module
         $module_name = strtolower($module_name);
         if (empty($module_name))
         {
-            $module_name = '#default#';
+            $module_name = self::DEFAULT_MODULE_NAME;
         }
         if (empty($appid))
         {
@@ -102,7 +109,7 @@ class QApplication_Module
      *
      * @return string
      */
-    function appid()
+    function APPID()
     {
         return $this->_appid;
     }
@@ -112,7 +119,7 @@ class QApplication_Module
      *
      * @return string
      */
-    function module_name()
+    function moduleName()
     {
         return $this->_module_name;
     }
@@ -184,7 +191,7 @@ class QApplication_Module
         $root_dir = $app_config['ROOT_DIR'];
 
         // 载入配置文件，并替换配置文件中的宏
-        if ($module_name != '#default#')
+        if ($module_name != self::DEFAULT_MODULE_NAME)
         {
             $module_name = strtolower(preg_replace('/[^a-z0-9_]+/i', '', $module_name));
             $root = "{$root_dir}/config/modules/{$module_name}";

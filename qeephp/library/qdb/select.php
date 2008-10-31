@@ -246,6 +246,29 @@ class QDB_Select
     }
 
     /**
+     * 设置要使用的数据库访问对象
+     *
+     * @param QDB_Adapter_Abstract $conn
+     *
+     * @return QDB_Select
+     */
+    function setConn(QDB_Adapter_Abstract $conn)
+    {
+        $this->_conn = $conn;
+        return $this;
+    }
+
+    /**
+     * 返回当前使用的数据库访问对象
+     *
+     * @return QDB_Adapter_Abstract
+     */
+    function getConn()
+    {
+        return $this->_conn;
+    }
+
+    /**
      * 创建一个 SELECT DISTINCT 查询
      *
      * @param bool $flag 指示是否是一个 SELECT DISTINCT 查询（默认 true）

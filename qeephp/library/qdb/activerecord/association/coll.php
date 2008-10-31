@@ -1,5 +1,5 @@
 <?php
-// $Id: coll.php 1091 2008-05-23 06:53:51Z dualface $
+// $Id$
 
 /**
  * QeePHP Framework

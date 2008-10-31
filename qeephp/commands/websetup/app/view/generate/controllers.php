@@ -1,6 +1,6 @@
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
-	$("#controllers > ul").tabs();
+    $("#controllers > ul").tabs();
 });
 </script>
 <!-- BEGIN COL3 -->
@@ -18,15 +18,21 @@ $(document).ready(function() {
       <table class="data full">
         <thead>
           <tr>
-            <th width="180">控制器名称</th>
-            <th>文件</th>
+            <th nowrap>名字空间</th>
+            <th nowrap>控制器名称</th>
+            <th nowrap>模块</th>
+            <th nowrap>类名称</th>
+            <th nowrap>文件</th>
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($controllers as $name => $file): ?>
+          <?php foreach ($controllers as $controller): ?>
           <tr>
-            <th width="180"><?php echo h($name); ?></th>
-            <td><?php echo h($file); ?></td>
+            <td><?php echo h($controller->namespace() ? $controller->namespace() . '::' : '-'); ?></td>
+            <th><?php echo h($controller->controllerName()); ?></th>
+            <td><?php echo h($controller->moduleName() != QApplication_Module::DEFAULT_MODULE_NAME ? '@' . $controller->moduleName() : '-'); ?></td>
+            <td><?php echo h($controller->className()); ?></td>
+            <td><?php echo h($controller->filePath()); ?></td>
           </tr>
           <?php endforeach; ?>
         </tbody>

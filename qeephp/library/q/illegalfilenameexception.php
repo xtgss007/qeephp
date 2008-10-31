@@ -1,7 +1,7 @@
 <?php
 // $Id$
 
-class QException_IllegalFilename extends QException
+class Q_IllegalFilenameException extends QException
 {
     public $required_filename;
 

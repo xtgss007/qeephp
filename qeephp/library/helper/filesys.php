@@ -28,9 +28,14 @@ abstract class Helper_Filesys
      */
     static function mkdirs($dir, $mode = 0777)
     {
-        if (!is_dir($dir)) {
+        if (!is_dir($dir))
+        {
             self::mkdirs(dirname($dir), $mode);
-            return mkdir($dir, $mode);
+            $ret = @mkdir($dir, $mode);
+            if (!$ret)
+            {
+                throw new Q_CreateDirFailedException($dir);
+            }
         }
         return true;
     }
@@ -54,7 +59,7 @@ abstract class Helper_Filesys
         if ($dir == '' || $dir == '/' || (strlen($dir) == 3 && substr($dir, 1) == ':\\'))
         {
             // 禁止删除根目录
-            return false;
+            throw new Q_RemoveDirFailedException($dir);
         }
 
         // 遍历目录，删除所有文件和子目录
@@ -62,11 +67,15 @@ abstract class Helper_Filesys
         {
             while(false !== ($file = readdir($dh))) 
             {
-                if($file == '.' || $file == '..') { continue; }
+                if($file == '.' || $file == '..')
+                {
+                    continue;
+                }
+
                 $path = $dir . DIRECTORY_SEPARATOR . $file;
                 if (is_dir($path)) 
                 {
-                    if (!self::rmdirs($path)) { return false; }
+                    self::rmdirs($path);
                 } 
                 else 
                 {
@@ -74,12 +83,14 @@ abstract class Helper_Filesys
                 }
             }
             closedir($dh);
-            rmdir($dir);
-            return true;
+            if (@rmdir($dir) == false)
+            {
+                throw new Q_RemoveDirFailedException($dir);
+            }
         }
         else 
         {
-            return false;
+            throw new Q_RemoveDirFailedException($dir);
         }
     }
 }

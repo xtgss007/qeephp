@@ -12,11 +12,15 @@ class Controller_Generate extends AppController_Abstract
      */
     function actionControllers()
     {
-        $dir = MANAGED_APP_ROOT_DIR . '/app/controller';
+        $app = $this->_managed_app;
+        $dir = rtrim($app->ROOT_DIR(), '/\\') . '/app/controller';
+        $controllers = new QColl('QReflection_Controller');
+        foreach ($app->reflectionModules() as $module)
+        {
+            $controllers->append($module->reflectionControllers());
+        }
 
-        $files = $this->_getControllers($dir);
-        ksort($files);
-        $this->view['controllers'] = $files;
+        $this->view['controllers'] = $controllers;
         $this->_help_text = '查看已有的控制器，并能够创建新控制器。';
     }
 
@@ -28,8 +32,27 @@ class Controller_Generate extends AppController_Abstract
         $name = $this->context->new_controller_name;
         if (!empty($name))
         {
-        	$url = $this->context->url(null, null, array('_app_op' => 'newcontroller', 'name' => $name), '', '');
-            $this->app->setFlashMessage(file_get_contents($url));
+            try
+            {
+                $log = $this->_managed_app->generateController($name)->log();
+                $this->app()->setFlashMessage(implode("\n", $log));
+            }
+            catch (QException $ex)
+            {
+                if (function_exists('error_get_last'))
+                {
+                    $error = error_get_last();
+                    if (!empty($error['message']))
+                    {
+                        $error = "\n\n" . strip_tags($error['message']);
+                    }
+                }
+                else
+                {
+                    $error = '';
+                }
+                $this->app()->setFlashMessage($ex->getMessage() . $error, self::FLASH_MSG_ERROR);
+            }
         }
 
         return new QView_Redirect($this->context->url(null, 'controllers'));
@@ -40,13 +63,14 @@ class Controller_Generate extends AppController_Abstract
      */
     function actionModels()
     {
-        $dir = MANAGED_APP_ROOT_DIR . '/app/model';
-        $appinfo = ManagedApp::appInfo();
-
+        $dir = $this->_managed_app->configItem('ROOT_DIR') . '/app/model';
+        $appinfo = $this->_managed_app;
+		$dsn = (array)$appinfo->getIni('db_dsn_pool');
+		
         $files = $this->_getModels($dir);
         ksort($files);
         $this->view['models'] = $files;
-        $tables = $this->_getTables($appinfo['db_dsn_pool']['default']);
+        $tables = $this->_getTables($dsn['default']);
         if (!empty($tables))
         {
             $tables = array_combine($tables, $tables);
@@ -63,8 +87,10 @@ class Controller_Generate extends AppController_Abstract
     function actionGetColumns()
     {
     	$table_name = $this->context->table;
-    	$appinfo = ManagedApp::appInfo();
-    	$this->view['columns'] = $this->_getColumns($table_name, $appinfo['db_dsn_pool']['default']);
+    	$appinfo = $this->_managed_app;
+		$dsn = (array)$appinfo->getIni('db_dsn_pool');
+		
+    	$this->view['columns'] = $this->_getColumns($table_name, $dsn['default']);
     	$this->view['table_name'] = $table_name;
     	$this->view_layouts = '-none-';
 	}

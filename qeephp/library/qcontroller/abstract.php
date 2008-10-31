@@ -17,6 +17,9 @@
  */
 abstract class QController_Abstract
 {
+    const FLASH_MSG_ERROR   = '#flash_msg_error#';
+    const FLASH_MSG_INFO    = '#flash_msg_info#';
+    const FLASH_MSG_WARNING = '#flash_msg_warning#';
 
     /**
      * 应用程序对象

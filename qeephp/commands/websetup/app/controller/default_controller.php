@@ -8,28 +8,14 @@
 class Controller_Default extends AppController_Abstract
 {
     /**
-     * 返回被管理应用程序
-     *
-     * @return QReflection_Application
-     */
-    protected function _managedApp()
-    {
-        static $app;
-        if (is_null($app))
-        {
-            $app = new QReflection_Application($this->app()->managed_app_config);
-        }
-        return $app;
-    }
-
-    /**
      * 确认应用程序基本信息
      */
     function actionIndex()
     {
-        $app = $this->_managedApp();
-        $this->view['app_config'] = $app->config();
-        $this->view['all_ini'] = $app->getIni('/');
+        $app = $this->_managed_app;
+
+        $this->view['app_config']       = $app->config();
+        $this->view['all_ini']          = $app->getIni('/');
         $this->view['ini_descriptions'] = $app->getIniDescriptions($this->app()->lang);
 
         $this->_help_text = '在开始使用 WebSetup 之前，请务必仔细核对本页列出的应用程序信息，' .
@@ -42,17 +28,17 @@ class Controller_Default extends AppController_Abstract
      */
     function actionSetDSN()
     {
-        $app = $this->_managedApp();
+        $app = $this->_managed_app;
         $dsn = (array)$app->getIni('db_dsn_pool');
         $default_dsn = array
         (
-            'driver' => 'mysql',
-            'host' => 'localhost',
-            'login' => 'username',
-            'password' => 'password',
-            'database' => strtolower($app->appid()) . '_db',
-            'charset' => 'utf8',
-            'prefix' => '',
+            'driver'    => 'mysql',
+            'host'      => 'localhost',
+            'login'     => 'username',
+            'password'  => 'password',
+            'database'  => strtolower($app->APPID()) . '_db',
+            'charset'   => 'utf8',
+            'prefix'    => '',
         );
 
         unset($dsn['default']);
@@ -64,7 +50,7 @@ class Controller_Default extends AppController_Abstract
                 $data[$section] = $default_dsn;
                 if ($section != 'deploy')
                 {
-                    $dsn[$section]['database'] = strtolower($app->appid()) . '_' . $section . '_db';
+                    $dsn[$section]['database'] = strtolower($app->APPID()) . '_' . $section . '_db';
                 }
             }
             else
@@ -89,7 +75,7 @@ class Controller_Default extends AppController_Abstract
             }
         }
 
-        $filename = $this->_managedApp()->configItem('ROOT_DIR') . '/config/database.yaml';
+        $filename = rtrim($this->_managed_app_root_dir, '/\\') . '/config/database.yaml';
         file_put_contents($filename, Helper_YAML::dump($dsn), LOCK_EX);
 
         $this->app->setFlashMessage('成功更新数据库配置');

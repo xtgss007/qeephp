@@ -3,7 +3,7 @@
 
 /**
  * @file
- * 定义 QException_ClassNotDefined 异常
+ * 定义 Q_ClassNotDefinedException 异常
  *
  * @ingroup core
  *
@@ -11,10 +11,10 @@
  */
 
 /**
- * QException_ClassNotDefined 异常指示指定的文件中没有定义需要的类
+ * Q_ClassNotDefinedException 异常指示指定的文件中没有定义需要的类
  *
  */
-class QException_ClassNotDefined extends QException
+class Q_ClassNotDefinedException extends QException
 {
     public $class_name;
     public $filename;

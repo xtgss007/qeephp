@@ -346,7 +346,7 @@ abstract class Q
         Q::loadFile($filename, $dirs);
         if (!class_exists($class_name, false) && ! interface_exists($class_name, false))
         {
-            throw new QException_ClassNotDefined($class_name, $filename);
+            throw new Q_ClassNotDefinedException($class_name, $filename);
         }
     }
 
@@ -373,7 +373,7 @@ abstract class Q
     {
         if (preg_match('/[^a-z0-9\-_.]/i', $filename))
         {
-            throw new QException_IllegalFilename($filename);
+            throw new Q_IllegalFilenameException($filename);
         }
 
         if (is_null($dirs))
@@ -395,7 +395,7 @@ abstract class Q
 
         if ($throw)
         {
-            throw new QException_FileNotFound($filename);
+            throw new Q_FileNotFoundException($filename);
         }
 
         return false;

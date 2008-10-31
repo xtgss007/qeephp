@@ -36,7 +36,7 @@
 
     <?php if (!empty($g['flash_message'])): ?>
     <div id="teaser">
-      <p class="warning">
+    <p class="<?php if ($g['flash_message_type'] == QApplication_Abstract::FLASH_MSG_ERROR || $g['flash_message_type'] == QApplication_Abstract::FLASH_MSG_WARNING): echo 'warning'; else: echo 'note'; endif; ?>">
         <span class="float_right"><a href="#" onclick="$('#teaser').hide(); return false;">隐藏该信息</a></span>
 
         <?php echo nl2br(h($g['flash_message'])); ?>
