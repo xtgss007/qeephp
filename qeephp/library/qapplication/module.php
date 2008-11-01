@@ -79,6 +79,10 @@ class QApplication_Module
         if (empty($appid))
         {
             $appid = QApplication_Abstract::defaultAppID();
+            if (empty($appid))
+            {
+                $appid = QApplication_Abstract::DEFAULT_APPID;
+            }
         }
 
         if (!isset(self::$_instances[$appid][$module_name]))
@@ -131,6 +135,11 @@ class QApplication_Module
      */
     function loadCachedModuleConfig()
     {
+        if ($this->_appid == QApplication_Abstract::DEFAULT_APPID)
+        {
+            return include(Q_DIR . '/_config/default_config.php');
+        }
+
         $app_config = QApplication_Abstract::getAppConfig($this->_appid);
 
         if (empty($app_config['CONFIG_CACHED']))

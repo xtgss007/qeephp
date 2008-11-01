@@ -1,8 +1,13 @@
 <script language="javascript" type="text/javascript">
 $(document).ready(function() {
 	$("#models > ul").tabs();
-	$("#table_name").change(function() {
-		$("#table_detail").load("<?php echo $this->context->url(null, 'getcolumns'); ?>", {table: this.value});
+    $("#table_name").change(function() {
+        if (this.value != 0)
+        {
+		    $("#table_detail").load("<?php echo $this->context->url(null, 'getcolumns'); ?>", {
+                table: this.value
+            });
+        }
 	});
 });
 </script>
@@ -31,17 +36,19 @@ $(document).ready(function() {
       <table class="data full">
         <thead>
           <tr>
-            <th width="120">模型类名称</th>
-            <th>使用的数据表</th>
-            <th>文件</th>
+            <th nowrap>模型类名称</th>
+            <th nowrap>模块</th>
+            <th nowrap>使用的数据表</th>
+            <th nowrap>文件</th>
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($models as $name => $arr): list($table_name, $file) = $arr; ?>
+          <?php foreach ($models as $model): ?>
           <tr>
-            <th><?php echo h($name); ?></th>
-            <td><?php echo h($table_name); ?></td>
-            <td><?php echo h($file); ?></td>
+            <th><?php echo h($model->className()); ?></th>
+            <td><?php echo h($model->moduleName() != QApplication_Module::DEFAULT_MODULE_NAME ? $model->moduleName() : '-'); ?></td>
+            <td><?php echo h($model->tableName()); ?></td>
+            <td><?php echo h($model->filePath()); ?></td>
           </tr>
           <?php endforeach; ?>
         </tbody>

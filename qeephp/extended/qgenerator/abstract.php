@@ -10,6 +10,23 @@ abstract class QGenerator_Abstract
     protected $_log = array();
 
     /**
+     * 该生成器所述的应用程序模块反射
+     *
+     * @var QReflection_Module
+     */
+    protected $_reflection_module;
+
+    /**
+     * 构造函数
+     *
+     * @param QReflection_Module $module
+     */
+    function __construct(QReflection_Module $module)
+    {
+        $this->_reflection_module = $module;
+    }
+
+    /**
      * 返回日志信息
      *
      * @return array of log

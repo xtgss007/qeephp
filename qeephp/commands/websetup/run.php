@@ -4,7 +4,6 @@
 global $g_boot_time;
 $g_boot_time = microtime(true);
 
-
 function _startup_websetup($managed_app_config)
 {
     $app_config = require(dirname(__FILE__) . '/config/boot.php');

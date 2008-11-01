@@ -107,6 +107,7 @@ class QReflection_Application
     {
         if (is_null($this->_reflection_modules_name))
         {
+            $this->_reflection_modules_name = array();
             $module_dir_layout = $this->configItem('MODULE_DIR_LAYOUT');
             if (empty($module_dir_layout))
             {
@@ -248,6 +249,24 @@ class QReflection_Application
             list($controller_name, $module) = explode('@', $controller_name);
         }
         return $this->reflectionModule($module)->generateController($controller_name);
+    }
+
+    /**
+     * 为应用程序生成一个模型的代码
+     *
+     * @param string $model_name
+     * @param string $table_name
+     *
+     * @return QGenerator_Model
+     */
+    function generateModel($model_name, $table_name)
+    {
+        $module = null;
+        if (strpos($model_name, '@') !== false)
+        {
+            list($model_name, $module) = explode('@', $model_name);
+        }
+        return $this->reflectionModule($module)->generateModel($model_name, $table_name);
     }
 }
 

@@ -1,0 +1,62 @@
+2008-11-02T03:38:42+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:38:42+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:38:42+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:38:42+08:00 DEBUG (7): session_start()
+2008-11-02T03:38:42+08:00 DEBUG (7): Execute controller action: "default/edit".
+2008-11-02T03:38:42+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:38:42+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:38:42+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(posts)
+2008-11-02T03:39:26+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:39:26+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:39:26+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:39:26+08:00 DEBUG (7): session_start()
+2008-11-02T03:39:26+08:00 DEBUG (7): Execute controller action: "default/save".
+2008-11-02T03:39:26+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:39:26+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:39:26+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(posts)
+2008-11-02T03:39:26+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:39:26+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:39:26+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:39:26+08:00 DEBUG (7): session_start()
+2008-11-02T03:39:26+08:00 DEBUG (7): Execute controller action: "default/index".
+2008-11-02T03:39:26+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:39:26+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:39:26+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(posts)
+2008-11-02T03:39:30+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:39:30+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:39:30+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:39:30+08:00 DEBUG (7): session_start()
+2008-11-02T03:39:30+08:00 DEBUG (7): Execute controller action: "default/view".
+2008-11-02T03:39:30+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:39:30+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:39:30+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(posts)
+2008-11-02T03:39:33+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:39:33+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:39:33+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:39:33+08:00 DEBUG (7): session_start()
+2008-11-02T03:39:33+08:00 DEBUG (7): Execute controller action: "default/comment".
+2008-11-02T03:39:33+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:39:33+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:39:33+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:39:33+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:39:33+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:39:33+08:00 DEBUG (7): session_start()
+2008-11-02T03:39:33+08:00 DEBUG (7): Execute controller action: "default/view".
+2008-11-02T03:39:33+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:39:33+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:39:33+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(posts)
+2008-11-02T03:39:38+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:39:38+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:39:38+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:39:38+08:00 DEBUG (7): session_start()
+2008-11-02T03:39:38+08:00 DEBUG (7): Execute controller action: "default/comment".
+2008-11-02T03:39:38+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:39:38+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:39:38+08:00 DEBUG (7): QLog::__construct
+2008-11-02T03:39:38+08:00 DEBUG (7): QApplication_Abstract::__construct
+2008-11-02T03:39:38+08:00 DEBUG (7): QApplication_Abstract::run
+2008-11-02T03:39:38+08:00 DEBUG (7): session_start()
+2008-11-02T03:39:38+08:00 DEBUG (7): Execute controller action: "default/view".
+2008-11-02T03:39:38+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(tags)
+2008-11-02T03:39:38+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(comments)
+2008-11-02T03:39:38+08:00 DEBUG (7): QDB_ActiveRecord_Association_Abstract::__construct(posts)

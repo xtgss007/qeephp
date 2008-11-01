@@ -48,13 +48,15 @@ class QReflection_Controller
         $this->_reflection_module = $module;
         $this->_controller_name = $controller_name;
         $this->_namespace = $namespace;
+        $controller_name = strtolower($controller_name);
+        $dir = rtrim($module->moduleDir(), '/\\') . '/controller';
         if ($namespace)
         {
-            $this->_controller_file_path = rtrim($module->moduleDir(), '/\\') . "/controller/{$namespace}/" . $controller_name . '_controller.php';
+            $this->_controller_file_path = "{$dir}/{$namespace}/{$controller_name}_controller.php";
         }
         else
         {
-            $this->_controller_file_path = rtrim($module->moduleDir(), '/\\') . '/controller/' . $controller_name . '_controller.php';
+            $this->_controller_file_path = "{$dir}/{$controller_name}_controller.php";
         }
     }
 

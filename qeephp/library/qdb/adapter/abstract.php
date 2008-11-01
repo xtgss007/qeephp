@@ -104,9 +104,7 @@ abstract class QDB_Adapter_Abstract
      * 用于描绘 true、false 和 null 的数据库值
      */
     protected $_true_value = 1;
-
     protected $_false_value = 0;
-
     protected $_null_value = 'NULL';
 
     /**

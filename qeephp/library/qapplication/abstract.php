@@ -33,9 +33,17 @@
  */
 abstract class QApplication_Abstract
 {
+    /**
+     * flash 消息的类型
+     */
     const FLASH_MSG_ERROR   = '#flash_msg_error#';
     const FLASH_MSG_INFO    = '#flash_msg_info#';
     const FLASH_MSG_WARNING = '#flash_msg_warning#';
+
+    /**
+     * 默认的应用程序 ID
+     */
+    const DEFAULT_APPID     = '#default_appid#';
 
     /**
      * 用于提供验证服务的对象实例
@@ -91,7 +99,7 @@ abstract class QApplication_Abstract
      *
      * @var string
      */
-    static private $_default_appid;
+    static private $_default_appid = null;
 
     /**
      * 应用程序对象

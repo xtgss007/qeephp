@@ -61,8 +61,7 @@ abstract class QController_Abstract
      *
      * @var array
      */
-    public $view_config = array
-    (
+    public $view_config = array(
         /**
          * 视图文件所在目录，如果不指定则由框架自行决定
          *
@@ -149,6 +148,11 @@ abstract class QController_Abstract
             if (!empty($this->view_config['view_layouts_dir']))
             {
                 $response->view_layouts_dir = $this->view_config['view_layouts_dir'];
+            }
+
+            if ($this->context->isAJAX() && empty($this->view_layouts))
+            {
+                $response->no_view_layouts = true;
             }
 
             if (method_exists($response, $action_method))

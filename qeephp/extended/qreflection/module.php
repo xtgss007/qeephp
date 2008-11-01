@@ -44,7 +44,7 @@ class QReflection_Module
     protected $_config;
 
     /**
-     * 模块的所有控制器
+     * 模块所有控制器的反射
      *
      * @var QColl
      */
@@ -63,6 +63,27 @@ class QReflection_Module
      * @var QGenerator_Controller
      */
     protected $_controller_generator;
+
+    /**
+     * 模块所有模型的反射
+     *
+     * @var QColl
+     */
+    protected $_reflection_models;
+
+    /**
+     * 模块所有模型的名字
+     *
+     * @var array of model name
+     */
+    protected $_reflection_models_name;
+
+    /**
+     * 该模块的模型生成器
+     *
+     * @var QGenerator_Model
+     */
+    protected $_model_generator;
 
     /**
      * 构造函数
@@ -251,8 +272,91 @@ class QReflection_Module
      */
     function hasController($controller_name, $namespace = null)
     {
-        $names = $this->reflectionControllersName();
-        return in_array($controller_name, $names);
+        $arr = $this->reflectionControllersName();
+        foreach ($arr as $names)
+        {
+            if (in_array($controller_name, $names))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 获得该模块所有模型的名字
+     *
+     * @return array of model name
+     */
+    function reflectionModelsName()
+    {
+        if (is_null($this->_reflection_models_name))
+        {
+            $dir = rtrim($this->_reflection_module_dir, '/\\') . '/model';
+            $this->_reflection_models_name = array();
+
+            foreach ((array)glob($dir . '/*.php') as $path)
+            {
+                if (is_dir($path))
+                {
+                    continue;
+                }
+
+                $model_name = basename($path);
+                if (QReflection_Model::isModelFile($path))
+                {
+                    $this->_reflection_models_name[] = substr($model_name, 0, -4);
+                }
+            }
+
+            sort($this->_reflection_models_name, SORT_STRING);
+        }
+
+        return $this->_reflection_models_name;
+    }
+
+    /**
+     * 获得该模块所有模型的反射
+     *
+     * @return QColl
+     */
+    function reflectionModels()
+    {
+        if (is_null($this->_reflection_models))
+        {
+            $this->_reflection_models = new QColl('QReflection_Model');
+            foreach ($this->reflectionModelsName() as $name)
+            {
+                $this->_reflection_models[$name] = new QReflection_Model($this, $name);
+            }
+        }
+
+        return $this->_reflection_models;
+    }
+
+    /**
+     * 获得指定名字模型的反射
+     *
+     * @param string $model_name
+     *
+     * @retrun QReflection_Model
+     */
+    function reflectionModel($model_name)
+    {
+        return $this->reflectionModels[$model_name];
+    }
+
+    /**
+     * 检查是否存在指定的模型
+     *
+     * @param string $model_name
+     *
+     * @return boolean
+     */
+    function hasModel($model_name)
+    {
+        $names = $this->reflectionModelsName();
+        return in_array($model_name, $names);
     }
 
     /**
@@ -414,6 +518,33 @@ class QReflection_Module
             $this->_controller_generator = new QGenerator_Controller($this);
         }
         return $this->_controller_generator;
+    }
+
+    /**
+     * 生成属于该模块的模型，返回包含创建信息的数组
+     *
+     * @param string $model_name
+     * @param string $table_name
+     *
+     * @return QGenerator_Controller
+     */
+    function generateModel($model_name, $table_name)
+    {
+        return $this->modelGenerator()->generate($model_name, $table_name);
+    }
+
+    /**
+     * 返回对应该模块的模型生成器
+     *
+     * @return QGenerator_Mode
+     */
+    function modelGenerator()
+    {
+        if (is_null($this->_model_generator))
+        {
+            $this->_model_generator = new QGenerator_Model($this);
+        }
+        return $this->_model_generator;
     }
 
     /**

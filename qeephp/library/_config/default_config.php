@@ -19,28 +19,28 @@ return array
     /**
      * 要使用的 session 服务
      */
-    'runtime_session_provider' => null,
+    'runtime_session_provider'  => null,
 
     /**
      * 是否自动打开 session
      */
-    'runtime_session_start' => false,
+    'runtime_session_start'     => false,
 
     /**
      * QeePHP 内部及 cache 系列函数使用的缓存目录
      * 应用程序必须设置该选项才能使用 cache 功能。
      */
-    'runtime_cache_dir' => null,
+    'runtime_cache_dir'         => null,
 
     /**
      * 默认使用的缓存服务
      */
-    'runtime_cache_backend' => 'QCache_File',
+    'runtime_cache_backend'     => 'QCache_Memory',
 
     /**
      * 是否自动输出 Content-Type: text/html; charset=%i18n_response_charset%
      */
-    'runtime_response_header' => true,
+    'runtime_response_header'   => true,
 
     // }}}
 
@@ -53,41 +53,41 @@ return array
      *
      * 在生产环境建议关闭此功能。
      */
-    'error_display' => true,
+    'error_display'             => true,
 
     /**
      * 指示是否显示友好的错误信息（有安全风险）
      *
      * 在生产环境必须关闭此功能。
      */
-    'error_display_friendly' => true,
+    'error_display_friendly'    => true,
 
     /**
      * 指示是否在错误信息中显示出错位置的源代码（有安全风险）
      *
      * 在生产环境必须关闭此功能。
      */
-    'error_display_source' => true,
+    'error_display_source'      => true,
 
     /**
      * 错误信息的默认语言
      */
-    'error_language' => 'zh_cn',
+    'error_language'            => 'zh_cn',
 
     /**
      * 是否允许 QDbug::assert()
      */
-    'assert_enabled' => true,
+    'assert_enabled'            => true,
 
     /**
      * 断言为 false 时，是否产生一个警告信息
      */
-    'assert_warning' => true,
+    'assert_warning'            => true,
 
     /**
      * 断言为 false 时，是否抛出 QDebug_Assert_Failed 异常
      */
-    'assert_exception' => false,
+    'assert_exception'          => false,
 
     // }}}
 
@@ -101,28 +101,28 @@ return array
      * 控制器名字只能是a-z字母和0-9数字，以及“_”下划线。
      */
     'dispatcher_controller_accessor' => 'controller',
-    'dispatcher_default_controller' => 'default',
+    'dispatcher_default_controller'  => 'default',
 
     /**
      * 指示 动作方法的 url 参数名和默认 动作方法名
      */
-    'dispatcher_action_accessor' => 'action',
-    'dispatcher_default_action' => 'index',
+    'dispatcher_action_accessor'     => 'action',
+    'dispatcher_default_action'      => 'index',
 
     /**
      * 指示命名空间的 url 参数名和默认命名空间
      */
-    'dispatcher_namespace_accessor' => 'namespace',
+    'dispatcher_namespace_accessor'  => 'namespace',
 
     /**
      * 指示模块的 url 参数名和默认模块名
      */
-    'dispatcher_module_accessor' => 'module',
+    'dispatcher_module_accessor'     => 'module',
 
     /**
      * 当无权访问请求的动作时要调用的处理例程
      */
-    'dispatcher_on_access_denied' => null,
+    'dispatcher_on_access_denied'    => null,
 
     /**
      * 当请求的动作不存在时要调用的处理例程
@@ -132,7 +132,7 @@ return array
     /**
      * url 参数的传递模式，可以是标准、PATHINFO、URL 重写等模式
      */
-    'dispatcher_url_mode' => 'standard',
+    'dispatcher_url_mode'            => 'standard',
 
     // }}}
 
@@ -255,7 +255,7 @@ return array
     /**
      * 指示是否允许记录日志
      */
-    'log_enabled' => true,
+    'log_enabled' => false,
 
     /**
      * 指示记录哪些优先级的日志（不符合条件的会直接过滤）

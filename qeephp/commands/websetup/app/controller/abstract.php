@@ -26,6 +26,28 @@ abstract class AppController_Abstract extends QController_Abstract
         $this->_managed_app = new QReflection_Application($this->app()->managed_app_config);
     }
 
+    /**
+     * 返回最后一次出错的错误信息
+     *
+     * @return string
+     */
+    protected function _getLastError()
+    {
+        if (function_exists('error_get_last'))
+        {
+            $error = error_get_last();
+            if (!empty($error['message']))
+            {
+                $error = strip_tags($error['message']);
+            }
+        }
+        else
+        {
+            $error = '';
+        }
+        return $error;
+    }
+
     protected function _after_execute($ret)
     {
         if (is_array($this->view))

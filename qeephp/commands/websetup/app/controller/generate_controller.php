@@ -12,10 +12,8 @@ class Controller_Generate extends AppController_Abstract
      */
     function actionControllers()
     {
-        $app = $this->_managed_app;
-        $dir = rtrim($app->ROOT_DIR(), '/\\') . '/app/controller';
         $controllers = new QColl('QReflection_Controller');
-        foreach ($app->reflectionModules() as $module)
+        foreach ($this->_managed_app->reflectionModules() as $module)
         {
             $controllers->append($module->reflectionControllers());
         }
@@ -39,17 +37,10 @@ class Controller_Generate extends AppController_Abstract
             }
             catch (QException $ex)
             {
-                if (function_exists('error_get_last'))
+                $error = $this->_getLastError();
+                if ($error)
                 {
-                    $error = error_get_last();
-                    if (!empty($error['message']))
-                    {
-                        $error = "\n\n" . strip_tags($error['message']);
-                    }
-                }
-                else
-                {
-                    $error = '';
+                    $error = "\n\n{$error}";
                 }
                 $this->app()->setFlashMessage($ex->getMessage() . $error, self::FLASH_MSG_ERROR);
             }
@@ -63,20 +54,35 @@ class Controller_Generate extends AppController_Abstract
      */
     function actionModels()
     {
-        $dir = $this->_managed_app->configItem('ROOT_DIR') . '/app/model';
-        $appinfo = $this->_managed_app;
-		$dsn = (array)$appinfo->getIni('db_dsn_pool');
-		
-        $files = $this->_getModels($dir);
-        ksort($files);
-        $this->view['models'] = $files;
-        $tables = $this->_getTables($dsn['default']);
-        if (!empty($tables))
+        $models = new QColl('QReflection_Model');
+        foreach ($this->_managed_app->reflectionModules() as $module)
         {
-            $tables = array_combine($tables, $tables);
+           $models->append($module->reflectionModels());
         }
-        array_unshift($tables, 0);
-        $tables[0] = '- 选择要使用的数据表 -';
+
+        $this->view['models'] = $models;
+
+        try
+        {
+            $tables = $this->_getDBO()->metaTables();
+            if (!empty($tables))
+            {
+                $tables = array_combine($tables, $tables);
+            }
+            array_unshift($tables, 0);
+            $tables[0] = '- 选择要使用的数据表 -';
+        }
+        catch (QException $ex)
+        {
+            $error = $this->_getLastError();
+            if ($error)
+            {
+                $error = "\n\n{$error}";
+            }
+            $this->app()->setFlashMessage($ex->getMessage(). $error, self::FLASH_MSG_ERROR);
+            $tables = array('- 无法读取数据库或没有数据表 -');
+        }
+
         $this->view['tables'] = $tables;
         $this->_help_text = '查看已有的模型，并能够创建新模型。';
     }
@@ -86,122 +92,46 @@ class Controller_Generate extends AppController_Abstract
      */
     function actionGetColumns()
     {
-    	$table_name = $this->context->table;
-    	$appinfo = $this->_managed_app;
-		$dsn = (array)$appinfo->getIni('db_dsn_pool');
-		
-    	$this->view['columns'] = $this->_getColumns($table_name, $dsn['default']);
-    	$this->view['table_name'] = $table_name;
-    	$this->view_layouts = '-none-';
-	}
+        $table_name = $this->context->table;
+        $this->view['columns'] = $this->_getDBO()->metaColumns($table_name);
+        $this->view['table_name'] = $table_name;
+    }
 
-	/**
-	 * 创建一个新模型
-	 */
-	function actionNewModel()
-	{
+    /**
+     * 创建一个新模型
+     */
+    function actionNewModel()
+    {
         $name = $this->context->new_model_name;
         $table_name = $this->context->table_name;
-        if (!empty($name) && !empty($table_name))
+        if (!empty($name))
         {
-        	$url = $this->context->url(null, null, array('_app_op' => 'newmodel', 'name' => $name, 'table_name' => $table_name), '', '');
-            $this->app->setFlashMessage(file_get_contents($url));
+            try
+            {
+                $log = $this->_managed_app->generateModel($name, $table_name)->log();
+                $this->app()->setFlashMessage(implode("\n", $log));
+            }
+            catch (QException $ex)
+            {
+                $error = $this->_getLastError();
+                if ($error)
+                {
+                    $error = "\n\n{$error}";
+                }
+                $this->app()->setFlashMessage($ex->getMessage() . $error, self::FLASH_MSG_ERROR);
+            }
         }
 
         return new QView_Redirect($this->context->url(null, 'models'));
-	}
-
-    protected function _getControllers($dir, $namespace = '')
-    {
-        $files = array();
-        $dh = opendir($dir);
-        while (($file = readdir($dh)))
-        {
-            $path = realpath(rtrim($dir, '/\\') . DS . $file);
-            if (substr($file, 0, 1) == '.') { continue; }
-            if (is_dir($path))
-            {
-                $other = $this->_getControllers($path, $file);
-                $files = array_merge($other, $files);
-            }
-            elseif (!is_file($path) || strpos($file, '_') == false)
-            {
-                continue;
-            }
-            else
-            {
-                list($name) = explode('_', $file);
-                if ($namespace)
-                {
-                    $name = "{$namespace}::{$name}";
-                }
-                $files[$name] = $path;
-            }
-        }
-        closedir($dh);
-        return $files;
     }
 
-    protected function _getModels($dir)
+    protected function _getDBO()
     {
-        $files = array();
-        $dh = opendir($dir);
-        while (($file = readdir($dh)))
-        {
-            $path = realpath(rtrim($dir, '/\\') . DS . $file);
-            if (substr($file, 0, 1) == '.') { continue; }
-            if (is_dir($path))
-            {
-            	$models = $this->_getModels($path);
-            	$files = array_merge($files, $models);
-			}
-			else
-			{
-            	$content = file_get_contents($path);
-            	$m = null;
-            	preg_match("/^class ([a-z_0-9]+) extends /im", $content, $m);
-            	if (empty($m[1])) { continue; }
-            	$class_name = $m[1];
-            	preg_match("/'table_name'[ ]*=>[ ]*'([a-z_0-9\\.]+)'/", $content, $m);
-            	if (empty($m[1])) { continue; }
-            	$table_name = $m[1];
-
-            	$files[$class_name] = array($table_name, $path);
-			}
-        }
-        closedir($dh);
-        return $files;
+        $dsn = $this->_managed_app->getIni('db_dsn_pool/default');
+        $dbtype = $dsn['driver'];
+        $objid = "dbo_{$dbtype}_" .  md5(serialize($dsn));
+        $class_name = 'QDB_Adapter_' . ucfirst($dbtype);
+        return new $class_name($dsn, $objid);
     }
-
-    protected function _getTables($dsn)
-    {
-        Q::setIni('db_dsn_pool/temp_dsn', $dsn);
-        $dbo = QDB::getConn('temp_dsn');
-
-        try
-        {
-            return $dbo->metaTables();
-        }
-        catch (Exception $ex)
-        {
-            $this->app->setFlashMessage($ex->getMessage());
-        }
-        return array();
-    }
-
-    protected function _getColumns($table_name, $dsn)
-    {
-        Q::setIni('db_dsn_pool/temp_dsn', $dsn);
-        $dbo = QDB::getConn('temp_dsn');
-
-        try
-        {
-        	return $dbo->metaColumns($table_name);
-        }
-        catch (Exception $ex)
-        {
-            $this->app->setFlashMessage($ex->getMessage());
-        }
-        return array();
-	}
 }
+

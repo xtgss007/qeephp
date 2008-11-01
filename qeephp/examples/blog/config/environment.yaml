@@ -11,10 +11,10 @@ runtime_session_start:      true
 session_cookie_name:        blog_sess
 
 # 默认使用的缓存服务
-runtime_cache_backend:      %DEFAULT_CACHE_BACKEND%
+runtime_cache_backend:      %CONFIG_CACHE_BACKEND%
 
 # 数据库元信息要使用的缓存服务
-db_meta_cache_backend:      %DEFAULT_CACHE_BACKEND%
+db_meta_cache_backend:      %CONFIG_CACHE_BACKEND%
 
 # 运行时信息的缓存目录
 runtime_cache_dir:          %CONFIG_CACHE_DIR%

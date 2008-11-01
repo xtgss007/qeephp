@@ -3,23 +3,6 @@
 class QGenerator_Controller extends QGenerator_Abstract
 {
     /**
-     * 该生成器所述的应用程序模块反射
-     *
-     * @var QReflection_Module
-     */
-    protected $_reflection_module;
-
-    /**
-     * 构造函数
-     *
-     * @param QReflection_Module $module
-     */
-    function __construct(QReflection_Module $module)
-    {
-        $this->_reflection_module = $module;
-    }
-
-    /**
      * 生成指定名称的控制器
      *
      * @param string $controller_name
@@ -38,7 +21,6 @@ class QGenerator_Controller extends QGenerator_Abstract
             $class_name = "Controller_{$controller_name}";
         }
         $class_name = $this->_normalizeClassName($class_name);
-
         $path = $this->_classFilePath($this->_reflection_module->moduleDir(), $class_name, '_controller.php');
 
         $this->_logClean();

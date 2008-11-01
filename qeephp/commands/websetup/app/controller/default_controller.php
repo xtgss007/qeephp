@@ -75,7 +75,7 @@ class Controller_Default extends AppController_Abstract
             }
         }
 
-        $filename = rtrim($this->_managed_app_root_dir, '/\\') . '/config/database.yaml';
+        $filename = rtrim($this->_managed_app->ROOT_DIR(), '/\\') . '/config/database.yaml';
         file_put_contents($filename, Helper_YAML::dump($dsn), LOCK_EX);
 
         $this->app->setFlashMessage('成功更新数据库配置');

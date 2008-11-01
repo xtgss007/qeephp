@@ -20,7 +20,10 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
 
     function __construct($dsn, $id)
     {
-        if (! is_array($dsn)) { $dsn = QDB::parseDSN($dsn); }
+        if (! is_array($dsn))
+        {
+            $dsn = QDB::parseDSN($dsn);
+        }
         parent::__construct($dsn, $id);
         $this->_schema = $dsn['database'];
     }
@@ -190,7 +193,6 @@ class QDB_Adapter_Mysql extends QDB_Adapter_Abstract
             $this->connect();
         }
         $result = mysql_query($sql, $this->_conn);
-        QLog::log($sql, QLog::DEBUG);
 
         if (is_resource($result))
         {

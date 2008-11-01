@@ -42,6 +42,13 @@ class QView
     public $view_layouts;
 
     /**
+     * 是否禁用布局视图
+     *
+     * @var boolean
+     */
+    public $no_view_layouts = false;
+
+    /**
      * 视图布局所在目录，如果不指定则由框架自行决定
      *
      * @var string
@@ -128,42 +135,49 @@ class QView
             $contents_for_layouts = '';
         }
 
-        // 确定要使用的布局视图
-        $view_layouts = self::getViewLayouts($context, $this->view_layouts);
-
-        // 如果使用父布局视图，则要切换 context
-        if (($pos = strpos($view_layouts, '@')) !== false)
+        if (!$this->no_view_layouts)
         {
-            $module = substr($view_layouts, $pos + 1);
-            $view_layouts = substr($view_layouts, 0, $pos);
-            $arr = explode('::', $view_layouts);
-            if (isset($arr[1]))
+            // 确定要使用的布局视图
+            $view_layouts = self::getViewLayouts($context, $this->view_layouts);
+
+            // 如果使用父布局视图，则要切换 context
+            if (($pos = strpos($view_layouts, '@')) !== false)
             {
-                $context->namespace = $arr[0];
-                $view_layouts = $arr[1];
+                $module = substr($view_layouts, $pos + 1);
+                $view_layouts = substr($view_layouts, 0, $pos);
+                $arr = explode('::', $view_layouts);
+                if (isset($arr[1]))
+                {
+                    $context->namespace = $arr[0];
+                    $view_layouts = $arr[1];
+                }
+                else
+                {
+                    $context->namespace = null;
+                }
+                if (empty($view_layouts))
+                {
+                    $view_layouts = 'default';
+                }
+                if ($module == 'app' || empty($module))
+                {
+                    $module = null;
+                }
+                $context->module_name = $module;
+            }
+
+            // 渲染布局视图
+            $filename = self::getViewLayoutsFilename($context, $adapter, $view_layouts, $this->view_layouts_dir);
+
+            if (file_exists($filename))
+            {
+                $adapter->assign('contents_for_layouts', $contents_for_layouts);
+                $contents = $adapter->fetch($filename);
             }
             else
             {
-                $context->namespace = null;
+                $contents = $contents_for_layouts;
             }
-            if (empty($view_layouts))
-            {
-                $view_layouts = 'default';
-            }
-            if ($module == 'app' || empty($module))
-            {
-                $module = null;
-            }
-            $context->module_name = $module;
-        }
-
-        // 渲染布局视图
-        $filename = self::getViewLayoutsFilename($context, $adapter, $view_layouts, $this->view_layouts_dir);
-
-        if (file_exists($filename))
-        {
-            $adapter->assign('contents_for_layouts', $contents_for_layouts);
-            $contents = $adapter->fetch($filename);
         }
         else
         {
